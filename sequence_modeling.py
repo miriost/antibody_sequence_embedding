@@ -56,7 +56,7 @@ def split_to_random_n_grams(seq, n):
     str_ngrams.append(str(seq))
     return str_ngrams
     
-def generate_corpusfile(corpus_fname, n, out, reading_frame = None):
+def generate_corpusfile(corpus_fname, n, out, reading_frame = None, trim = None):
     '''
     Args:
         corpus_fname: corpus file name
@@ -64,13 +64,17 @@ def generate_corpusfile(corpus_fname, n, out, reading_frame = None):
         for a constant n splitting - n is an integer, for a random range, n should be a tuple of (start, end)
         reading_frame: 1/2/3 for splitting, default: None, including repetition (generating 3 overlaps)
         out: output corpus file path
+        trim : typle (from start, drom end) - how many characteres to trim from the beginning and from the end
     Description:
         Protvec uses word2vec inside, and it requires to load corpus file
         to generate corpus.
+        
     '''
     f = open(out, "w")
     
     for r in SeqIO.parse(corpus_fname, "fasta"):
+        if trim:
+            r.seq = r.seq[trim[0]:-trim[1]]
         if (reading_frame == None) and type(n) == int:
             ngram_patterns = split_ngrams_with_repetition(r.seq, n)
         elif type(n) == int:
@@ -94,13 +98,14 @@ def load_protvec(model_fname):
 
 class ProtVec(word2vec.Word2Vec):
 
-    def __init__(self, corpus_fname=None, corpus=None, n=3, reading_frame = None, size=100, out="corpus.txt",  sg=1, window=25, min_count=2, workers=3):
+    def __init__(self, corpus_fname=None, corpus=None, n=3, reading_frame = None, trim = None, size=100, out="corpus.txt",  sg=1, window=25, min_count=2, workers=3):
         """
         Either fname or corpus is required.
         corpus_fname: fasta file for corpus
         corpus: corpus object implemented by gensim
-        n: n of n-gram
-        reading frame : default None
+        n: n of n-gramp. single integer for a costant n, and a string ‘(start, end)’ for random splitting.
+        reading frame : default None. possible values: 1/2/3/None – for all options
+        trim: paramter for trimming the sequences, string format ‘(chars from start, chars from end)’ 
         out: corpus output file path
         min_count: least appearance count in corpus. if the n-gram appear k times which is below min_count, the model does not remember the n-gram
         """
@@ -109,14 +114,16 @@ class ProtVec(word2vec.Word2Vec):
         self.reading_frame = reading_frame
         self.size = size
         self.corpus_fname = corpus_fname
+        self.trim = trim
 
         if corpus is None and corpus_fname is None:
             raise Exception("Either corpus_fname or corpus is needed!")
 
         if corpus_fname is not None:
             print('Generate Corpus file from fasta file...')
-            generate_corpusfile(corpus_fname, n, out, reading_frame)
-            corpus = word2vec.Text8Corpus(out)
+            generate_corpusfile(corpus_fname, n, out + '_corpus.txt', reading_frame, trim)
+            corpus = word2vec.Text8Corpus(out + '_corpus.txt')
+            
 
         word2vec.Word2Vec.__init__(self, corpus, size=size, sg=sg, window=window, min_count=min_count, workers=workers)
 
@@ -141,7 +148,7 @@ class ProtVec(word2vec.Word2Vec):
         
 class AAVec(word2vec.Word2Vec):
 
-    def __init__(self, corpus_fname=None, corpus=None, n=3, reading_frame=1,size=100, out="corpus.txt",  sg=1, window=25, min_count=2, workers=3):
+    def __init__(self, corpus_fname=None, corpus=None, n=3, reading_frame=1, trim = None, size=100, out="corpus.txt",  sg=1, window=25, min_count=2, workers=3):
         """
         Either fname or corpus is required.
         corpus_fname: fasta file for corpus
@@ -155,6 +162,7 @@ class AAVec(word2vec.Word2Vec):
         self.size = size
         self.corpus_fname = corpus_fname
         self.reading_frame = reading_frame
+        self.trim = trim
 
         if corpus is None and corpus_fname is None:
             raise Exception("Either corpus_fname or corpus is needed!")
@@ -163,6 +171,7 @@ class AAVec(word2vec.Word2Vec):
             print('Generate Corpus file from fasta file...')
             generate_corpusfile(corpus_fname, n, out, reading_frame)
             corpus = word2vec.Text8Corpus(out)
+            
 
         word2vec.Word2Vec.__init__(self, corpus, size=size, sg=sg, window=window, min_count=min_count, workers=workers)
 
