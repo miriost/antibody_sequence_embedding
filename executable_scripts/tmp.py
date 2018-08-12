@@ -35,7 +35,7 @@ labels = np.concatenate((np.ones(500), np.ones(500)*2, np.ones(500)*3, np.ones(5
 
 data = {'x':x, 'y':y, 'labels':labels}
 DF = pd.DataFrame(data, columns=['x','y', 'labels'])
-DF.to_csv('/media/miri-o/Documents/Immune2vec/vectors/4_gaussians_test.csv', index=False)
+DF.to_csv('C:\\Users\\mirio\\Dropbox\\BIU\\LAB\\4_gaussians_test.csv', index=False)
 #print(DF)
 
 

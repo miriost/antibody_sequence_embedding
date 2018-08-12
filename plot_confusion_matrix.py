@@ -53,13 +53,11 @@ def plot_confusion_matrix(cm, classes,
 
 class classifier():
     
-    """ Perform a clssafication based ona feature matrix
+    """ Perform a classification based ona feature matrix
  
     Parameters
     ----------       
-    n : integer, default 20
-        the number of clusters per iteration
-    
+
     depth : integer, defalut 2
         the number of k-means iterations. CURRENTLY SUPPORTING ONLY DEPTH OF 2.
         
@@ -119,4 +117,4 @@ class classifier():
                           title='Normalized confusion matrix'+ ' score: ' + str(accuracy_score(actual_all, predictions_all)))
         print('score: ' + str(accuracy_score(actual_all, predictions_all)))
 
-        
+

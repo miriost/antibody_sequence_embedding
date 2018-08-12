@@ -7,7 +7,8 @@ Created on Wed Aug  1 15:18:09 2018
 """
 
 import sys, argparse
-sys.path.insert(0, "/media/miri-o/Documents")
+import os
+sys.path.insert(0, os.path.join(os.pardir, os.path.pardir))
 from miris_tools import kmeans
 import pandas as pd
 import numpy as np
@@ -24,7 +25,7 @@ def main(argv):
     if not args.method:
         method = 'kmeans'
     else:
-        method = args.model
+        method = args.method
     if not args.number_of_clusters_per_level:
         n = 20
     else:
@@ -54,11 +55,11 @@ def main(argv):
 #    print(clust.labels_)
     clust.create_feature_table(data['labels'], TH)
     print(clust.feature_table)
-    clust.save_feature_table(args.infile + '_feature_table.csv')
+    clust.save_feature_table(args.infile, path = os.path.join(os.pardir, os.path.pardir, 'results'))
     
  
 #    infile = pd.read_csv(args.infile)
-#    filename = args.infile.split('/')[-1]
+#     filename = args.infile.split('/')[-1]
 #    
 #    
 #    #save to files:

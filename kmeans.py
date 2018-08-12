@@ -147,7 +147,7 @@ class unsupervised_clustering():
         features_table = pd.DataFrame(0, index=pd.unique(classes), columns=self.clusters_.keys())
         print(self.clusters_.keys())
         for index, row in enumerate(classes):
-            print(str(index) +' | '+ str(row)+' | '+ str(self.labels_[index]))
+            #print(str(index) +' | '+ str(row)+' | '+ str(self.labels_[index]))
             features_table.loc[row, self.labels_[index]] +=1
         
         # Normlize by raw
@@ -169,9 +169,11 @@ class unsupervised_clustering():
         
         return self
     
-    def save_feature_table(self, filename, path = '/media/miri-o/Documents/Immune2vec/feature_table/'):
-        self.feature_table.to_csv(path+filename)
-        print('Feature table saved to: ' +path+filename)
+    def save_feature_table(self, filename, path = None):
+        name = os.path.split(filename)[-1].split(os.path.extsep)[0]
+        final_dest = os.path.join(path, name+'_feature_table.csv')
+        self.feature_table.to_csv(final_dest)
+        print('Feature table saved to: ' + os.path.abspath(final_dest))
     
     def save_clusters_to_file(self, filename):      
         # Add cluster labels to existing file
