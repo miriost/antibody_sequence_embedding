@@ -145,7 +145,7 @@ class unsupervised_clustering():
         """
             
         features_table = pd.DataFrame(0, index=pd.unique(classes), columns=self.clusters_.keys())
-        print(self.clusters_.keys())
+        #print(self.clusters_.keys())
         for index, row in enumerate(classes):
             #print(str(index) +' | '+ str(row)+' | '+ str(self.labels_[index]))
             features_table.loc[row, self.labels_[index]] +=1
@@ -183,11 +183,12 @@ class unsupervised_clustering():
             datafile.to_csv(filename)
             print('Added "cluster" column to ' + filename)
         else:
-            indexes = sorted(self.labels_.keys())
-            values = [self.labels_[i] for i in indexes]
-            data_for_file = pd.DataFrame(values, index=indexes)
-            data_for_file.to_csv('/media/miri-o/Documents/Immune2vec/clusters/test1.csv')
-            print('Created new clusters file',filename)
+            print('Error, miri please finis your code!')
+#            indexes = sorted(self.labels_.keys())
+#            values = [self.labels_[i] for i in indexes]
+#            data_for_file = pd.DataFrame(values, index=indexes)
+#            data_for_file.to_csv('/media/miri-o/Documents/Immune2vec/clusters/test1.csv')
+#            print('Created new clusters file',filename)
         
     def save_labels_to_file(self, filename):
         pass

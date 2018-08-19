@@ -15,7 +15,8 @@ Created on Mon Jul 23 15:16:13 2018
 """
 
 import sys, getopt
-sys.path.insert(0, "/media/miri-o/Documents")
+import os
+sys.path.insert(0, os.path.join(os.pardir, os.path.pardir))
 
 from miris_tools.dimensional_reduction import dimensional_reduction
 

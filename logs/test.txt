@@ -1,0 +1,11 @@
+~~~~~~~~ Begin classifing...
+Feature_file: /media/miri-o/Documents/feature_table/HCV_sampled_50k_Celiac_n_3_trimming_2_1_VECTORS_after_TSNE_2D_feature_table_with_labels.csv
+feature columns: (1, 31)
+Labels column name: labels
+Model: logistic_regression
+~~~~~~~
+Normalized confusion matrix
+[[0.27 0.51 0.22]
+ [0.11 0.68 0.21]
+ [0.09 0.63 0.28]]
+score: 0.41383333333333333

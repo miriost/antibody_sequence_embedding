@@ -29,7 +29,7 @@ for j in range(group_size):
     DF_c = pd.DataFrame({'x':x, 'y':y, 'labels':subject})
     DF_for_clustering = DF_for_clustering.append(DF_c)
     DF = DF.append(DF2, ignore_index=True)
-    #plt.scatter(x, y, s=5, marker = '^')
+    plt.scatter(x, y, s=5, marker = '^')
     
 for j in range(group_size):
     x = np.random.normal(np.random.choice(board_range[0]), scale=1.0, size=500)
@@ -40,11 +40,13 @@ for j in range(group_size):
     DF_for_clustering = DF_for_clustering.append(DF_c)
     DF2 = pd.DataFrame({'x':x, 'y':y, 'subject':subject, 'condition':condition})
     DF = DF.append(DF2, ignore_index = True)
-    #plt.scatter(x, y, s=5, marker = 'o')
+    plt.scatter(x, y, s=5, marker = 'o')
 
 print('length:' + str(len(DF)))
 print(DF.describe)
 path = os.path.join(os.pardir, os.path.pardir, 'results')
+if not os.path.exists(path):
+    os.mkdir(path)
 final_dest = os.path.join(path, str(group_size*2)+'_syntetic_data.csv')
 DF.to_csv(final_dest)
 print('syntetic_data saved to: ' + os.path.abspath(final_dest))
