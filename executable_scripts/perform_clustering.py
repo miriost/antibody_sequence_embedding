@@ -20,39 +20,23 @@ def main(argv):
 
     parser.add_argument('vector_file', help='a *.csv file where each raw is a vector represents an observation')
     parser.add_argument('labels_file', help='a *.csv file with the same number of rows as the vector file, containing the observation label for each row')
-    parser.add_argument('-m','--method', help='Clustering method, default: kmeans')
-    parser.add_argument('-n','--number_of_clusters_per_level', help='Number of clusters for each clustering iteartion. default: 20')
-    parser.add_argument('-d','--depth', help='Depth of clustering, default: 2')
-    parser.add_argument('-D','--debug_mode', help='Display debug messages, default: False')
-    parser.add_argument('-TH','--filtering_TH', help = 'filtering threshold for features uniqeness.\nExpeceted values: 0-100, default: 100')
+    parser.add_argument('-m','--method', help='Clustering method, default: kmeans', default = 'kmeans')
+    parser.add_argument('-n','--number_of_clusters_per_level', help='Number of clusters for each clustering iteartion. default: 20', type = int, default = 20)
+    parser.add_argument('-d','--depth', help='Depth of clustering, default: 2', type = int, default = 2)
+    parser.add_argument('-D','--debug_mode', help='Display debug messages, default: False', default = False)
+    parser.add_argument('-TH','--filtering_TH', help = 'filtering threshold for features uniqeness.\nExpeceted values: 0-100, default: 100', type = int, default = 100)
     parser.add_argument('-I', '--ingore_columns', nargs = '+', help = 'A list of columns in vector file to ignore for clustering, default: []')
     parser.add_argument('-l', '--label_col_name', help = 'The column name in labels file, default: labels', default = 'labels')
+    parser.add_argument('-v', '--visualize', help = 'Visualize clustering result, default: False', default = False)
 
         
     args = parser.parse_args()
-    print(args.label_col_name)
-    if not args.method:
-        method = 'kmeans'
-    else:
-        method = args.method
-    if not args.number_of_clusters_per_level:
-        n = 20
-    else:
-        n = int(args.number_of_clusters_per_level)
-    if not args.depth:
-        depth = 2
-    else:
-        depth = int(args.depth)
-    if args.debug_mode:
-         debug_mode=args.debug_mode
-    else:
-        debug_mode = False
-    if not args.filtering_TH:
-        TH = 100
-    else:
-        TH = int(args.filtering_TH)
-    
-    print('Input file for clustering: {}, clustering method: {}, n per layer= {}, depth = {}'.format(args.vector_file, method, n, depth))
+    n = args.number_of_clusters_per_level
+    depth = args.depth
+    debug_mode=args.debug_mode
+    TH = args.filtering_TH
+
+    print('Input file for clustering: {}, clustering method: {}, n per layer= {}, depth = {}'.format(args.vector_file, args.method, n, depth))
     if not os.path.isfile(args.vector_file) or args.vector_file[:-4] == '.csv':
         print('Input file file error! Make sure the file exists and it is *.csv file.\nExiting...')
         sys.exit(1)
@@ -79,14 +63,16 @@ def main(argv):
                 print(args.label_col_name + " column doesn't exist.\nExiting...")
                 sys.exit(1)
     if len(labels) != len(vectors):
-        print('Vectors and labels length mismatch.\nExiting...')
+        print('Vectors and labels length mismatch. Vectors length: {}, labels length: {}\nExiting...'.format(len(vectors), len(labels)))
         sys.exit(1)
         
-    clust = kmeans.unsupervised_clustering(n, depth, debug_mode, method)
+    clust = kmeans.unsupervised_clustering(n, depth, debug_mode, args.method)
     clust.fit(to_fit)
-    clust.visualize()     
+    if args.visualize:
+        clust.visualize()     
     clust.create_feature_table(labels, TH)
-    print(clust.feature_table)
+    print('Clustering finished\n [ {} rows x {} columns ]'.format(clust.feature_table.shape[0], clust.feature_table.shape[1]))
+    #print(clust.feature_table)
     feature_table_path = os.path.join(os.pardir, os.path.pardir, 'feature_table')
     if not os.path.exists(feature_table_path):
         os.mkdir(feature_table_path)        

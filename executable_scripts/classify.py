@@ -12,8 +12,6 @@ import os
 sys.path.insert(0, os.path.join(os.pardir, os.path.pardir))
 from miris_tools.classifier import classifier
 import pandas as pd
-import numpy as np
-
 def main(argv):
     
     parser=argparse.ArgumentParser(
@@ -23,27 +21,32 @@ def main(argv):
     parser.add_argument('feature_file', help='a *.csv file containing the features table')
     parser.add_argument('--feature_cols', help='start and end range for features columns. default: ALL columns', nargs = 2, type = int)
     parser.add_argument('--labels_file', help='a file containing the labels for each row, default: None, using the features file')
-    parser.add_argument('--labels_col_name', help='Name of the labels column, default: "labels"')
-    parser.add_argument('-M','--model', help='Classification model. Currently supported: ["logistic_regression","decision_tree"] , default: "decision_tree"')
+    parser.add_argument('--labels_col_name', help='Name of the labels column, default: "labels"', default='labels')
+    parser.add_argument('-M','--model', help='Classification model. Currently supported: ["logistic_regression"/"LR","decision_tree"/"DT"] , default: "decision_tree"', default = "decision_tree")
     
     args = parser.parse_args()
-    if not os.path.isfile(args.feature_file) or args.feature_file[:-4] == '.csv':
-        print('Feature file error! Make sure the file exists and it is *.csv file.\nExiting...')
+    
+    if not (os.path.isfile(args.feature_file) and os.path.splitext(os.path.split(args.feature_file)[1])[1]=='.csv'):
+        print('Feature file {} error! Make sure the file exists and it is *.csv file.\nExiting...'.format(args.feature_file))
         sys.exit(1)
     feature_file = pd.read_csv(args.feature_file)
-    if not args.feature_cols:
-        feat_range = (0, len(feature_file.columns))
-    else:
-        feat_range = (args.feature_cols[0], args.feature_cols[1]+1)
-        features = feature_file.iloc[:, range(feat_range[0], feat_range[1])]
-        
+           
     if args.labels_file:
-       if not os.path.isfile(args.feature_file) or args.feature_file[:-4] == '.csv':
+       if not (os.path.isfile(args.feature_file) and os.path.splitext(os.path.split(args.feature_file)[1])[1]=='.csv'):
            print('Labels file error! Make sure the file exists and it is *.csv file.\nExiting...')
            sys.exit(1)
        labels_file = pd.read_csv(args.labels_file)
+       if not args.labels_col_name in labels_file.columns:
+           print('label column name doesnt exist.\nExiting...')
+           sys.exit(1)
     else:
        labels_file = feature_file.copy()
+       if not args.labels_col_name in labels_file.columns:
+           print('label column name doesnt exist.\nExiting...')
+           sys.exit(1)
+       feature_file = feature_file.drop(args.labels_col_name, axis=1)
+    labels = labels_file.loc[:, args.labels_col_name]
+    
     if args.labels_col_name:
        if not args.labels_col_name in labels_file.columns:
            print('label column name doesnt exist.\nExiting...')
@@ -52,21 +55,22 @@ def main(argv):
            labels_col_name = args.labels_col_name
     else: 
        labels_col_name = 'labels'
-    labels = labels_file.loc[:, labels_col_name]
+    if not args.feature_cols:
+        feat_range = (1, len(feature_file.columns))
+    else:
+        feat_range = (args.feature_cols[0], args.feature_cols[1]+1)
+        
+    features = feature_file.iloc[:, range(feat_range[0], feat_range[1])]       
     if len(labels) != len(features):
            print('Labels and features length mismatch!.\nExiting...')
            sys.exit(1)
-               
-    if not args.model:
-        model = 'decision_tree'
-    else:
-        model = args.model
+    
         
         
     print("~~~~~~~~ Begin classifing...\nFeature_file: {}\nfeature columns: {}\nLabels column name: {}\nModel: {}\n~~~~~~~".format(
-            os.path.abspath(args.feature_file), feat_range, labels_col_name, model))   
+            os.path.abspath(args.feature_file), feat_range, labels_col_name, args.model))   
     
-    our_classifier = classifier(features, labels, model)
+    our_classifier = classifier(features, labels, args.model)
     our_classifier.run()
     return(our_classifier.score)   
     

@@ -29,7 +29,7 @@ def standardPCA(data, ncomp):
     pca = PCA(n_components=ncomp)
     pca.fit(s_data)
     data_after_pca = pca.transform(s_data)
-    print('Explained variance: {}'.format(pca.explained_variance_ratio_))
+    print('Explained variance: {}, summing to {} of the data'.format(pca.explained_variance_ratio_, sum(pca.explained_variance_ratio_)))
     return(data_after_pca)
 
 

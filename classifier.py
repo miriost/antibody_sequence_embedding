@@ -88,7 +88,7 @@ class classifier():
 #        print(self.labels_num)
 #        print(self.labels)
         
-        if model == 'logistic_regression':
+        if model == 'logistic_regression' or model == 'LR':
             if len(self.classes) == 2: #binomial logistic regression case
                 self.model = LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
                                                 intercept_scaling=1, max_iter=100, multi_class='ovr', n_jobs=1,
@@ -99,7 +99,7 @@ class classifier():
                                                 intercept_scaling=1, max_iter=100, multi_class='multinomial', n_jobs=1,
                                                 penalty='l2', random_state=None, solver='newton-cg', tol=0.0001,
                                                 verbose=0, warm_start=True)
-        elif model == 'decision_tree':
+        elif model == 'decision_tree' or model == 'DT':
             self.model = tree.DecisionTreeClassifier(max_depth=3)
         else:
             raise Exception("Classifier model un-recognized, current supported models: logistic_regression, decision_tree")
@@ -127,7 +127,7 @@ class classifier():
         self.score = accuracy_score(actual_all, predictions_all)
         print('score: ' + "%.3f" % self.score)
         
-        if self.model == 'decision_tree':
+        if self.model == 'decision_tree' or self.model == 'DT':
             dot_data = tree.export_graphviz(self.model, out_file='../../results/tmp.dot', 
                                  feature_names=self.feature_table.columns,  
                                  class_names=self.classes,  

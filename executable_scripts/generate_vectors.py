@@ -25,7 +25,7 @@ def main(argv):
                         help="Delimiter to use. default: ','", default = ',')
 
     args = parser.parse_args()
-    print(type(args.sep))
+
     if not os.path.isfile(args.infile) or args.infile[:-4] == '.csv':
         print('Feature file error! Make sure the file exists and it is *.csv file.\nExiting...')
         sys.exit(1)

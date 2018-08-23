@@ -42,6 +42,7 @@ def main(argv):
          method = arg
       elif opt in ("-n", "--n-gram"):
          n = int(arg)
+
           
    print('Input file is: {}, n = {}, method = {}'.format(inputfile, n, method))
    
