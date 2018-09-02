@@ -17,6 +17,9 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.linear_model import LogisticRegression
 from sklearn import tree
 
+def add(a,b):
+    return(a+b)
+
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
                           title='Confusion matrix',
@@ -72,9 +75,11 @@ class classifier():
     
     """
     
-    def __init__(self, feature_table, labels, model, classes = None):
+    def __init__(self, feature_table, labels, model, classes = None, C = 1.0):
         self.feature_table = feature_table
         self.labels = labels
+        self.modelname = model 
+        self.coef = np.zeros(feature_table.shape[1])
         if (len(feature_table)!=len(labels)):
             raise Exception("Feature table and labels length mismatch!")
         if classes:
@@ -88,24 +93,35 @@ class classifier():
 #        print(self.labels_num)
 #        print(self.labels)
         
-        if model == 'logistic_regression' or model == 'LR':
+        if self.modelname == 'logistic_regression' or self.modelname == 'LR':
             if len(self.classes) == 2: #binomial logistic regression case
-                self.model = LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
+                self.model = LogisticRegression(C=C, class_weight=None, dual=False, fit_intercept=True,
                                                 intercept_scaling=1, max_iter=100, multi_class='ovr', n_jobs=1,
                                                 penalty='l2', random_state=None, solver='liblinear', tol=0.0001,
                                                 verbose=0, warm_start=False)
             else: #Multinomial logistic regression
-                self.model = LogisticRegression(C=1.0, class_weight='balanced', dual=False, fit_intercept=True, 
+                self.model = LogisticRegression(C=C, class_weight='balanced', dual=False, fit_intercept=True, 
                                                 intercept_scaling=1, max_iter=100, multi_class='multinomial', n_jobs=1,
                                                 penalty='l2', random_state=None, solver='newton-cg', tol=0.0001,
                                                 verbose=0, warm_start=True)
-        elif model == 'decision_tree' or model == 'DT':
+        elif self.modelname == 'regulized_logistic_regression' or self.modelname == 'RLR':
+            if len(self.classes) == 2: #binomial logistic regression case
+                self.model = LogisticRegression(C=C, class_weight=None, dual=False, fit_intercept=True,
+                                                intercept_scaling=1, max_iter=100, multi_class='ovr', n_jobs=1,
+                                                penalty='l2', random_state=None, solver='liblinear', tol=0.0001,
+                                                verbose=0, warm_start=False)
+            else: #Multinomial logistic regression
+                self.model = LogisticRegression(C=C, class_weight='balanced', dual=False, fit_intercept=True, 
+                                                intercept_scaling=1, max_iter=100, multi_class='multinomial', n_jobs=1,
+                                                penalty='l2', random_state=None, solver='newton-cg', tol=0.0001,
+                                                verbose=0, warm_start=True)
+        elif self.modelname in ['decision_tree','DT']:
             self.model = tree.DecisionTreeClassifier(max_depth=3)
         else:
             raise Exception("Classifier model un-recognized, current supported models: logistic_regression, decision_tree")
       
     
-    def run(self, n=1000, test_size=.2):
+    def run(self, n = 1000, test_size = .2):
         predictions_all =[]
         actual_all = []
         
@@ -113,6 +129,8 @@ class classifier():
             X_train, X_test, y_train, y_test = train_test_split(self.feature_table, self.labels_num, test_size=test_size)
             
             self.model.fit(X_train,y_train)
+            if self.modelname in ["LR", "RLR", 'logistic_regression', 'regulized_logistic_regression']:
+                self.coef = list(map(add, self.coef, self.model.coef_))
             predictions_all.extend(list(self.model.predict(X_test)))
             actual_all.extend(y_test)
             #coefs = coefs + self.model.coef_
@@ -135,4 +153,5 @@ class classifier():
                                  special_characters=True)  
     #        graph = graphviz.Source(dot_data)  
 #        graph.show()
+        return(self)
 

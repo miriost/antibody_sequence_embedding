@@ -9,10 +9,14 @@ Created on Sun Aug 12 11:21:56 2018
 
 import sys, argparse
 import os
+import matplotlib.pyplot as plt
 sys.path.insert(0, os.path.join(os.pardir, os.path.pardir))
 from miris_tools.classifier import classifier
 import pandas as pd
+import numpy as np
+
 def main(argv):
+    
     
     parser=argparse.ArgumentParser(
             description='''classify.py function performs classification based on a feature table where each row is an observation and each column is a feature. It's output is a confusion matrix and a score.  ''',
@@ -70,11 +74,35 @@ def main(argv):
     print("~~~~~~~~ Begin classifing...\nFeature_file: {}\nfeature columns: {}\nLabels column name: {}\nModel: {}\n~~~~~~~".format(
             os.path.abspath(args.feature_file), feat_range, labels_col_name, args.model))   
     
-    our_classifier = classifier(features, labels, args.model)
-    our_classifier.run()
-    return(our_classifier.score)   
     
-    
+    if args.model == 'regulized_logistic_regression' or args.model == 'RLR':
+        #plt.figure()
+#        for i in range(1,11):
+        our_classifier = classifier(features, labels, args.model, C= .9)
+        our_classifier.run(n=1000)
+        print(our_classifier.score)
+        print(our_classifier.coef)
+        
+#        for j in range(3):
+        plt.plot(range(args.feature_cols[0],args.feature_cols[1]+1), our_classifier.coef[0])      
+        plt.legend(loc = 'best')
+        
+        top_20_coefs = np.argsort(abs(our_classifier.coef[0]))[-20:]
+        plt.scatter(top_20_coefs, our_classifier.coef[0][top_20_coefs], c='r', marker='*')
+        print('Top 20 features:', str(top_20_coefs), '\nPerforming RLR...')
+        plt.show()
+        filtered_features = features.iloc[:, top_20_coefs]
+        our_classifier = classifier(filtered_features, labels, args.model, C= .9)
+        our_classifier.run(n=1000)
+        print(our_classifier.score)
+        
+        
+    else: 
+        print('not RLR')
+        our_classifier = classifier(features, labels, args.model)
+        our_classifier.run()
+        print(our_classifier.score)
+        
 
     
 if __name__ == "__main__":
