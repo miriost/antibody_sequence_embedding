@@ -11,6 +11,8 @@ import sys, argparse
 import os
 import pandas as pd
 import numpy as np
+from Bio.Seq import Seq
+from Bio.Alphabet import IUPAC
 
 
 sys.path.insert(0, os.path.join(os.pardir, os.path.pardir))
@@ -28,6 +30,7 @@ def main(argv):
     args = parser.parse_args()
     number_of_files = 0
     total_rows = 0
+    filtered_rows = 0
     if not (os.path.isdir(args.input_dir)):
         print('Input directory {} error! Make sure the directory exists.\nExiting...'.format(args.input_dir))
         sys.exit(1)
@@ -36,32 +39,44 @@ def main(argv):
         if filename.endswith('pass_collapsed.tab'):
             number_of_files += 1
             print('~~~file #' + str(number_of_files) + ': ' + os.path.join(args.input_dir, filename))
-            local_df = pd.read_table(os.path.join(args.input_dir, filename), usecols=['SEQUENCE_ID', 'FUNCTIONAL', 'JUNCTION_LENGTH', 'JUNCTION', 'DUPCOUNT'], header = 0, index_col = None)
+            local_df = pd.read_table(os.path.join(args.input_dir, filename), usecols=['SEQUENCE_ID', 'FUNCTIONAL', 'JUNCTION_LENGTH', 'JUNCTION', 'DUPCOUNT', 'CONSCOUNT', 'V_CALL', 'D_CALL', 'J_CALL'], header = 0, index_col = None)
             total_rows += len(local_df)
             print('total rows: ' + str(len(local_df)))
             local_df['FILENAME'] = os.path.splitext(os.path.split(filename)[1])[0]
+            ## DATA REPROCESS PART
+            # 1. REMOVE NON-FUNCTIONAL SEQUENCES 
+            
+            local_df = local_df[local_df.FUNCTIONAL=='T']
+    
+            print(' - After removing non functional sequences: {}'.format(len(local_df)))
+            # 2. REMOVE ROWS WHERE JUNCTION LENGTH IS SHORTER THAN 12 OR DOESN'T DEVIDE BY 3
+            local_df = local_df[local_df.JUNCTION_LENGTH > 12]
+            local_df = local_df[local_df.JUNCTION_LENGTH%3 == 0]
+            print(' - After len>12, len%3==0 : {}'.format(len(local_df)))
+            # 3. LEAVE ONLY ROWS WHERE CONSCOUNT > 1
+            local_df = local_df[local_df['CONSCOUNT'] > 1]
+            print(' - After CONSCOUNT > 1: {} '.format(len(local_df)))
+            # 4. REMOVE SEQUENCES WITH 'N' OR '-'
+            local_df['tmp'] = [junc if (('N' not in junc) and ('-' not in junc)) else 0 for junc in local_df.JUNCTION]
+            local_df = local_df[local_df.tmp != 0]
+            local_df = local_df.drop(['tmp'], axis = 1)
+            print(' - After removing sequences with N or gaps'.format(len(local_df)))
+            filtered_rows += len(local_df)
+    
+            #  5. translate to AA and trim first two letters and 1 last letter
+            local_df['JUNC_AA'] = [str(Seq(a).translate())[2:-1] for a in local_df.JUNCTION]
+            col_names = local_df.columns.values.tolist()
+    
 
             big_DF_.append(local_df)
             
     comb_np_array = np.vstack(big_DF_)  
     big_frame = pd.DataFrame(comb_np_array)
-    big_frame.columns = ['SEQUENCE_ID', 'FUNCTIONAL', 'JUNCTION_LENGTH', 'JUNCTION', 'DUPCOUNT', 'FILENAME']
+    big_frame.columns = col_names
     #print(big_frame) 
-    ## DATA REPROCESS PART
-    # 1. REMOVE NON-FUNCTIONAL SEQUENCES 
-    print(' - Begining data reprocess and filterting, number of original rows: ' +str(total_rows))
-    big_frame = big_frame[big_frame.FUNCTIONAL=='T']
-    current_len = len(big_frame)
-    print('Removed non functional {} sequences'.format(total_rows-current_len))
-    # 2. REMOVE ROWS WHERE JUNCTION LENGTH IS SHORTER THAN 12 OR DOESN'T DEVIDE BY 3
-    big_frame = big_frame[big_frame.JUNCTION_LENGTH > 12]
-    big_frame = big_frame[big_frame.JUNCTION_LENGTH%3 == 0]
-    print(' - Removed {} short junctions '.format(current_len-len(big_frame)))
-    current_len = len(big_frame)
-    
     
     big_frame.to_csv(args.output_file, index = False)
-    print('file generated {} out of {} files\nOriginal rows count: {} After filtering: {}'.format(args.output_file, number_of_files, total_rows, len(big_frame)))
+    print('*********\nfile generated {} out of {} files\nOriginal rows count: {} After filtering: {}'.format(args.output_file, number_of_files, total_rows, filtered_rows))
 
         
 if __name__ == "__main__":

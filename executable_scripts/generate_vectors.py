@@ -40,10 +40,13 @@ def main(argv):
     
     # generate a vector for each junction
     data_len = len(infile)
+    print('Data length: ' + str(data_len))
     W2V_vectors = np.zeros((data_len,100))
     to_drop = []
     for i in range(data_len) :
-        word = infile[args.column].iloc[i] 
+        word = infile[args.column].iloc[i]
+        if i%100000==0: 
+            print(str(i) + ': ' + word)
         # Check for errors (if some sequence doesn't appear in the model)
         try:
             W2V_vectors[i] = list(model.to_vecs(word)[0])
