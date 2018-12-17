@@ -8,6 +8,7 @@ Created on Mon Dec 10 15:31:14 2018
 
 import pandas as pd
 import numpy as np
+import sys
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
@@ -27,13 +28,32 @@ from sklearn.metrics import confusion_matrix
 #file.to_csv('/media/miri-o/Documents/filtered_data_sets/Celiac_for_V_family_analysis_3M_seqs_Celiac_n_3_trimming_2_1_labeled_FILTERED_DATA.csv', sep = ',')
 
 # Now let's try straight-forawrd classification on our vectors based on the v family
-#vectors = pd.read_csv('/media/miri-o/Documents/vectors/Celiac_for_V_family_analysis_3M_seqs_Celiac_n_3_trimming_2_1_VECTORS_after_PCACeliac_10D.csv')
-vectors = pd.read_csv(r'C:\Users\mirio\Dropbox\BIU\LAB\Celiac_for_V_family_analysis_10K_3D_vectors.csv')
-data = pd.read_csv(r'C:\Users\mirio\Dropbox\BIU\LAB\Celiac_for_V_family_analysis_10K_DATA.csv')
+#vectors = pd.read_csv('/media/miri-o/Documents/vectors/Celiac_for_V_family_analysis_3M_seqs_Celiac_n_3_trimming_2_1_VECTORS_after_PCACeliac_3D.csv')
+#vectors = pd.read_csv(r'C:\Users\mirio\Dropbox\BIU\LAB\Celiac_for_V_family_analysis_10K_3D_vectors.csv')
+#data = pd.read_csv(r'C:\Users\mirio\Dropbox\BIU\LAB\Celiac_for_V_family_analysis_10K_DATA.csv')
 
-valid_indexes = data.index[~data.V_FAMILY.isnull()]
-X = vectors.loc[valid_indexes]
-y = data.V_FAMILY.loc[valid_indexes]
+# Trying on all data (3M)
+
+vectors = pd.read_csv('/media/miri-o/Documents/vectors/Celiac_for_V_family_analysis_3M_seqs_Celiac_n_3_trimming_2_1_VECTORS_after_PCACeliac_10D.csv', sep = ',')
+data = pd.read_csv('/media/miri-o/Documents/filtered_data_sets/Celiac_for_V_family_analysis_3M_seqs_Celiac_n_3_trimming_2_1_labeled_FILTERED_DATA.csv', sep = ',')
+
+if len(vectors) == len(data):
+    print('Data length validation succeeded')
+else:
+    print('Data validation FAILED...')
+    sys.exit(1)
+
+
+valid_indexes = data.index[~data.V_FAMILY.isnull()] # Remove rows where v_family is null 
+sub_indexes = [*np.random.choice(data.index[data.V_FAMILY=='IGHV1'], 500000), *np.random.choice(data.index[data.V_FAMILY=='IGHV3'], 500000), *np.random.choice(data.index[data.V_FAMILY=='IGHV4'], 500000)]
+#X = vectors.loc[valid_indexes]
+#y = data.V_FAMILY.loc[valid_indexes]
+
+#sampled data
+X = vectors.loc[sub_indexes]
+y = data.V_FAMILY.loc[sub_indexes]
+
+y = [int(x[-1]) for x in y]
 
 # Create Training and Test Sets and Apply Scaling
 
@@ -62,6 +82,9 @@ print('Accuracy of Decision Tree classifier on training set: {:.2f}'
 print('Accuracy of Decision Tree classifier on test set: {:.2f}'
      .format(clf.score(X_test, y_test)))
 
+pred = clf.predict(X_test)
+print(confusion_matrix(y_test, pred))
+print(classification_report(y_test, pred))
 #K-Nearest Neighbors
 
 knn = KNeighborsClassifier()
@@ -70,6 +93,10 @@ print('Accuracy of K-NN classifier on training set: {:.2f}'
      .format(knn.score(X_train, y_train)))
 print('Accuracy of K-NN classifier on test set: {:.2f}'
      .format(knn.score(X_test, y_test)))
+
+pred = knn.predict(X_test)
+print(confusion_matrix(y_test, pred))
+print(classification_report(y_test, pred))
 
 #Linear Discriminant Analysis
 
@@ -89,7 +116,7 @@ print('Accuracy of GNB classifier on training set: {:.2f}'
 print('Accuracy of GNB classifier on test set: {:.2f}'
      .format(gnb.score(X_test, y_test)))
 
-# Support Vector Machine
+## Support Vector Machine
 svm = SVC()
 svm.fit(X_train, y_train)
 print('Accuracy of SVM classifier on training set: {:.2f}'
@@ -97,7 +124,7 @@ print('Accuracy of SVM classifier on training set: {:.2f}'
 print('Accuracy of SVM classifier on test set: {:.2f}'
      .format(svm.score(X_test, y_test)))
 
-pred = knn.predict(X_test)
+pred = svm.predict(X_test)
 print(confusion_matrix(y_test, pred))
 print(classification_report(y_test, pred))
 
