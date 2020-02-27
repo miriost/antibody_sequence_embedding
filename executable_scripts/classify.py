@@ -63,7 +63,8 @@ def main(argv):
         feat_range = (1, len(feature_file.columns))
     else:
         feat_range = (args.feature_cols[0], args.feature_cols[1]+1)
-        
+    print('features range: {},{}'.format(feat_range[0], feat_range[1]))
+    print('features used:{}'.format(feature_file.columns[feat_range[0]: feat_range[1]]))
     features = feature_file.iloc[:, range(feat_range[0], feat_range[1])]       
     if len(labels) != len(features):
            print('Labels and features length mismatch!.\nExiting...')
@@ -98,7 +99,6 @@ def main(argv):
         
         
     else: 
-        print('not RLR')
         our_classifier = classifier(features, labels, args.model)
         our_classifier.run()
         print(our_classifier.score)
@@ -107,5 +107,6 @@ def main(argv):
     
 if __name__ == "__main__":
    main(sys.argv[1:])   
+   
    
   

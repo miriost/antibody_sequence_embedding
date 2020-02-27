@@ -26,6 +26,7 @@ def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('input_dir', help='a directory containing makedb files')
     parser.add_argument('output_file', help='output file')
+    parser.add_argument('--trim', nargs = 2, type = int, help = 'too integers to trim, first from beginning, 2nd from end')
     
     args = parser.parse_args()
     number_of_files = 0
@@ -36,8 +37,8 @@ def main(argv):
         sys.exit(1)
     big_DF_ = []
     for filename in os.listdir(args.input_dir):
-        if filename.endswith('pass_collapsed.tab'):
-            number_of_files += 1
+        if filename.endswith('_collapsed.tab'):
+            
             print('~~~file #' + str(number_of_files) + ': ' + os.path.join(args.input_dir, filename))
             local_df = pd.read_table(os.path.join(args.input_dir, filename), usecols=['SEQUENCE_ID', 'FUNCTIONAL', 'JUNCTION_LENGTH', 'JUNCTION', 'DUPCOUNT', 'CONSCOUNT', 'V_CALL', 'D_CALL', 'J_CALL'], header = 0, index_col = None)
             total_rows += len(local_df)
@@ -60,15 +61,22 @@ def main(argv):
             local_df['tmp'] = [junc if (('N' not in junc) and ('-' not in junc)) else 0 for junc in local_df.JUNCTION]
             local_df = local_df[local_df.tmp != 0]
             local_df = local_df.drop(['tmp'], axis = 1)
-            print(' - After removing sequences with N or gaps'.format(len(local_df)))
+            print(' - After removing sequences with N or gaps: {}'.format(len(local_df)))
             filtered_rows += len(local_df)
     
-            #  5. translate to AA and trim first two letters and 1 last letter
-            local_df['JUNC_AA'] = [str(Seq(a).translate())[2:-1] for a in local_df.JUNCTION]
+            #  5. translate to AA and trim (if needed)
+            
+            local_df['JUNC_AA'] = [str(Seq(a).translate()) for a in local_df.JUNCTION]
+            if args.trim:   
+                print('trimmimg {} AAs from he beginning, {} AAs from te end'.format(args.trim[0], args.trim[1]))
+                local_df['JUNC_AA'] = [a[args.trim[0]:-args.trim[1]] for a in local_df['JUNC_AA']]
             col_names = local_df.columns.values.tolist()
     
-
-            big_DF_.append(local_df)
+            if len(local_df) > 3000:
+                big_DF_.append(local_df)
+                number_of_files += 1
+            else:
+                print('file not added due to low number of sequences')
             
     comb_np_array = np.vstack(big_DF_)  
     big_frame = pd.DataFrame(comb_np_array)

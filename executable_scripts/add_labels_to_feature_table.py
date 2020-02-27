@@ -20,9 +20,11 @@ def main(argv):
     parser.add_argument('labels_file', 
                         help='a file containing the labels for each observation')
     parser.add_argument('-l', '--labels_col_name', 
-                        help='Name of the labels column, default: "labels"', default= 'labels')
+                        help='Name of the labels column in lable file, default: "labels"', default= 'labels')
     parser.add_argument('-o', '--observation_col_name', 
-                        help='Name of the observation column, default: "SUBJECT"', default = "SUBJECT")
+                        help='Name of the observation column in labels file, default: "SUBJECT"', default = "SUBJECT")
+    parser.add_argument('-od', '--observation_col_name_data_file', 
+                        help='Name of the observation column in faeture file, default: "SUBJECT"', default = "SUBJECT")
     
     args = parser.parse_args()
     print('~~~\nAdding labels to feature file, feature file: {}, labels file: {}, labels column name: {}, observation column name: {}'.format(args.feature_file,
@@ -37,7 +39,7 @@ def main(argv):
            sys.exit(1)
     
     
-    feature_file = pd.read_csv(args.feature_file, index_col = 0)     
+    feature_file = pd.read_csv(args.feature_file)     ## removed index_col=0!!!
     labels_file = pd.read_csv(args.labels_file) 
     if not args.observation_col_name in labels_file.columns:
            print(args.observation_col_name + ' column is missing in labels file\nExiting...')
@@ -45,6 +47,9 @@ def main(argv):
     if not args.labels_col_name in labels_file.columns:
            print(args.labels_col_name + ' column is missing in labels file\nExiting...')
            sys.exit(1)           
+    if not args.observation_col_name_data_file in feature_file.columns:
+           print(args.observation_col_name_data_file + ' column is missing in feature file\nExiting...')
+           sys.exit(1)  
 #    labels_file = labels_file[[args.observation_col_name, args.labels_col_name]]
 #    print(labels_file.head())
 #    labels_dict = labels_file.to_dict()
@@ -54,7 +59,7 @@ def main(argv):
         
 
 #    labels = [labels_dict[args.labels_col_name][i] for i in feature_file.index]
-    labels = [labels_dict[i] for i in feature_file.index]
+    labels = [labels_dict[i] for i in feature_file.loc[:, args.observation_col_name_data_file]]
     feature_file['labels'] = labels
     
     path = os.path.join(os.path.dirname(args.feature_file), os.path.split(args.feature_file)[-1].split(os.path.extsep)[0]+'_with_labels.csv')

@@ -1,15 +1,15 @@
 #!/bin/bash
 
-Input_file=/media/miri-o/Documents/files_to_vectorise/HCV_sampled_50k.csv
-model_file=/media/miri-o/Documents/Immune2vec/trained_models/Celiac_n_3_trimming_2_1.model
-log_file=/media/miri-o/Documents/logs/auto_run.txt
-score_file=/media/miri-o/Documents/logs/scores.txt
+Input_file=/media/miri-o/Documents/HCV_data_only_CI_SC_10K_per_subject.csv
+model_file=/media/miri-o/Documents/trained_models_NEW/CDR3_from_HCV_trimmied_3_4.model.model
+log_file=/media/miri-o/Documents/logs/auto_run_HCV_data_only_CI_SC_10K_per_subject_251219.txt
+score_file=/media/miri-o/Documents/logs/scores_data_only_CI_SC_10K_per_subject_251219.txt
 echo 'Inputfile,model_name,dimension_reduction_method,number_of_dimensions,clustering_method,number_of_clusters,diversity_TH,classification_method,score' > $score_file
 
 cd /media/miri-o/Documents/miris_tools/executable_scripts/
 
 echo "Generating vectors"
-python generate_vectors.py -c "JUNC_AA" $Input_file $model_file > $log_file
+python generate_vectors.py -c "JUNC_AA_trimmed_3_4" $Input_file $model_file > $log_file
 line=$(tail -n 1 $log_file)
 vector_file_path=${line##*:}
 filename=${line##*/*/}
@@ -20,9 +20,9 @@ data_file=${data_file##*:}
 
 
 dim_method='PCA'
-for dims in {3..100}
+for dims in {2..100}
 do
-	echo "reducing dimensions to" $dims 
+	echo "reducing dimensions to" $dims
 	echo $vector_file_path
 	python reduce_dimensions.py -i $vector_file_path -o ${only_path}${filename}_after_${dim_method}_${dims}D.csv -n $dims -m $dim_method >> $log_file
 
@@ -34,7 +34,7 @@ do
 		TH=98
 		l='SUBJECT'
 		clust_method="kmeans"
-		echo "Performing clustering, n = "$n  
+		echo "Performing clustering, n = "$n
 		python perform_clustering.py -m $clust_method -n $n -d $d -TH $TH -l $l $clustering_file $data_file >> $log_file
 
 		line=$(tail -n 1 $log_file)
@@ -51,7 +51,7 @@ do
 		line=$(tail -n 1 $log_file)
 		classify_file=${line##*:}
 
-		 
+
 		declare -a class_method=('LR' 'DT')
 		for method in "${class_method[@]}"
 		do

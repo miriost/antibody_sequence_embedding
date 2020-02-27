@@ -14,19 +14,20 @@ import numpy as np
 import os
 
 
-def plot_embedding_with_properties(x,y, prop, title=None, filename = None):
+def plot_embedding_with_properties(x,y, prop, title=None, filename = None, normalize = False):
     # normalize property
     #prop = [(c - min(prop))/(max(prop)-min(prop))*100 for c in prop]
-    
-    sc = plt.scatter(x, y, c=prop, s=2, cmap='plasma', alpha = .7, marker = 'D')
+    if normalize:
+        prop = [(c - min(prop))/(max(prop)-min(prop))*100 for c in prop]
+    sc = plt.scatter(x, y, c=prop, s=2, cmap='gnuplot', alpha = .7, marker = 'D')
     plt.colorbar(sc)
-    plt.xlabel('1st component')
-    plt.ylabel('2nd component')
+    plt.xlabel('t-SNE 1st component')
+    plt.ylabel('t-SNE 2nd component')
     #plt.axis([xmin, xmax, ymin, ymax])
     if title is not None:
         plt.title(title) 
     if filename is not None:
-        plt.savefig(filename+'.pdf', bbox_inches='tight')
+        plt.savefig(filename+'.png', bbox_inches='tight')
 
     plt.show()
 

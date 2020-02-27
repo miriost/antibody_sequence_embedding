@@ -23,6 +23,7 @@ def main(argv):
                         help='a saved word embedding model file')
     parser.add_argument('--sep', 
                         help="Delimiter to use. default: ','", default = ',')
+    parser.add_argument('--size', help = "Vector size", default = 100)
 
     args = parser.parse_args()
 
@@ -41,7 +42,7 @@ def main(argv):
     # generate a vector for each junction
     data_len = len(infile)
     print('Data length: ' + str(data_len))
-    W2V_vectors = np.zeros((data_len,100))
+    W2V_vectors = np.zeros((data_len,int(args.size)))
     to_drop = []
     for i in range(data_len) :
         word = infile[args.column].iloc[i]

@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Sep  2 14:26:25 2019
+
+@author: miri-o
+"""
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+
+
+mi_val_df = pd.read_csv('/media/miri-o/Documents/Moran_I_on_AA_triplets.csv')
+props = ['CDR3_AA_GRAVY', 'CDR3_AA_BULK',
+       'CDR3_AA_ALIPHATIC', 'CDR3_AA_POLARITY', 'CDR3_AA_CHARGE', 'CDR3_AA_BASIC', 'CDR3_AA_ACIDIC', 'CDR3_AA_AROMATIC']
+TH = mi_val_df['d']
+
+plt.figure(figsize=(10,10))  
+colors = iter(plt.cm.gist_ncar(np.linspace(0,1,10)))
+for prop in props:
+    c=next(colors)
+    plt.plot(TH, mi_val_df.loc[:,[prop]], 'ro--',c=c)
+#for i in range(len(TH)):
+#    plt.text(TH[i], mi_vec[i]+0.05, str("%.3f"%mi_vec[i]))
+plt.title("Moran's Index as a funcion of distance")
+plt.xlabel('Euclidian distance')
+plt.ylabel("Moran's I")
+plt.legend(props)
+plt.grid(True)
+
+output_dir = '/media/miri-o/Documents/results/New_results_dec5_2019'
+plt.savefig(os.path.join(output_dir, 'morans_index_3_grams.png'), bbox_inches='tight')
+plt.show()

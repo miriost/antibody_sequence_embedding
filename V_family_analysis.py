@@ -21,11 +21,11 @@ from sklearn.svm import SVC
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 ## Preprocess
-#file = pd.read_csv('/media/miri-o/Documents/filtered_data_sets/Celiac_for_V_family_analysis_3M_seqs_Celiac_n_3_trimming_2_1_FILTERED_DATA.csv',sep=',')
-#labels = pd.read_csv('/media/miri-o/Documents/filtered_data_sets/Celiac_for_V_Family_V_family_labels.csv', sep='\t')
-#valid_labels = ['NA' if ',' in y else y for y in labels.x ]
-#file['V_FAMILY'] = valid_labels
-#file.to_csv('/media/miri-o/Documents/filtered_data_sets/Celiac_for_V_family_analysis_3M_seqs_Celiac_n_3_trimming_2_1_labeled_FILTERED_DATA.csv', sep = ',')
+#file = pd.read_csv('/media/miri-o/Documents/filtered_data_sets/Celiac_for_V_family_analysis_3M_seqs_celiac_model_Jan19_2019_FILTERED_DATA.csv',sep=',')
+#file_with_labels = pd.read_csv('/media/miri-o/Documents/filtered_data_sets/Celiac_for_V_Family_V_family_labels_Jan9_2019.csv', index_col = 0, sep = '\t')
+#valid_labels = ['NA' if ',' in y else y for y in file_with_labels.V_FAMILY]
+#file_with_labels['V_FAMILY'] = valid_labels
+#file_with_labels.to_csv('/media/miri-o/Documents/filtered_data_sets/Celiac_for_V_family_analysis_3M_seqs_celiac_model_Jan19_2019_FILTERED_DATA2.csv', sep = ',')
 
 # Now let's try straight-forawrd classification on our vectors based on the v family
 #vectors = pd.read_csv('/media/miri-o/Documents/vectors/Celiac_for_V_family_analysis_3M_seqs_Celiac_n_3_trimming_2_1_VECTORS_after_PCACeliac_3D.csv')
@@ -34,8 +34,8 @@ from sklearn.metrics import confusion_matrix
 
 # Trying on all data (3M)
 
-vectors = pd.read_csv('/media/miri-o/Documents/vectors/Celiac_for_V_family_analysis_3M_seqs_Celiac_n_3_trimming_2_1_VECTORS_after_PCACeliac_10D.csv', sep = ',')
-data = pd.read_csv('/media/miri-o/Documents/filtered_data_sets/Celiac_for_V_family_analysis_3M_seqs_Celiac_n_3_trimming_2_1_labeled_FILTERED_DATA.csv', sep = ',')
+vectors = pd.read_csv('/media/miri-o/Documents/vectors/FLU_data_012119_HCV_model_Jan19_2019_VECTORS.csv', sep = ',')
+data = pd.read_csv('/media/miri-o/Documents/filtered_data_sets/FLU_data_012119_HCV_model_Jan19_2019_FILTERED_DATA2.csv', sep = ',')
 
 if len(vectors) == len(data):
     print('Data length validation succeeded')
@@ -45,7 +45,7 @@ else:
 
 
 valid_indexes = data.index[~data.V_FAMILY.isnull()] # Remove rows where v_family is null 
-sub_indexes = [*np.random.choice(data.index[data.V_FAMILY=='IGHV1'], 500000), *np.random.choice(data.index[data.V_FAMILY=='IGHV3'], 500000), *np.random.choice(data.index[data.V_FAMILY=='IGHV4'], 500000)]
+sub_indexes = [*np.random.choice(data.index[data.V_FAMILY=='IGHV1'], 114000, replace=False), *np.random.choice(data.index[data.V_FAMILY=='IGHV3'], 114000, replace=False), *np.random.choice(data.index[data.V_FAMILY=='IGHV4'], 114000, replace=False)]
 #X = vectors.loc[valid_indexes]
 #y = data.V_FAMILY.loc[valid_indexes]
 

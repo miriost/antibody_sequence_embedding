@@ -115,6 +115,7 @@ class ProtVec(word2vec.Word2Vec):
         self.size = size
         self.corpus_fname = corpus_fname
         self.trim = trim
+        self.window = window
 
         if corpus is None and corpus_fname is None:
             raise Exception("Either corpus_fname or corpus is needed!")
@@ -126,6 +127,7 @@ class ProtVec(word2vec.Word2Vec):
             
 
         word2vec.Word2Vec.__init__(self, corpus, size=size, sg=sg, window=window, min_count=min_count, workers=workers)
+        print('word2vec model, size={}, window={}, min_count={}, workers={})'.format(size, window, min_count, workers))
 
     def to_vecs(self, seq):
         """
@@ -174,6 +176,7 @@ class AAVec(word2vec.Word2Vec):
             
 
         word2vec.Word2Vec.__init__(self, corpus, size=size, sg=sg, window=window, min_count=min_count, workers=workers)
+        print('word2vec model, size={}, window={}, min_count={}, workers={})'.format(size, window, min_count, workers))
 
     def to_vecs(self, seq):
         """
