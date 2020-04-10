@@ -26,7 +26,7 @@ def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('input_dir', help='a directory containing makedb files')
     parser.add_argument('output_file', help='output file')
-    parser.add_argument('--trim', nargs = 2, type = int, help = 'too integers to trim, first from beginning, 2nd from end')
+    parser.add_argument('--trim', nargs = 2, type = int, help = 'two integers to trim, first from beginning, 2nd from end')
     
     args = parser.parse_args()
     number_of_files = 0

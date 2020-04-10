@@ -5,13 +5,20 @@ Created on Wed Aug  1 10:31:42 2018
 
 @author: miri-o
 """
-
-import sys, argparse
-sys.path.insert(0, "/media/miri-o/Documents")
-from miris_tools import sequence_modeling
 import pandas as pd
 import numpy as np
 import os
+import sys, argparse
+
+if os.path.exists("/media/miri-o/Documents"):
+    sys.path.insert(0, "/media/miri-o/Documents") 
+elif os.path.exists(r'C:\Users\mirio\research'):
+    sys.path.insert(0, r'C:\Users\mirio\research')
+else:
+    raise Exception('Could not find miris tools library')
+            
+from miris_tools import sequence_modeling
+
 
 def main(argv):
     parser = argparse.ArgumentParser()

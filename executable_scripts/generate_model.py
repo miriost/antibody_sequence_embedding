@@ -6,9 +6,15 @@ Created on Mon Jul 23 15:16:13 2018
 @author: miri-o
 """
 
-import sys, getopt
-sys.path.insert(0, "/media/miri-o/Documents")
+import sys, getopt, os
 import time
+if os.path.exists("/media/miri-o/Documents"):
+    sys.path.insert(0, "/media/miri-o/Documents") 
+elif os.path.exists(r'C:\Users\mirio\research'):
+    sys.path.insert(0, r'C:\Users\mirio\research')
+else:
+    raise Exception('Could not find miris tools library')
+    
 from miris_tools.sequence_modeling import ProtVec
 
 def main(argv):
@@ -57,13 +63,13 @@ def main(argv):
        print('Missing fasta file or corpus file\ngenerate_model.py -f <fasta_file> -c <corpus_object> -o <outputfile> -n <n_length> -r <reading_frame> -t <trimming>')
        sys.exit(2)
    elif fasta_file:
-       pv = ProtVec(corpus_fname=fasta_file, corpus=None, n=n_len, reading_frame=reading_frame, trim = trim_range,size=300, out=output_corpus_file, sg=1, window=3, min_count=2, workers=3)
+       pv = ProtVec(corpus_fname=fasta_file, corpus=None, n=n_len, reading_frame=reading_frame, trim = trim_range,size=100, out=output_corpus_file, sg=1, window=5, min_count=2, workers=3)
        process_time = (time.time() - t0)/60 # in minutes
        print('Model built in {} minutes, saving...'.format(process_time))
        pv.save(output_corpus_file+ '.model')
        print('generated a model from fasta file "{}"\nModel saved to: {}\nCorpus file saved to: {}'.format(fasta_file, output_corpus_file + '.model', output_corpus_file + '_corpus.txt'))
    elif corpus_object:
-       pv = ProtVec(corpus_fname=None, corpus=corpus_object, n=n_len, reading_frame=reading_frame, trim = trim_range, size=300, out=output_corpus_file, sg=1, window=3, min_count=2, workers=3)
+       pv = ProtVec(corpus_fname=None, corpus=corpus_object, n=n_len, reading_frame=reading_frame, trim = trim_range, size=100, out=output_corpus_file, sg=1, window=5, min_count=2, workers=3)
        process_time = (time.time() - t0)/60 # in minutes
        print('Model built in {} minutes, saving...'.format(process_time))
        pv.save(output_model + '.model')
