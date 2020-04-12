@@ -6,6 +6,7 @@ Created on Sun Apr 12 21:11:02 2020
 """
 #multi-proceesing test
 import time
+import multiprocessing 
 
 def basic_func(x):
     if x == 0:
@@ -14,11 +15,21 @@ def basic_func(x):
         return 'even'
     else:
         return 'odd'
-    
-starttime = time.time()
-for i in range(0,10):
-    y = i*i
+
+def multiprocessing_func(x):
+    y = x*x
     time.sleep(2)
-    print('{} squared results in a/an {} number'.format(i, basic_func(y)))
+    print('{} squared results in a/an {} number'.format(x, basic_func(y)))
     
-print('That took {} seconds'.format(time.time() - starttime))
+if __name__ == '__main__':
+    starttime = time.time()
+    processes = []
+    for i in range(0,10):
+        p = multiprocessing.Process(target=multiprocessing_func, args=(i,))
+        processes.append(p)
+        p.start()
+        
+    for process in processes:
+        process.join()
+        
+    print('That took {} seconds'.format(time.time() - starttime))
