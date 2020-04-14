@@ -9,6 +9,7 @@ import numpy as np
 from scipy.spatial import KDTree
 import time
 import sys
+import multiprocessing
 #import pprofile
 #import cProfile
 from datetime import datetime
@@ -23,6 +24,7 @@ def main(argv):
                         help='Output folder for the 3 output files - Nearest neighbors file, destances file, and results anaylsis file')
     parser.add_argument('output_description', 
                         help='description to use inside output file names')
+    parser.add_argument('--cpus', type=int, default=2, help='How many cores to run in parallel')
     args = parser.parse_args()
     if not(os.path.isfile(args.data_file_path)):
         print('feature file error, make sure feature and vectors file path\nExiting...')
@@ -43,12 +45,13 @@ def main(argv):
     print('Vectors file path:' + args.vectors_file_path)
     print('-----------------------')
     output_file_name = args.output_description + '.csv'
-    neighbors_list = cluster(args.vectors_file_path, args.output_folder_path, output_file_name, cluster_size=100)
+    neighbors_list = cluster(args.vectors_file_path, args.output_folder_path, 
+                             output_file_name, cluster_size=100, cpus=args.cpus)
 #    neighbors_list = np.loadtxt(output_file_path, delimiter=',', skiprows =1)
-    out = analyze_data(neighbors_list, args.data_file_path)
-    output_file = args.output_description + '_analysis.csv'
-    out.to_csv(os.path.join(args.output_folder_path, output_file))
-    print(str(datetime.now()) +  ' | data written to output file: ' + output_file)
+#    out = analyze_data(neighbors_list, args.data_file_path)
+#    output_file = args.output_description + '_analysis.csv'
+#    out.to_csv(os.path.join(args.output_folder_path, output_file))
+#    print(str(datetime.now()) +  ' | data written to output file: ' + output_file)
     
 def read_vector_data(input_file):
     """Read vector data from input file and return it as pandas vector list"""
@@ -65,15 +68,12 @@ def write_proximity_file(output_file, proximity):
 def get_proximity_list(data, cluster_size):
     proximity_list = np.zeros([data.shape[0], cluster_size+1])
     distances_list = np.zeros([data.shape[0], cluster_size+1])
-#    profiler = pprofile.Profile()
-#    with profiler:
         # Build KDTree to inquire the closest points
     tree = KDTree(data)
     print(str(datetime.now()) + '| KDtree ready')
     t0 = time.time()
     upper_bound = 10
-    for vector_idx, vector in enumerate(data):
-        # the query will always find vector as nearest result        
+    for vector_idx, vector in enumerate(data):      
         distances, indices = tree.query(vector,cluster_size+1,p=2,distance_upper_bound=upper_bound)
         while math.inf in distances:
             upper_bound = upper_bound*1.1
@@ -87,24 +87,125 @@ def get_proximity_list(data, cluster_size):
             dateTimeObj = datetime.now()
             timeObj = dateTimeObj.time()
             print('{} | index = {}, finished 1000 vectors in {:.3} sec'.format(timeObj, str(vector_idx), time.time()-t0))
-            #distances_average = np.mean(distances_list[(vector_idx-1000):(vector_idx+1)])
             distances_max = np.max(distances_list[(vector_idx-1000):(vector_idx+1)])
-            #print('average distance between neighbors, indexes {} to {}: {}'.format((vector_idx-1000),(vector_idx+1), distances_average))
             print('Maximal distance between neighbors, indexes {} to {}: {}'.format((vector_idx-1000),(vector_idx+1), distances_max))
             upper_bound = (upper_bound*(vector_idx//1000) + distances_max)/(1+vector_idx//1000)
             print('Updating upper bound to:' + str(upper_bound))
             t0 = time.time()
-#        print('vector index {}, closest to {}, distances {}:'.format(vector_idx, indices, distances[:2]))
-        #assert indices[0] == vector_idx, "First index should be the vector itself"
-        #indices = indices[1:]
-#        profiler.print_stats() 
+
+    return proximity_list, distances_list
+
+def worker_query(proximity_list, distances_list, vector_idx, tree, vector, 
+                 cluster_size, p, upper_bound, out_q):
+    """Run a single query and return the result"""
+    # import ipdb; ipdb.set_trace()
+    distances, indices = tree.query(vector,cluster_size,p=2,distance_upper_bound=upper_bound)
+    while math.inf in distances:
+            upper_bound = upper_bound*1.1
+            distances, indices = tree.query(vector, cluster_size,p=2,distance_upper_bound=upper_bound)
+            print('Upper bound updated itertivly to: ' + str(upper_bound))
+    out_dict = {vector_idx:{'distances':distances, 'indices':indices}}        
+             
+    if vector_idx%1000==0 and vector_idx>0:
+        dateTimeObj = datetime.now()
+        timeObj = dateTimeObj.time()
+        print('{} | index = {}, finished 1000 vectors'
+              .format(timeObj, str(vector_idx)))
+    out_q.put(out_dict)
+
+def get_proximity_list_parallel_old(data, cluster_size):
+    proximity_list = np.zeros([data.shape[0], cluster_size+1])
+    distances_list = np.zeros([data.shape[0], cluster_size+1])
+        # Build KDTree to inquire the closest points
+    tree = KDTree(data)
+    print(str(datetime.now()) + '| KDtree ready')
+    upper_bound = 10
+    PROCESSORS = 2
+    CHUNK_SIZE = 100    
+#    t0 = time.time()    
+    # build input for processes
+    workers_input = [None] * len(data)
+    out_q = multiprocessing.Queue()
+    for vector_idx, vector in enumerate(data):
+        workers_input[vector_idx] = (proximity_list, distances_list, 
+                     vector_idx, tree, vector, cluster_size+1, 2, upper_bound, out_q)
+    
+    print(str(datetime.now()) + '| Input ready')
+    with multiprocessing.Pool(processes=PROCESSORS) as pool:
+        print('Entering pool')
+        pool.starmap(worker_query, workers_input, CHUNK_SIZE)
+        
+    print('str(datetime.now()) | Pool finished, starting query procssing')
+    while not out_q.empty():
+        single_value = out_q.get()
+        proximity_list[list(single_value.keys())[0]] = np.array(single_value[list(single_value.keys())[0]]['indices'], dtype=np.int)
+        proximity_list[list(single_value.keys())[0]] = np.array(single_value[list(single_value.keys())[0]]['distances'], dtype=np.float)
+
+
+def input_iterator(kd_tree, vectors, cluster_size, p, upper_bound):
+    for idx, vector in enumerate(vectors):
+        yield (kd_tree, vector, idx, cluster_size, p, upper_bound)
+
+def worker_pavel(input_arg):
+    (kd_tree, vector, idx, cluster_size, p, upper_bound) = input_arg
+    
+#    assert isinstance(kd_tree, KDTree)
+#    assert len(vector) == 100
+#    assert isinstance(idx, int)
+#    assert cluster_size == 101
+#    assert isinstance(upper_bound, float)
+    
+    distances, indices = kd_tree.query(vector, cluster_size, p,  
+                                       distance_upper_bound=upper_bound)
+    while math.inf in distances:
+            upper_bound = upper_bound * 1.1
+            distances, indices = kd_tree.query(vector, cluster_size, p,
+                                               distance_upper_bound=upper_bound)
+            print('Upper bound updated itertivly to: ' + str(upper_bound))
+    out_dict = {idx:{'distances':distances, 'indices':indices}}
+    return out_dict
+
+
+def get_proximity_list_parallel(data, cluster_size, cpus=2):
+
+    print(f'data length: {len(data)}. Using {cpus} cpus')
+    kd_tree = KDTree(data)    
+    print(str(datetime.now()) + '| KDtree ready')
+    
+    # initialize pool
+    giant_result = {}
+    upper_bound = 10.0
+    t0 = time.time()
+    
+    with multiprocessing.Pool(processes=cpus) as pool:
+        for res in pool.imap_unordered(func=worker_pavel, 
+                                       iterable=input_iterator(kd_tree, data, cluster_size+1, 2, upper_bound), 
+                                       chunksize=200):
+            giant_result.update(res)
+            if len(giant_result) % 1000 == 0:
+                print(f'{datetime.now()} finished {len(giant_result)} results there bitches')
+
+    print("{} finished. Received {} results. Took {}"
+          .format(datetime.now(), len(giant_result), time.time() - t0))
+    
+    proximity_list = np.zeros([data.shape[0], cluster_size+1])
+    distances_list = np.zeros([data.shape[0], cluster_size+1])
+    for idx, res_dict in giant_result.items():    
+        proximity_list[idx] = np.array(res_dict['indices'], dtype=np.int)
+        distances_list[idx] = np.array(res_dict['distances'], dtype=np.float)
+    
     return proximity_list, distances_list
 
 
-def cluster(data_file, output_file_path, output_file_name, cluster_size=100):
+
+def cluster(data_file, output_file_path, output_file_name, cluster_size=100, cpus=2):
     """Cluster the data and write the result to output file"""
     vectors = read_vector_data(data_file)
-    proximity, distances = get_proximity_list(vectors, cluster_size)
+    if False:
+        proximity, distances = get_proximity_list(vectors, cluster_size)
+    else:
+        proximity, distances = get_proximity_list_parallel(vectors, cluster_size, cpus)
+    
     write_proximity_file(os.path.join(output_file_path, 'NN_'+output_file_name), proximity)
     write_proximity_file(os.path.join(output_file_path, 'Distances_'+output_file_name), distances)
     print(str(datetime.now()) + ' | finished clustering, files saved to: ')
@@ -234,6 +335,7 @@ def test_cluster_small_data():
 
     
 if __name__ == '__main__':
+    print('alive')
     main(sys.argv[1:])
     # test_proximity_list()
     # options = parse_args()
