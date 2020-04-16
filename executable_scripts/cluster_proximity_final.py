@@ -74,6 +74,7 @@ def main():
         print('Vectors file path: ' + args.vectors_file_path)
     else:
         print('NN file path: ' + args.NN_file_path)
+        logger.info(f'NN file path: {args.NN_file_path}')
     print('-----------------------')
     output_file_name = args.output_description + '.csv'
     if args.perform_NN:
@@ -86,15 +87,17 @@ def main():
         out = analyze_data(neighbors_list, args.data_file_path)
         output_file = args.output_description + '_analysis.csv'
         out.to_csv(os.path.join(args.output_folder_path, output_file))
-        print(str(datetime.now()) +  ' | data written to output file: ' + output_file)
+        logger.info(str(datetime.now()) +  ' | data written to output file: ' + output_file)
 
 
 def init_logger():
     logger.setLevel(logging.DEBUG)
     output_handler = logging.StreamHandler()
     output_handler.setLevel(logging.DEBUG)
-
-    file_handler = logging.FileHandler(filename='my_log.log')
+    logs_dir = os.path.join('..','..','logs')
+    if not(os.path.isdir(logs_dir)):
+        os.mkdir(logs_dir)
+    file_handler = logging.FileHandler(filename=os.path.join(logs_dir, 'log_'+ str(datetime.now().date()) + '.log'))
     output_handler.setLevel(logging.DEBUG)
 
     logger.addHandler(output_handler)
@@ -135,7 +138,7 @@ def get_proximity_list(data, cluster_size):
         if vector_idx%1000==0 and vector_idx>0:
             dateTimeObj = datetime.now()
             timeObj = dateTimeObj.time()
-            print('{} | index = {}, finished 1000 vectors in {:.3} sec'.format(timeObj, str(vector_idx), time.time()-t0))
+            print('{} | finished 1000 vectors in {:.3} sec'.format(timeObj, time.time()-t0))
             distances_max = np.max(distances_list[(vector_idx-1000):(vector_idx+1)])
             print('Maximal distance between neighbors, indexes {} to {}: {}'.format((vector_idx-1000),(vector_idx+1), distances_max))
             upper_bound = (upper_bound*(vector_idx//1000) + distances_max)/(1+vector_idx//1000)
@@ -229,8 +232,9 @@ def cluster(data_file, output_file_path, output_file_name, cluster_size=100, cpu
     write_proximity_file(os.path.join(output_file_path, 'NN_'+output_file_name), proximity)
     write_proximity_file(os.path.join(output_file_path, 'Distances_'+output_file_name), distances)
     print(str(datetime.now()) + ' | finished clustering, files saved to: ')
-    print(os.path.join(output_file_path, 'NN_'+output_file_name))
-    print(os.path.join(output_file_path, 'Distances_'+output_file_name))
+    logger.info(str(datetime.now()) + ' | finished clustering, files saved to: ')
+    logger.info(os.path.join(output_file_path, 'NN_' + output_file_name))
+    logger.info(os.path.join(output_file_path, 'Distances_'+output_file_name))
     return proximity
 
 
@@ -267,12 +271,12 @@ def get_subject_stats(subjects, subject_status, status_types):
 
 def analyze_data(neighbors_list, data_file, id_field='FILENAME', status_field='labels'):
     """Return a dataframe with """
-
+    logger.info(f'{str(datetime.now())} | Begin data analyze of nearest neighbors')
     data = pd.read_csv(data_file)
-    print(data.head())
+    #print(data.head())
     status_types = data[status_field].unique()
     subject_status = build_subject_status(data, id_field, status_field)
-    print('build subject status complete')
+    logger.info(f'{str(datetime.now())} |build subject status complete')
     list_out = [np.nan]*len(neighbors_list)
     fields_to_extract = [id_field, status_field]
     t0 = time.time()
@@ -291,9 +295,11 @@ def analyze_data(neighbors_list, data_file, id_field='FILENAME', status_field='l
         #print(output)
         #print(output_df)
         if int(row[0])%1000==0:
-            print(str(datetime.now()) + ' | index = {}, finished 1000 vectors in {:.3} sec'.format(str(row), time.time()-t0))
+            logger.info('{} | index = {}, finished 1000 vectors in {:.3} sec'.format(str(datetime.now()), str(row), time.time()-t0))
             t0 = time.time()
+
     output_df = pd.DataFrame(list_out,columns = ['neighbors', 'how_many_subjects'].extend(status_types))
+    logger.info(f'{str(datetime.now())} | Finished analysis and transfered to dataframe')
     return output_df
 
 def test_proximity_list_small():
