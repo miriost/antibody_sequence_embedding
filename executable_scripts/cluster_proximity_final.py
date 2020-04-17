@@ -31,9 +31,11 @@ def main():
     init_logger()
 
     if len(sys.argv) < 2:
-        sys.argv.extend('../../filtered_data_sets/CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_10K_per_subject.csv '
-                        '../../vectors/CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_VECTORS_10K_per_subject.csv ../../10K_test '
-                        '10K_test --cpus 2'.split())
+        sys.argv.extend('-d ../../filtered_data_sets/CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_100_per_subject.csv '
+                        '-nn ../../test_script/NN_test_100.csv '
+                        '-of ../../test_profiling '
+                        '-od test_profiling_100 '
+                        '--perform_NN no --perform_results_analysis yes --cpus 2'.split())
     
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data_file_path',
@@ -46,7 +48,7 @@ def main():
                         help='Output folder for the 3 output files - Nearest neighbors file, destances file, and results anaylsis file')
     parser.add_argument('-od', '--output_description',
                         help='description to use inside output file names')
-    parser.add_argument('--cpus', type=int, default=2, help='How many cores to run in parallel')
+    parser.add_argument('--cpus', type=int, default=1, help='How many cores to run in parallel')
     parser.add_argument('--perform_NN', type=str2bool, default=True, help = 'Perform KD-tree and nearest neighbors analysis, and save NN list and distances')
     parser.add_argument('--perform_results_analysis', type=str2bool, default=False, help = 'Analyse nearest neighbors file, to subject frequencies')
     args = parser.parse_args()
@@ -84,7 +86,10 @@ def main():
         if not(args.perform_NN): #need to load neigbors list as it was not processed
             neighbors_list = np.loadtxt(args.NN_file_path, delimiter=',', skiprows =1)
 
-        out = analyze_data(neighbors_list, args.data_file_path)
+        if args.cpus == 1:
+            out = analyze_data(neighbors_list, args.data_file_path)
+        else:
+            out = analyze_data_parallel(neighbors_list, args.data_file_path, cpus=args.cpus)
         output_file = args.output_description + '_analysis.csv'
         out.to_csv(os.path.join(args.output_folder_path, output_file))
         logger.info(str(datetime.now()) +  ' | data written to output file: ' + output_file)
@@ -269,6 +274,58 @@ def get_subject_stats(subjects, subject_status, status_types):
     return d
 
 
+def analyze_data_worker(input_arg):
+
+    data, idx, row, fields_to_extract, id_field, subject_status, status_types = input_arg
+
+    assert isinstance(data, pd.DataFrame)
+    assert len(row) == 101
+    assert isinstance(id_field, str)
+
+    cluster_data = data.loc[row, fields_to_extract]
+    subjects = cluster_data[id_field].unique()
+    stats = get_subject_stats(subjects, subject_status, status_types)
+    res = {
+        'neighbors': [int(x) for x in row],
+        'how_many_subjects': len(subjects),
+    }
+    res.update(stats)
+
+    return idx, res
+
+def analyze_data_parallel_input_generator(data, neighbors_list, fields_to_extract, id_field, subject_status, status_types):
+    for idx, row in enumerate(neighbors_list):
+        yield (data, idx, row, fields_to_extract, id_field, subject_status, status_types)
+
+def analyze_data_parallel(neighbors_list, data_file, id_field='FILENAME', status_field='labels', cpus=4):
+    """Return a dataframe with """
+    logger.info(f'{str(datetime.now())} | Begin data analyze of nearest neighbors')
+    data = pd.read_csv(data_file)
+    # print(data.head())
+    status_types = data[status_field].unique()
+    subject_status = build_subject_status(data, id_field, status_field)
+    logger.info(f'{str(datetime.now())} | Build subject status complete')
+    list_out = [np.nan] * len(neighbors_list)
+    fields_to_extract = [id_field, status_field]
+    t0 = time.time()
+    t1 = t0
+    results = 0
+
+    with multiprocessing.Pool(processes=cpus) as pool:
+        for res in pool.imap_unordered(func=analyze_data_worker,
+                iterable=analyze_data_parallel_input_generator(data, neighbors_list, fields_to_extract,
+                                                               id_field, subject_status, status_types),
+                chunksize=200):
+            list_out[res[0]] = res[1]
+            results +=1
+            if results % 1000 == 0:
+                logger.info(f'{datetime.now()} finished {results} results so far. time for 1000: {time.time() -t1} Elapsed time={time.time() -t0}')
+                t1 = time.time()
+
+    output_df = pd.DataFrame(list_out, columns=['neighbors', 'how_many_subjects'].extend(status_types))
+    logger.info(f'{str(datetime.now())} | Finished analysis and transfered to dataframe')
+    return output_df
+
 def analyze_data(neighbors_list, data_file, id_field='FILENAME', status_field='labels'):
     """Return a dataframe with """
     logger.info(f'{str(datetime.now())} | Begin data analyze of nearest neighbors')
@@ -276,7 +333,7 @@ def analyze_data(neighbors_list, data_file, id_field='FILENAME', status_field='l
     #print(data.head())
     status_types = data[status_field].unique()
     subject_status = build_subject_status(data, id_field, status_field)
-    logger.info(f'{str(datetime.now())} |build subject status complete')
+    logger.info(f'{str(datetime.now())} | Build subject status complete')
     list_out = [np.nan]*len(neighbors_list)
     fields_to_extract = [id_field, status_field]
     t0 = time.time()
@@ -294,8 +351,8 @@ def analyze_data(neighbors_list, data_file, id_field='FILENAME', status_field='l
 #        output.append(res)
         #print(output)
         #print(output_df)
-        if int(row[0])%1000==0:
-            logger.info('{} | index = {}, finished 1000 vectors in {:.3} sec'.format(str(datetime.now()), str(row), time.time()-t0))
+        if idx % 1000 == 0:
+            logger.info('{} | index = {}, finished 1000 vectors in {:.3} sec'.format(str(datetime.now()), str(row[:6]), time.time()-t0))
             t0 = time.time()
 
     output_df = pd.DataFrame(list_out,columns = ['neighbors', 'how_many_subjects'].extend(status_types))
