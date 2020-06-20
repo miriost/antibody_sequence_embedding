@@ -46,7 +46,7 @@ sub_indexes = [*np.random.choice(data.index[data.V_FAMILY=='IGHV1'], 114000, rep
 
 
 
-dimensions = [0, 2, 5, 10, 15, 20, 30, 50, 75, 90, 100]
+dimensions = [2, 5, 10, 15, 20, 30, 50, 75, 90, 100]
 decision_tree_f1_score = []
 knn_f1_score = []
 
@@ -75,8 +75,8 @@ for dim in dimensions:
     scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+#    X_train = scaler.fit_transform(X_train)
+#    X_test = scaler.transform(X_test)
     
     #Logistic regression
     
@@ -141,6 +141,9 @@ for dim in dimensions:
 #    pred = svm.predict(X_test)
 #    print(confusion_matrix(y_test, pred))
 #    print(classification_report(y_test, pred))
+print(f'Dimensions: {dimensions}')
+print(f'k-nn f1 score: {knn_f1_score}')
+print(f'Decision tree f1 score: {decision_tree_f1_score}')
   
 knn_f1_score.insert(0,0)
 decision_tree_f1_score.insert(0,0)
