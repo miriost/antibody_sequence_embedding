@@ -42,14 +42,17 @@ def main(argv):
     feature_file = pd.read_csv(args.feature_file)     ## removed index_col=0!!!
     labels_file = pd.read_csv(args.labels_file) 
     if not args.observation_col_name in labels_file.columns:
-           print(args.observation_col_name + ' column is missing in labels file\nExiting...')
-           sys.exit(1)
+        print(labels_file.columns)
+        print(args.observation_col_name + ' column is missing in labels file\nExiting...')
+        sys.exit(1)
     if not args.labels_col_name in labels_file.columns:
-           print(args.labels_col_name + ' column is missing in labels file\nExiting...')
-           sys.exit(1)           
+        print(labels_file.columns)
+        print(args.labels_col_name + ' column is missing in labels file\nExiting...')
+        sys.exit(1)           
     if not args.observation_col_name_data_file in feature_file.columns:
-           print(args.observation_col_name_data_file + ' column is missing in feature file\nExiting...')
-           sys.exit(1)  
+        print(feature_file.columns)
+        print(args.observation_col_name_data_file + ' column is missing in feature file\nExiting...')
+        sys.exit(1)  
 #    labels_file = labels_file[[args.observation_col_name, args.labels_col_name]]
 #    print(labels_file.head())
 #    labels_dict = labels_file.to_dict()
@@ -63,7 +66,7 @@ def main(argv):
     feature_file['labels'] = labels
     
     path = os.path.join(os.path.dirname(args.feature_file), os.path.split(args.feature_file)[-1].split(os.path.extsep)[0]+'_with_labels.csv')
-    feature_file.to_csv(path)
+    feature_file.to_csv(path, index = False)
     print('~~~\nlabels add to feature file, new file is: ' + path)
     
 

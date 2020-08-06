@@ -11,12 +11,12 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
-min_num_smaples_per_subject = 1000
+min_num_smaples_per_subject = 1cd 00
 
 Input_filtered_data_file_path = r'C:\Users\mirio\research\filtered_data_sets\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA.csv'
-Output_filtered_data_file_path = r'C:\Users\mirio\research\filtered_data_sets\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_1K_per_subject.csv'
+Output_filtered_data_file_path = r'C:\Users\mirio\research\filtered_data_sets\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_100_per_subject.csv'
 Input_vector_file_path = r'C:\Users\mirio\research\vectors\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_VECTORS.csv'
-Output_vector_file_path = r'C:\Users\mirio\research\vectors\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_VECTORS_1K_per_subjec.csv'
+Output_vector_file_path = r'C:\Users\mirio\research\vectors\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_VECTORS_100_per_subject.csv'
 Subject_field = 'FILENAME'
 
 Input_data_file = pd.read_csv(Input_filtered_data_file_path)
@@ -57,7 +57,7 @@ print(f'Chose {positive_subjects!r} subjects with > {min_num_smaples_per_subject
 
 output_data_df.to_csv(Output_filtered_data_file_path)
 print('output data set saved to: ', Output_filtered_data_file_path)
-output_vectors_df.to_csv(Output_vector_file_path)
+output_vectors_df.to_csv(Output_vector_file_path, index = False)
 print('output vectors set saved to: ', Output_vector_file_path)
 
 

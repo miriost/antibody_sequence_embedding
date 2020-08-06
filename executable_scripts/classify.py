@@ -15,8 +15,18 @@ from miris_tools.classifier import classifier
 import pandas as pd
 import numpy as np
 
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1', "True"):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0', "False"):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 def main(argv):
-    
     
     parser=argparse.ArgumentParser(
             description='''classify.py function performs classification based on a feature table where each row is an observation and each column is a feature. It's output is a confusion matrix and a score.  ''',
@@ -26,7 +36,10 @@ def main(argv):
     parser.add_argument('--feature_cols', help='start and end range for features columns. default: ALL columns', nargs = 2, type = int)
     parser.add_argument('--labels_file', help='a file containing the labels for each row, default: None, using the features file')
     parser.add_argument('--labels_col_name', help='Name of the labels column, default: "labels"', default='labels')
-    parser.add_argument('-M','--model', help='Classification model. Currently supported: ["logistic_regression"/"LR","decision_tree"/"DT"] , default: "decision_tree"', default = "decision_tree")
+    parser.add_argument('-M','--model', help='Classification model. current supported models: logistic_regression, decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, MLP, naive_bayes, QDA" , default: "decision_tree"', default = "decision_tree")
+    parser.add_argument('-V', '--verify', type=str2bool, default=True, help= 'Verify results on un-seen data set')
+    parser.add_argument('--verify_feature_file', help = 'verification feature file')
+    
     
     args = parser.parse_args()
     
@@ -69,7 +82,14 @@ def main(argv):
     if len(labels) != len(features):
            print('Labels and features length mismatch!.\nExiting...')
            sys.exit(1)
-    
+    if args.verify and not(os.path.isfile(args.verify_feature_file)):
+        print('verify feature table file error, make sure feature file path\nExiting...')
+        sys.exit(1)
+    else:
+        verify_feature_file = pd.read_csv(args.verify_feature_file, index_col = 0)
+        X_verify = verify_feature_file.drop(args.labels_col_name, axis=1)
+        y_verify = verify_feature_file.loc[:, args.labels_col_name]
+        
         
         
     print("~~~~~~~~ Begin classifing...\nFeature_file: {}\nfeature columns: {}\nLabels column name: {}\nModel: {}\n~~~~~~~".format(
@@ -100,8 +120,17 @@ def main(argv):
         
     else: 
         our_classifier = classifier(features, labels, args.model)
-        our_classifier.run()
-        print(our_classifier.score)
+        if not args.verify:
+            print('Performing classification, cross correlation without verification')
+            our_classifier.run()
+            print(our_classifier.score) #score on test set
+        else:
+            print('Performing classification, cross correlation with verification')
+            our_classifier.run(validate=True, X_validate=X_verify, y_validate=y_verify)
+            print('Scores on test set:')
+            print(our_classifier.score) #score on test set    
+            print('Scores on verification set:')
+            print(our_classifier.validation_score) #score on test set    
         
 
     

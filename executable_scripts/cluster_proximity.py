@@ -2,16 +2,33 @@ import os
 import csv
 import argparse
 from collections import defaultdict
+import math
 
 import pandas as pd
 import numpy as np
 from scipy.spatial import KDTree
 import time
 #import pprofile
-import cProfile
+#import cProfile
+from datetime import datetime
 
 def parse_args():
-    pass
+    parser = argparse.ArgumentParser()
+    parser.add_argument('data_file_path', 
+                        help='the filtered data file path')
+    parser.add_argument('vector_file_path', 
+                        help='the vectors file path')
+    parser.add_argument('output_folder_path', 
+                        help='Output folder for the 3 output files - Nearest neighbors file, destances file, and results anaylsis file')
+    args = parser.parse_args()
+    if not os.path.isfile(args.data_file_path) or os.path.isfile(args.vector_file_path):
+        print('Input file error, maje sure feature and vectors file path\nExiting...')
+        sys.exit(1)
+    
+    if not os.path.exists(args.output_folder_path):
+        os.mkdir(args.output_folder_path)
+    
+    
 
 
 def read_vector_data(input_file):
@@ -28,29 +45,49 @@ def write_proximity_file(output_file, proximity):
 
 def get_proximity_list(data, cluster_size):
     proximity_list = np.zeros([data.shape[0], cluster_size+1])
-    # Build KDTree to inquire the closest points
+    distances_list = np.zeros([data.shape[0], cluster_size+1])
+#    profiler = pprofile.Profile()
+#    with profiler:
+        # Build KDTree to inquire the closest points
     tree = KDTree(data)
-    print('KDtree ready')
+    print(str(datetime.now()) + '| KDtree ready')
     t0 = time.time()
+    upper_bound = 10
     for vector_idx, vector in enumerate(data):
         # the query will always find vector as nearest result        
-        distances, indices = tree.query(vector, cluster_size + 1)       
-        if vector_idx%1000==0:
-            print('index = {}, finished 1000 vectors in {:.3} sec'.format(str(vector_idx), time.time()-t0))
+        distances, indices = tree.query(vector,cluster_size+1,p=2,distance_upper_bound=upper_bound)
+        while math.inf in distances:
+            upper_bound = upper_bound*1.1
+            distances, indices = tree.query(vector, cluster_size + 1,p=2,distance_upper_bound=upper_bound)
+            print('Upper bound updated itertivly to: ' + str(upper_bound))
+        proximity_list[vector_idx] = np.array(indices, dtype=np.int)
+#        print(proximity_list[vector_idx])
+        distances_list[vector_idx] = np.array(distances, dtype=np.float)
+#        print(distances_list[vector_idx])
+        if vector_idx%1000==0 and vector_idx>0:
+            dateTimeObj = datetime.now()
+            timeObj = dateTimeObj.time()
+            print('{} | index = {}, finished 1000 vectors in {:.3} sec'.format(timeObj, str(vector_idx), time.time()-t0))
+            #distances_average = np.mean(distances_list[(vector_idx-1000):(vector_idx+1)])
+            distances_max = np.max(distances_list[(vector_idx-1000):(vector_idx+1)])
+            #print('average distance between neighbors, indexes {} to {}: {}'.format((vector_idx-1000),(vector_idx+1), distances_average))
+            print('Maximal distance between neighbors, indexes {} to {}: {}'.format((vector_idx-1000),(vector_idx+1), distances_max))
+            upper_bound = (upper_bound*(vector_idx//1000) + distances_max)/(1+vector_idx//1000)
+            print('Updating upper bound to:' + str(upper_bound))
             t0 = time.time()
 #        print('vector index {}, closest to {}, distances {}:'.format(vector_idx, indices, distances[:2]))
         #assert indices[0] == vector_idx, "First index should be the vector itself"
         #indices = indices[1:]
-        proximity_list[vector_idx] = np.array(indices, dtype=np.int)
+#        profiler.print_stats() 
+    return proximity_list, distances_list
 
-    return proximity_list
 
-
-def cluster(data_file, output_file, cluster_size=100):
+def cluster(data_file, output_file_path, output_file_name, cluster_size=100):
     """Cluster the data and write the result to output file"""
     vectors = read_vector_data(data_file)
-    proximity = get_proximity_list(vectors, cluster_size)
-    write_proximity_file(output_file, proximity)
+    proximity, distances = get_proximity_list(vectors, cluster_size)
+    write_proximity_file(os.path.join(output_file_path, 'NN_'+output_file_name), proximity)
+    write_proximity_file(os.path.join(output_file_path, 'Distances_'+output_file_name), distances)
     return proximity
 
 
@@ -111,7 +148,7 @@ def analyze_data(neighbors_list, data_file, id_field='FILENAME', status_field='l
         #print(output)
         #print(output_df)
         if int(row[0])%1000==0:
-            print('index = {}, finished 1000 vectors in {:.3} sec'.format(str(row), time.time()-t0))
+            print(str(datatime.now()) + ' | index = {}, finished 1000 vectors in {:.3} sec'.format(str(row), time.time()-t0))
             t0 = time.time()
     output_df = pd.DataFrame(list_out,columns = ['neighbors', 'how_many_subjects'].extend(status_types))
     return output_df
@@ -197,24 +234,55 @@ def test_HCV_data():
     output_file = '/home/miri-o/Desktop/NN_results_HCV_10K_per_subject_Celiac_model_trimmied_3_4_VECTORS.csv'
     out.to_csv(output_file)
 
-def test_celiac_data():
+def test_celiac_data_1K():
     #Chose 94 subjects with > 1000 number of sequences
-    
 
-    data_file_path = r'C:\Users\mirio\research\filtered_data_sets\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_10K_per_subject.csv'
-    vectors_file_path = r'C:\Users\mirio\research\vectors\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_VECTORS_10K_per_subjec.csv'
-    output_file_path = r'C:\Users\mirio\research\cluster_proximity\clusters_celiac_10K.csv'
-    neighbors_list = cluster(vectors_file_path, output_file_path, cluster_size=100)
+    data_file_path = r'C:\Users\mirio\research\filtered_data_sets\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_1K_per_subject.csv'
+    vectors_file_path = r'C:\Users\mirio\research\vectors\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_VECTORS_1K_per_subject.csv'
+    output_file_path = r'C:\Users\mirio\research\cluster_proximity'
+    output_file_name = 'clusters_celiac_1K.csv'
+    neighbors_list = cluster(vectors_file_path, output_file_path,output_file_name, cluster_size=100)
 #    neighbors_list = np.loadtxt(output_file_path, delimiter=',', skiprows =1)
     out = analyze_data(neighbors_list, data_file_path)
-    output_file = r'C:\Users\mirio\research\cluster_proximity\Celiac_10K_per_subject.csv'
+    output_file = r'C:\Users\mirio\research\cluster_proximity\Celiac_1K_per_subject.csv'
     out.to_csv(output_file)
+
+def test_celiac_data_10K():
+    dateTimeObj = datetime.now()
+    timeObj = dateTimeObj.time()
+    print(timeObj, 'Beginning full data analysis')
+    #Chose 81 subjects with > 10000 number of sequences    
+    data_file_path = r'C:\Users\mirio\research\filtered_data_sets\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_10K_per_subject.csv'
+    vectors_file_path = r'C:\Users\mirio\research\vectors\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_VECTORS_10K_per_subject.csv'
+    print('Data file path:' + data_file_path)
+    print('Vectors file path:' + vectors_file_path)
+    output_file_path = r'C:\Users\mirio\research\cluster_proximity'
+    output_file_name = 'clusters_celiac_10K.csv'
+    neighbors_list = cluster(vectors_file_path, output_file_path,output_file_name, cluster_size=100)
+#    neighbors_list = np.loadtxt(output_file_path, delimiter=',', skiprows =1)
+    out = analyze_data(neighbors_list, data_file_path)
+    output_file = 'Celiac_10K_per_subject.csv'
+    out.to_csv(os.path.join(output_file_path, output_file))
+    print(str(datetime.now()) +  ' | data written to output file: ' + output_file)
+    
+def test_celiac_data_100():
+    #Chose 94 subjects with > 100 number of sequences
     
 
+    data_file_path = r'C:\Users\mirio\research\filtered_data_sets\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_100_per_subject.csv'
+    vectors_file_path = r'C:\Users\mirio\research\vectors\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_VECTORS_100_per_subject.csv'
+    output_file_path = r'C:\Users\mirio\research\cluster_proximity'
+    output_file_name = 'clusters_celiac_100.csv'
+    neighbors_list = cluster(vectors_file_path, output_file_path, output_file_name, cluster_size=100)
+#    neighbors_list = np.loadtxt(output_file_path, delimiter=',', skiprows =1)
+    out = analyze_data(neighbors_list, data_file_path)
+    output_file = r'C:\Users\mirio\research\cluster_proximity\Celiac_100_per_subject.csv'
+    out.to_csv(output_file)
+    
 if __name__ == '__main__':
     pass
     # test_proximity_list()
     # options = parse_args()
 #    test_analyze_data()
-    test_celiac_data()
+    test_celiac_data_10K()
 

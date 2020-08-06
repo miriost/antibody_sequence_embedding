@@ -103,7 +103,7 @@ class ProtVec(word2vec.Word2Vec):
         Either fname or corpus is required.
         corpus_fname: fasta file for corpus
         corpus: corpus object implemented by gensim
-        n: n of n-gramp. single integer for a costant n, and a string ‘(start, end)’ for random splitting.
+        n: n of n-grams. single integer for a costant n, and a string ‘(start, end)’ for random splitting.
         reading frame : default None. possible values: 1/2/3/None – for all options
         trim: paramter for trimming the sequences, string format ‘(chars from start, chars from end)’ 
         out: corpus output file path

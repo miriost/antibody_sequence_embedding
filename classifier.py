@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, f1_score, recall_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.gaussian_process import GaussianProcessClassifier
@@ -99,8 +99,8 @@ class classifier():
             self.classes = np.unique(labels)
             
         # turn string labels to numeric labels
-        d = dict(zip(self.classes, range(len(self.classes))))
-        self.labels_num = pd.Series(self.labels).map(d, na_action='ignore')
+        self.class_dict = dict(zip(self.classes, range(len(self.classes))))
+        self.labels_num = pd.Series(self.labels).map(self.class_dict, na_action='ignore')
 #        print(self.labels_num)
 #        print(self.labels)
         
@@ -162,12 +162,20 @@ class classifier():
             self.model = QuadraticDiscriminantAnalysis()
                 
         else:
-            raise Exception("Classifier model un-recognized, current supported models: logistic_regression, decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, MLP, naive_bayes, QDA")
+            raise Exception("Classifier model un-recognized, current supported models: logistic_regression, decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, naive_bayes, QDA")
       
     
-    def run(self, n = 1000, test_size = .2):
+    def run(self, n = 1000, test_size = .2, validate=False, X_validate=None, y_validate=None):
         predictions_all =[]
         actual_all = []
+        if validate and (X_validate is None or y_validate is None):
+            raise Exception("validation data is missing")
+        else:
+            print('Beginning cross correlation including validation set')
+            validate_prediction = []
+            validate_actual = []
+            y_validate_num = pd.Series(y_validate).map(self.class_dict, na_action='ignore')
+        
         
         for i in range(n):
             X_train, X_test, y_train, y_test = train_test_split(self.feature_table, self.labels_num, test_size=test_size)
@@ -177,21 +185,28 @@ class classifier():
                 self.coef = list(map(add, self.coef, self.model.coef_))
             predictions_all.extend(list(self.model.predict(X_test)))
             actual_all.extend(y_test)
+            if validate:
+                validate_prediction.extend(list(self.model.predict(X_validate)))
+                validate_actual.extend(y_validate_num)
             #coefs = coefs + self.model.coef_
          
     # Compute confusion matrix
         cnf_matrix = confusion_matrix(actual_all, predictions_all)
-#        print('actual:')
-#        print(actual_all)
-#        print('prediction:')
-#        print()
-        np.set_printoptions(precision=2)
-        
+        np.set_printoptions(precision=2)        
         plot_confusion_matrix(cnf_matrix, classes=self.classes, normalize=True,
                           title='Normalized confusion matrix'+ ' score: ' + str(accuracy_score(actual_all, predictions_all)))
         plt.show()
-        self.score = accuracy_score(actual_all, predictions_all)
-        print('classifier' + self.modelname +'score: ' + "%.3f" % self.score)
+        print(actual_all[:40])
+        print(predictions_all[:40])
+        self.score = [accuracy_score(actual_all, predictions_all), f1_score(actual_all, predictions_all), precision_score(actual_all, predictions_all), recall_score(actual_all, predictions_all)]
+        print('Classifier: {} scores (Accuracy, f1, precision, recall) - {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format(self.modelname, self.score[0], self.score[1], self.score[2], self.score[3]))
+        if validate:
+            print(validate_actual[:40])
+            print(validate_prediction[:40])
+            self.validation_score = [accuracy_score(validate_actual, validate_prediction), f1_score(validate_actual, validate_prediction), precision_score(validate_actual, validate_prediction), recall_score(validate_actual, validate_prediction)]
+            print('Classifier: {} scores (Accuracy, f1, precision, recall) - {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format(self.modelname, self.validation_score[0], self.validation_score[1], self.validation_score[2], self.validation_score[3]))
+            
+        #print('classifier ' + self.modelname +' score: ' + "%.3f" % self.score)
         
         if self.model == 'decision_tree' or self.model == 'DT':
             dot_data = tree.export_graphviz(self.model, out_file='../../results/tmp.dot', 
@@ -203,3 +218,4 @@ class classifier():
 #        graph.show()
         return(self)
 
+    
