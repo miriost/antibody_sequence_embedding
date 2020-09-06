@@ -8,8 +8,6 @@ Created on Thu Apr  9 14:57:21 2020
 # sample file 
 
 import pandas as pd
-from datetime import datetime
-
 max_num_smaples_per_subject = 10000
 
 Input_filtered_data_file_path = r'C:\Users\mirio\research\filtered_data_sets\CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA.csv'

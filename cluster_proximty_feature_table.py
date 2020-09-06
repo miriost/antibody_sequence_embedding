@@ -19,6 +19,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import euclidean
+
+
  
 analysis_file_path = r'C:\Users\mirio\research\cluster_proximity\test_ckdtree_10K_parallel_analysis_analysis.csv'
 inputfile = pd.read_csv(analysis_file_path)

@@ -30,7 +30,7 @@ def str2bool(v):
 def main():
     init_logger()
 
-    if len(sys.argv) < 2:
+    if False and len(sys.argv) < 2:
         sys.argv.extend('-d ../../filtered_data_sets/CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_100_per_subject.csv '
                         '-nn ../../test_script/NN_test_100.csv '
                         '-of ../../test_profiling '
@@ -290,7 +290,7 @@ def analyze_data_worker(input_arg):
         'how_many_subjects': len(subjects),
     }
     res.update(stats)
-
+    
     return idx, res
 
 def analyze_data_parallel_input_generator(data, neighbors_list, fields_to_extract, id_field, subject_status, status_types):
@@ -359,18 +359,6 @@ def analyze_data(neighbors_list, data_file, id_field='FILENAME', status_field='l
     logger.info(f'{str(datetime.now())} | Finished analysis and transfered to dataframe')
     return output_df
 
-def test_proximity_list_small():
-
-    d1 = np.array([[0., 0., 0.],
-                   [1., 0., 0.],
-                   [0., 0., 1.],
-                   [0.1, 0.1, 0.1]])
-    proximity = get_proximity_list(d1, 2)
-    assert 3 in proximity[0]
-    assert 0 in proximity[1]
-    assert 0 in proximity[2]
-    assert 0 in proximity[3]
-
 
 def donttest_proximity_list_large():
 
@@ -418,7 +406,6 @@ def test_cluster_small_data():
 
     
 if __name__ == '__main__':
-    print('alive')
     main()
     # test_proximity_list()
     # options = parse_args()
