@@ -5,8 +5,6 @@ Created on Sun Aug 12 11:21:56 2018
 
 @author: miri-o
 """
-
-
 import sys, argparse
 import os
 import matplotlib.pyplot as plt

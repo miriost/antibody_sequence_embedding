@@ -34,7 +34,7 @@ import time
 def main():
     
     if len(sys.argv) <= 1:
-        sys.argv.extend(" -f ../../cross_validation/try1.csv -d ../../filtered_data_sets/CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_1K_per_subject.csv -v ../../vectors/CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_VECTORS_1K_per_subject.csv -of ../../cross_validation/ -od try1K_TRAIN_0".split())
+        sys.argv.extend(" -f ../../cross_validation/features_list_10K_TRAIN_0_S_625.csv -d ../../filtered_data_sets/CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_1K_per_subject.csv -v ../../vectors/CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_VECTORS_1K_per_subject.csv -of ../../cross_validation/ -od try1K_TRAIN_0".split())
     
     parser = argparse.ArgumentParser()
 
@@ -117,8 +117,9 @@ def main():
                 features_count = np.sum(distance_close_enough_vec)
                 if features_count>1:
                     multiple_entries +=1
-                add_feature_index = np.where(distance_close_enough_vec==True)
-                features_table.loc[subject, feature_list.loc[add_feature_index, 'feature_index']] += 1
+                if features_count>=1:
+                    add_feature_index = np.where(distance_close_enough_vec==True)
+                    features_table.loc[subject, feature_list.loc[add_feature_index, 'feature_index']] += 1
 
             if False: # thecode before
                 for feature_index in feature_list.index: #check distances of each vector from all features

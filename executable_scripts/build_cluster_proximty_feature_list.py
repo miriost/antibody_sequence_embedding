@@ -39,7 +39,7 @@ def main():
                         help='Output folder for the 3 output files - Nearest neighbors file, destances file, and results anaylsis file')
     parser.add_argument('-od', '--output_description',
                         help='description to use inside output file names')
-    parser.add_argument('-S','--significance', help = 'minimal significance score for cluster selection', default=0.6)
+    parser.add_argument('-S','--significance', help = 'minimal significance score for cluster selection', default=0.6, type=float)
     parser.add_argument('-m','--min_subjects', help = 'minimal significance score for cluster selection', default=10, type=int)
     args = parser.parse_args()
     
