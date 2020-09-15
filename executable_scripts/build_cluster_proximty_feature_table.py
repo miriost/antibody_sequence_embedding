@@ -119,7 +119,7 @@ def main():
                     multiple_entries +=1
                 if features_count>=1:
                     add_feature_index = np.where(distance_close_enough_vec==True)
-                    features_table.loc[subject, feature_list.loc[add_feature_index, 'feature_index']] += 1
+                    features_table.loc[subject, feature_list.loc[add_feature_index[0], 'feature_index']] += 1
 
             if False: # thecode before
                 for feature_index in feature_list.index: #check distances of each vector from all features

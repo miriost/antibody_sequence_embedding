@@ -34,10 +34,15 @@ def main(argv):
     parser.add_argument('--feature_cols', help='start and end range for features columns. default: ALL columns', nargs = 2, type = int)
     parser.add_argument('--labels_file', help='a file containing the labels for each row, default: None, using the features file')
     parser.add_argument('--labels_col_name', help='Name of the labels column, default: "labels"', default='labels')
+<<<<<<< HEAD
     parser.add_argument('-M','--model', help='Classification model. current supported models: logistic_regression, '
                                              'decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP,'
                                              ' ADA, MLP, naive_bayes, QDA, all - to run through all models" , default: "decision_tree"', default = "decision_tree")
     parser.add_argument('-V', '--verify', type=str2bool, default=True, help= 'Verify results on un-seen data set')
+=======
+    parser.add_argument('-M','--model', help='Classification model. current supported models: logistic_regression, decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, MLP, naive_bayes, QDA" , default: "decision_tree"', default = "decision_tree")
+    parser.add_argument('-V', '--verify', type=str2bool, default=False, help= 'Verify results on un-seen data set')
+>>>>>>> change 2 params
     parser.add_argument('--verify_feature_file', help = 'verification feature file')
     
     
@@ -90,8 +95,6 @@ def main(argv):
             verify_feature_file = pd.read_csv(args.verify_feature_file, index_col = 0)
             X_verify = verify_feature_file.drop(args.labels_col_name, axis=1)
             y_verify = verify_feature_file.loc[:, args.labels_col_name]
-        
-        
         
     if args.model == 'all' or args.model=='All':
         model_list = ['logistic_regression, "decision_tree", "kNN", "linear_svm", "RBF_SVM", "Gaussian", "Random_Forest", "MLP",
