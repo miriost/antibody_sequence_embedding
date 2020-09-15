@@ -13,9 +13,10 @@ from miris_tools.classifier import classifier
 import pandas as pd
 import numpy as np
 
+
 def str2bool(v):
     if isinstance(v, bool):
-       return v
+        return v
     if v.lower() in ('yes', 'true', 't', 'y', '1', "True"):
         return True
     elif v.lower() in ('no', 'false', 'f', 'n', '0', "False"):
@@ -27,56 +28,55 @@ def str2bool(v):
 def main(argv):
     
     parser=argparse.ArgumentParser(
-            description='''classify.py function performs classification based on a feature table where each row is an observation and each column is a feature. It's output is a confusion matrix and a score.  ''',
+            description='''classify.py function performs classification based on a feature table where each row is an 
+            observation and each column is a feature. It's output is a confusion matrix and a score.  ''',
             epilog="""All's well that ends well.""")
     parser = argparse.ArgumentParser()
     parser.add_argument('feature_file', help='a *.csv file containing the features table')
-    parser.add_argument('--feature_cols', help='start and end range for features columns. default: ALL columns', nargs = 2, type = int)
-    parser.add_argument('--labels_file', help='a file containing the labels for each row, default: None, using the features file')
+    parser.add_argument('--feature_cols', help='start and end range for features columns. default: ALL columns',
+                        nargs = 2, type = int)
+    parser.add_argument('--labels_file', help='a file containing the labels for each row, default: None, '
+                                              'using the features file')
     parser.add_argument('--labels_col_name', help='Name of the labels column, default: "labels"', default='labels')
-<<<<<<< HEAD
     parser.add_argument('-M','--model', help='Classification model. current supported models: logistic_regression, '
                                              'decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP,'
-                                             ' ADA, MLP, naive_bayes, QDA, all - to run through all models" , default: "decision_tree"', default = "decision_tree")
-    parser.add_argument('-V', '--verify', type=str2bool, default=True, help= 'Verify results on un-seen data set')
-=======
-    parser.add_argument('-M','--model', help='Classification model. current supported models: logistic_regression, decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, MLP, naive_bayes, QDA" , default: "decision_tree"', default = "decision_tree")
+                                             ' ADA, MLP, naive_bayes, QDA, all - to run through all models" , '
+                                             'default: "decision_tree"', default = "decision_tree")
     parser.add_argument('-V', '--verify', type=str2bool, default=False, help= 'Verify results on un-seen data set')
->>>>>>> change 2 params
     parser.add_argument('--verify_feature_file', help = 'verification feature file')
     
     
     args = parser.parse_args()
     
-    if not (os.path.isfile(args.feature_file) and os.path.splitext(os.path.split(args.feature_file)[1])[1]=='.csv'):
+    if not (os.path.isfile(args.feature_file) and os.path.splitext(os.path.split(args.feature_file)[1])[1] == '.csv'):
         print('Feature file {} error! Make sure the file exists and it is *.csv file.\nExiting...'.format(args.feature_file))
         sys.exit(1)
     feature_file = pd.read_csv(args.feature_file)
            
     if args.labels_file:
-       if not (os.path.isfile(args.feature_file) and os.path.splitext(os.path.split(args.feature_file)[1])[1]=='.csv'):
-           print('Labels file error! Make sure the file exists and it is *.csv file.\nExiting...')
-           sys.exit(1)
-       labels_file = pd.read_csv(args.labels_file)
-       if not args.labels_col_name in labels_file.columns:
-           print('label column name doesnt exist.\nExiting...')
-           sys.exit(1)
+        if not (os.path.isfile(args.feature_file) and os.path.splitext(os.path.split(args.feature_file)[1])[1] == '.csv'):
+            print('Labels file error! Make sure the file exists and it is *.csv file.\nExiting...')
+            sys.exit(1)
+        labels_file = pd.read_csv(args.labels_file)
+        if args.labels_col_name not in labels_file.columns:
+            print('label column name doesnt exist.\nExiting...')
+            sys.exit(1)
     else:
-       labels_file = feature_file.copy()
-       if not args.labels_col_name in labels_file.columns:
-           print('label column name doesnt exist.\nExiting...')
-           sys.exit(1)
-       feature_file = feature_file.drop(args.labels_col_name, axis=1)
+        labels_file = feature_file.copy()
+        if args.labels_col_name not in labels_file.columns:
+            print('label column name doesnt exist.\nExiting...')
+            sys.exit(1)
+        feature_file = feature_file.drop(args.labels_col_name, axis=1)
     labels = labels_file.loc[:, args.labels_col_name]
     
     if args.labels_col_name:
-       if not args.labels_col_name in labels_file.columns:
-           print('label column name doesnt exist.\nExiting...')
-           sys.exit(1)
-       else:
-           labels_col_name = args.labels_col_name
+        if args.labels_col_name not in labels_file.columns:
+            print('label column name doesnt exist.\nExiting...')
+            sys.exit(1)
+        else:
+            labels_col_name = args.labels_col_name
     else: 
-       labels_col_name = 'labels'
+        labels_col_name = 'labels'
     if not args.feature_cols:
         feat_range = (1, len(feature_file.columns))
     else:
@@ -85,8 +85,8 @@ def main(argv):
     print('features used:{}'.format(feature_file.columns[feat_range[0]: feat_range[1]]))
     features = feature_file.iloc[:, range(feat_range[0], feat_range[1])]       
     if len(labels) != len(features):
-           print('Labels and features length mismatch!.\nExiting...')
-           sys.exit(1)
+        print('Labels and features length mismatch!.\nExiting...')
+        sys.exit(1)
     if args.verify:
         if not(os.path.isfile(args.verify_feature_file)):
             print('verify feature table file error, make sure feature file path\nExiting...')
@@ -97,8 +97,8 @@ def main(argv):
             y_verify = verify_feature_file.loc[:, args.labels_col_name]
         
     if args.model == 'all' or args.model=='All':
-        model_list = ['logistic_regression, "decision_tree", "kNN", "linear_svm", "RBF_SVM", "Gaussian", "Random_Forest", "MLP",
-                                             "ADA", "MLP", "naive_bayes", "QDA"]
+        model_list = ['logistic_regression', "decision_tree", "kNN", "linear_svm", "RBF_SVM", "Gaussian",
+                      "Random_Forest", "MLP", "ADA", "MLP", "naive_bayes", "QDA"]
     else:
         model_list = [args.model]
 
@@ -132,19 +132,17 @@ def main(argv):
             if not args.verify:
                 print('Performing classification, cross correlation without verification')
                 our_classifier.run()
-                print(our_classifier.score) #score on test set
+                print(our_classifier.score)  #score on test set
             else:
                 print('Performing classification, cross correlation with verification')
                 our_classifier.run(validate=True, X_validate=X_verify, y_validate=y_verify)
                 print('Scores on test set:')
-                print(our_classifier.score) #score on test set
+                print(our_classifier.score)  #score on test set
                 print('Scores on verification set:')
-                print(our_classifier.validation_score) #score on test set
+                print(our_classifier.validation_score)  #score on test set
 
-
-    
 if __name__ == "__main__":
-   main(sys.argv[1:])   
+    main(sys.argv[1:])
    
    
   
