@@ -21,10 +21,12 @@ def main(argv):
    n_len = 3
    fasta_type = True
    trim_range = None
+   portion = 1.0
+   random_seed = 5
    try:
-      opts, args = getopt.getopt(argv,"hf:c:o:n:r:t:",["fasta-file=","corpus-object=","output=","n=","Reading_frame=","trimming="])
+      opts, args = getopt.getopt(argv,"hf:c:o:n:r:t:p:s:",["fasta-file=","corpus-object=","output=","n=","Reading_frame=","trimming=","portion=","seed="])
    except getopt.GetoptError:
-      print('generate_model.py -f <fasta_file> -c <corpus_object> -o <outputfile> -n <n_length> -r <reading_frame> -t <trimming>')
+      print('generate_model.py -f <fasta_file> -c <corpus_object> -o <outputfile> -n <n_length> -r <reading_frame> -t <trimming> -p <portion> -s <seed>')
       sys.exit(2)
    reading_frame = None
    for opt, arg in opts:
@@ -32,7 +34,7 @@ def main(argv):
          print('generate_model.py -f <fasta_file> -c <corpus_object> -o <outputfile> -n <n_length> -r <reading_frame> -t <trimming>')
          sys.exit()
       elif opt in ("-f", "--fasta-file"):
-          fasta_file = arg
+         fasta_file = arg
       elif opt in ("-c", "--corpus-object"):
          corpus_object = arg
          fasta_type = False
@@ -53,12 +55,20 @@ def main(argv):
               n_len = int(n_pharse[0])
           else:
               n_len = (int(n_pharse[0]), int(n_pharse[1]))
+      elif opt in ("-p", "--portion"):
+          portion = float(arg)
+          if portion > 1.0 or portion <= 0:
+              print("illegal portion value, should be in the range (0, 1]");
+              sys.exit(2)
+      elif opt in ("-s", "--seed"):
+          random_seed = int(arg)
+
    t0 = time.time()              
    if fasta_type and not fasta_file:
        print('Missing fasta file or corpus file\ngenerate_model.py -f <fasta_file> -c <corpus_object> -o <outputfile> -n <n_length> -r <reading_frame> -t <trimming>')
        sys.exit(2)
    elif fasta_file:
-       pv = ProtVec(corpus_fname=fasta_file, corpus=None, n=n_len, reading_frame=reading_frame, trim = trim_range,size=100, out=output_corpus_file, sg=1, window=5, min_count=2, workers=3)
+       pv = ProtVec(corpus_fname=fasta_file, corpus=None, n=n_len, reading_frame=reading_frame, trim=trim_range,size=100, out=output_corpus_file, sg=1, window=5, min_count=2, workers=3, portion=portion, random_seed=random_seed)
        process_time = (time.time() - t0)/60 # in minutes
        print('Model built in {} minutes, saving...'.format(process_time))
        pv.save(output_corpus_file+ '.model')
