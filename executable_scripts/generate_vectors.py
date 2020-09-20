@@ -18,6 +18,8 @@ def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('infile', 
                         help='a *.csv file containing the JUNC_AA column')
+    parser.add_argument('-o', '--odir',
+                        help='output root directory', default = os.path.join(os.pardir, os.path.pardir))
     parser.add_argument('-c', '--column', 
                         help = 'column name to convert to vectors, default:"JUNC_AA"', default = "JUNC_AA")
     parser.add_argument('model', 
@@ -29,7 +31,7 @@ def main(argv):
     args = parser.parse_args()
 
     if not os.path.isfile(args.infile) or args.infile[:-4] == '.csv':
-        print('Feature file error! Make sure the file exists and it is *.csv file.\nExiting...')
+        print('Feature file ({}) error! Make sure the file exists and it is *.csv file.\nExiting...'.format(args.infile))
         sys.exit(1)
     print('Input file for embedding: ',args.infile, '\nModel: ', args.model)
  
@@ -38,7 +40,7 @@ def main(argv):
     
     #load saved model
     model = sequence_modeling.load_protvec(args.model)
-    modelname = os.path.split(args.model)[-1].split(os.path.extsep)[0]
+    modelname = os.path.split(args.model)[-1].split('.model')[0]
     
     # generate a vector for each junction
     data_len = len(infile)
@@ -66,15 +68,15 @@ def main(argv):
     
     #save to files:
 
-    path_filtered_files = os.path.join(os.pardir, os.path.pardir,'filtered_data_sets')
+    path_filtered_files = os.path.join(args.odir, 'filtered_data_sets')
     if not os.path.exists(path_filtered_files):
         os.mkdir(path_filtered_files)
         
     infile_path = os.path.join(path_filtered_files, filename+'_'+modelname+'_FILTERED_DATA.csv')
-    infile.to_csv(infile_path)
+    infile.to_csv(infile_path, sep='\t')
     print('Data file saved: ' + os.path.abspath(infile_path))
     
-    path_vectors = os.path.join(os.pardir, os.path.pardir, 'vectors')
+    path_vectors = os.path.join(args.odir, 'vectors')
     if not os.path.exists(path_vectors):
         os.mkdir(path_vectors)
         
