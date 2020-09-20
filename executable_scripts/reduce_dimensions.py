@@ -17,7 +17,8 @@ Created on Mon Jul 23 15:16:13 2018
 import sys, getopt
 import os
 sys.path.insert(0, os.path.join(os.pardir, os.path.pardir))
-
+import pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('miris_tools')[0])
 from miris_tools.dimensional_reduction import dimensional_reduction
 
 def main(argv):

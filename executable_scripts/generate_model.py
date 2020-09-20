@@ -8,13 +8,8 @@ Created on Mon Jul 23 15:16:13 2018
 
 import sys, getopt, os
 import time
-if os.path.exists("/media/miri-o/Documents"):
-    sys.path.insert(0, "/media/miri-o/Documents") 
-elif os.path.exists(r'C:\Users\mirio\research'):
-    sys.path.insert(0, r'C:\Users\mirio\research')
-else:
-    raise Exception('Could not find miris tools library')
-    
+import pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('miris_tools')[0])
 from miris_tools.sequence_modeling import ProtVec
 
 def main(argv):
