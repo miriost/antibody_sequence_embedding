@@ -93,6 +93,7 @@ def main(argv):
     valid_indexes = data.index[~data[labels_col_name].isnull()] # Remove rows where v_family is null 
 
     print(len(data))
+    np.random.seed(2)
     sub_indexes = [*np.random.choice(data.index[data[labels_col_name]=='IGHV1'], int(args.sample_length)*1000, replace=False), *np.random.choice(data.index[data[labels_col_name]=='IGHV3'], int(args.sample_length)*1000, replace=False), *np.random.choice(data.index[data[labels_col_name]=='IGHV4'], int(args.sample_length)*1000, replace=False)]
     #X = vectors.loc[valid_indexes]
     #y = data.V_FAMILY.loc[valid_indexes]
@@ -110,8 +111,8 @@ def main(argv):
     scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
-    #X_train = scaler.fit_transform(X_train)
-    #X_test = scaler.transform(X_test)
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
     
     names = ["Nearest Neighbors", "Linear SVM", "RBF SVM",
          "Decision Tree", "Random Forest", "AdaBoost",
