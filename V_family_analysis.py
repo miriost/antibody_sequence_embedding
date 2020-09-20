@@ -110,8 +110,8 @@ def main(argv):
     scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    #X_train = scaler.fit_transform(X_train)
+    #X_test = scaler.transform(X_test)
     
     names = ["Nearest Neighbors", "Linear SVM", "RBF SVM",
          "Decision Tree", "Random Forest", "AdaBoost",
