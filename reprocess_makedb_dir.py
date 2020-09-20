@@ -46,9 +46,10 @@ def main(argv):
             local_df['FILENAME'] = os.path.splitext(os.path.split(filename)[1])[0]
             ## DATA REPROCESS PART
             # 1. REMOVE NON-FUNCTIONAL SEQUENCES 
-            
-            local_df = local_df[local_df.FUNCTIONAL=='T']
-    
+            if local_df.dtypes['FUNCTIONAL'] == bool:
+                local_df = local_df[local_df.FUNCTIONAL]
+            else:
+                local_df = local_df[local_df.FUNCTIONAL=='T']
             print(' - After removing non functional sequences: {}'.format(len(local_df)))
             # 2. REMOVE ROWS WHERE JUNCTION LENGTH IS SHORTER THAN 12 OR DOESN'T DEVIDE BY 3
             local_df = local_df[local_df.JUNCTION_LENGTH > 12]
