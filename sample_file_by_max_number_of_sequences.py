@@ -8,29 +8,30 @@ Created on Thu Apr  9 14:57:21 2020
 # sample file 
 
 import pandas as pd
-import argparse
+import sys, argparse
+from datetime import datetime
 
 def main(argv):
 
     parser = argparse.ArgumentParser(
         description='''sample sequences by subjects from embedded vectors for the clustering/classification stage ''',
         epilog="""All's well that ends well.""")
-    parser.add_argument('--max_samples', type=int, default=1000, help='max number of sampled sequences per subject')
-    parser.add_argument('--input_data_file', type=str, default=1000, help='input filtered data file path')
-    parser.add_argument('--output_data_file', type=str, default=1000, help='output filtered data file path')
-    parser.add_argument('--input_vector_file', type=str, default=1000, help='input vectors file path')
-    parser.add_argument('--output_vector_file', type=str, default=1000, help='output vectors file path')
-    parser.add_argument('--subject_field', type=str, default=1000, help='name of the column which identifies the '
-                                                                        'subjects')
+    parser.add_argument('--max_samples', type=int, default=10000, help='max number of sampled sequences per subject')
+    parser.add_argument('--input_data_file', type=str, help='input filtered data file path')
+    parser.add_argument('--output_data_file', type=str, help='output filtered data file path')
+    parser.add_argument('--input_vector_file', type=str, help='input vectors file path')
+    parser.add_argument('--output_vector_file', type=str, help='output vectors file path')
+    parser.add_argument('--subject_field', type=str, default='FILENAME', help='name of the column which identifies the subjects')
+
     args = parser.parse_args()
-    max_num_smaples_per_subject = args.max_smaples
+    max_num_smaples_per_subject = args.max_samples
     Input_filtered_data_file_path = args.input_data_file
     Output_filtered_data_file_path = args.output_data_file
     Input_vector_file_path = args.input_vector_file
     Output_vector_file_path = args.output_vector_file
     Subject_field = args.subject_field
 
-    Input_data_file = pd.read_csv(Input_filtered_data_file_path)
+    Input_data_file = pd.read_csv(Input_filtered_data_file_path, sep='\t')
     Input_vectors_file = pd.read_csv(Input_vector_file_path)
 
     by_subject = Input_data_file.groupby([Subject_field])
