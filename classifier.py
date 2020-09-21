@@ -218,4 +218,17 @@ class classifier():
 #        graph.show()
         return(self)
 
+    def run_once(self, X_train, X_test, y_train, y_test):
+
+        # Train our classifier
+        self.model.fit(X_train, y_train)
+
+        # Make predictions
+        preds = self.model.predict(X_test)
+        print('predication: {}'.format(list(preds)))
+
+        # Evaluate accuracy
+        print(f'accuracy score for model {self.model} is: {accuracy_score(y_test, preds)}')
+
+        return(self)
     

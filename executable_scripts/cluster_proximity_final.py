@@ -199,6 +199,7 @@ def get_proximity_list_parallel(data, cluster_size, cpus=2):
     logger.info(f'{datetime.now()} Started {get_proximity_list_parallel.__name__} data length: {len(data)}. Using {cpus} cpus')
     kd_tree = cKDTree(data)
     logger.info(str(datetime.now()) + '| cKDtree ready')
+
     
     # initialize pool
     giant_result = {}
