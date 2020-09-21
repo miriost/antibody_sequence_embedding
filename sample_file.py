@@ -26,7 +26,7 @@ def main(argv):
 
     args = parser.parse_args()
     max_num_smaples_per_subject = args.max_samples
-    min_num_smaples_per_subject = args.min_samples
+    min_num_samples_per_subject = args.min_samples
     Input_filtered_data_file_path = args.input_data_file
     Output_filtered_data_file_path = args.output_data_file
     Input_vector_file_path = args.input_vector_file
@@ -66,9 +66,9 @@ def main(argv):
     print(f'Analysed {sub_num!r} subjects')
     print(f'Chose {positive_subjects!r} subjects with <= {max_num_smaples_per_subject} number of sequences')
 
-    output_data_df.to_csv(Output_filtered_data_file_path)
+    output_data_df.to_csv(Output_filtered_data_file_path, sep='\t', index=False)
     print('output data set saved to: ', Output_filtered_data_file_path)
-    output_vectors_df.to_csv(Output_vector_file_path, index = False)
+    output_vectors_df.to_csv(Output_vector_file_path, index=False)
     print('output vectors set saved to: ', Output_vector_file_path)
 
 
