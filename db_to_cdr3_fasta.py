@@ -31,7 +31,7 @@ def main(argv):
 		print('db_to_cdr3_fasta.py -i <input-file> -o <output-file> -c <colname>')
 		sys.exit(2)
 
-	db = pd.read_csv(ifile)
+	db = pd.read_csv(ifile, sep='\t')
 	f = open(ofile, "w")
 	for i in range(0,len(db)):
 		f.write(">{}_CDR3\n{}\n".format(i, db.loc[i, colname]))

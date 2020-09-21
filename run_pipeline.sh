@@ -37,14 +37,14 @@ if [ $MIN_STEP -le 0 ] && [ 0 -le $MAX_STEP ]; then
 	rm -f ${DIR}/logs/reprocess_makedb_dir.log.txt ;
 	rm -f ${DIR}/logs/reprocess_makedb_dir.csv ;
 
-	#python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${DIR}/data ${DIR}/data/${NAME}_aa_trim_3_4.csv --trim 3 4 2>&1 | tee ${DIR}/logs/reprocess_makedb_dir.log.txt ;
-	python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${DIR}/data ${DIR}/data/${NAME}_aa_trim_3_4.csv --trim 0 4 2>&1 | tee ${DIR}/logs/reprocess_makedb_dir.log.txt ;
+	#python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${DIR}/data ${DIR}/data/${NAME}.tab --trim 3 4 2>&1 | tee ${DIR}/logs/reprocess_makedb_dir.log.txt ;
+	python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${DIR}/data ${DIR}/data/${NAME}.tab --trim 3 4 2>&1 | tee ${DIR}/logs/reprocess_makedb_dir.log.txt ;
 	cat ${DIR}/logs/reprocess_makedb_dir.log.txt | cut -d : -f 2 | grep -E "([0-9]+[ ]*$)|(.*.tab$)" | sed -z 's/\n/,/g' | sed -z 's/\([^,]\+.tab\)/\n\1/g' | sed 's/,$//g' >> ${DIR}/logs/reprocess_makedb_dir.csv ;
 	# add columns names
 	echo "$(echo 'file,total,functional,len_ge_12,CONSCOUNT_gt_1,no_N_or_gaps' | cat - reprocess_makedb_dir.csv)" > ${DIR}/logs/reprocess_makedb_dir.csv ;
 	# discard empty lines
 	cat ${DIR}/logs/reprocess_makedb_dir.csv | sed -r '/^\s*$/d' | tee ${DIR}/logs/reprocess_makedb_dir.csv ;
-	python -u ~/antibody_sequence_embedding/db_to_cdr3_fasta.py -i ${DIR}/data/${NAME}_aa_trim_3_4.csv -o ${DIR}/${NAME}_cdr3_aa_trim_3_4.fasta -c JUNC_AA ; 
+	python -u ~/antibody_sequence_embedding/db_to_cdr3_fasta.py -i ${DIR}/data/${NAME}.tab -o ${DIR}/${NAME}.fasta -c JUNC_AA ; 
 fi
 
 if [ $MIN_STEP -le 1 ] && [ 1 -le $MAX_STEP ]; then
@@ -52,7 +52,7 @@ if [ $MIN_STEP -le 1 ] && [ 1 -le $MAX_STEP ]; then
 	mkdir -p ${DIR}/models/ ;
 	#for p in 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0; do 
 	for p in 1.0; do
-		pid = python -u ~/antibody_sequence_embedding/executable_scripts/generate_model.py -f ${DIR}/${NAME}_cdr3_aa_trim_3_4.fasta -o ${DIR}/models/${NAME}_${p} -p ${p} 2>&1 | tee -a ${DIR}/logs/generate_model.log.txt &  
+		python -u ~/antibody_sequence_embedding/executable_scripts/generate_model.py -f ${DIR}/${NAME}.fasta -o ${DIR}/models/${NAME}_${p} -p ${p} 2>&1 | tee -a ${DIR}/logs/generate_model.log.txt ;  
 	done ;
 fi
 
@@ -61,7 +61,7 @@ if [ $MIN_STEP -le 2 ] && [ 2 -le $MAX_STEP ]; then
 	mkdir -p ${DIR}/filtered_data_sets/ ;
 	rm -f ${DIR}/logs/generate_vectors.log.txt ;
 	for model in ${DIR}/models/*.model ; do 
-		python -u ~/antibody_sequence_embedding/executable_scripts/generate_vectors.py ${DIR}/data/${NAME}_aa_trim_3_4.csv -o ${DIR} -c JUNC_AA ${model} 2>&1 | tee -a ${DIR}/logs/generate_vectors.log.txt & 
+		python -u ~/antibody_sequence_embedding/executable_scripts/generate_vectors.py ${DIR}/data/${NAME}.tab -o ${DIR} -c JUNC_AA ${model} 2>&1 | tee -a ${DIR}/logs/generate_vectors.log.txt; 
 	done ;
 fi
 

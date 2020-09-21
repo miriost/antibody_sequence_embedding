@@ -24,8 +24,6 @@ def main(argv):
                         help = 'column name to convert to vectors, default:"JUNC_AA"', default = "JUNC_AA")
     parser.add_argument('model', 
                         help='a saved word embedding model file')
-    parser.add_argument('--sep', 
-                        help="Delimiter to use. default: ','", default = ',')
     parser.add_argument('--size', help = "Vector size", default = 100)
 
     args = parser.parse_args()
@@ -35,7 +33,7 @@ def main(argv):
         sys.exit(1)
     print('Input file for embedding: ',args.infile, '\nModel: ', args.model)
  
-    infile = pd.read_csv(args.infile, sep = args.sep)
+    infile = pd.read_csv(args.infile, sep = '\t')
     filename = os.path.split(args.infile)[-1].split(os.path.extsep)[0]
     
     #load saved model
@@ -72,7 +70,7 @@ def main(argv):
     if not os.path.exists(path_filtered_files):
         os.mkdir(path_filtered_files)
         
-    infile_path = os.path.join(path_filtered_files, filename+'_'+modelname+'_FILTERED_DATA.csv')
+    infile_path = os.path.join(path_filtered_files, filename+'_'+modelname+'_FILTERED_DATA.tab')
     infile.to_csv(infile_path, sep='\t')
     print('Data file saved: ' + os.path.abspath(infile_path))
     

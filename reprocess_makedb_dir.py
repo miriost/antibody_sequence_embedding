@@ -84,7 +84,7 @@ def main(argv):
     big_frame.columns = col_names
     #print(big_frame) 
     
-    big_frame.to_csv(args.output_file, index = False)
+    big_frame.to_csv(args.output_file, index = False, sep='\t')
     print('*********\nfile generated {} out of {} files\nOriginal rows count: {} After filtering: {}'.format(args.output_file, number_of_files, total_rows, filtered_rows))
 
         
