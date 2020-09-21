@@ -10,8 +10,8 @@ import numpy as np
 import os
 import sys, argparse
 import pathlib
-sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('miris_tools')[0])            
-from miris_tools import sequence_modeling
+sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('antibody_sequence_embedding')[0])            
+from antibody_sequence_embedding import sequence_modeling
 
 
 def main(argv):

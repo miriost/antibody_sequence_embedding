@@ -9,8 +9,8 @@ Created on Mon Jul 23 15:16:13 2018
 import sys, getopt, os
 import time
 import pathlib
-sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('miris_tools')[0])
-from miris_tools.sequence_modeling import ProtVec
+sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('antibody_sequence_embedding')[0])
+from antibody_sequence_embedding.sequence_modeling import ProtVec
 
 def main(argv):
    fasta_file = None
