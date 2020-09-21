@@ -16,7 +16,8 @@ def main(argv):
     parser = argparse.ArgumentParser(
         description='''sample sequences by subjects from embedded vectors for the clustering/classification stage ''',
         epilog="""All's well that ends well.""")
-    parser.add_argument('--max_samples', type=int, default=10000, help='max number of sampled sequences per subject')
+    parser.add_argument('--max_samples', type=int, help='max number of sampled sequences per subject')
+    parser.add_argument('--min_samples', type=int, help='min number of sampled sequences per subject')
     parser.add_argument('--input_data_file', type=str, help='input filtered data file path')
     parser.add_argument('--output_data_file', type=str, help='output filtered data file path')
     parser.add_argument('--input_vector_file', type=str, help='input vectors file path')
@@ -25,6 +26,7 @@ def main(argv):
 
     args = parser.parse_args()
     max_num_smaples_per_subject = args.max_samples
+    min_num_smaples_per_subject = args.min_samples
     Input_filtered_data_file_path = args.input_data_file
     Output_filtered_data_file_path = args.output_data_file
     Input_vector_file_path = args.input_vector_file
@@ -50,8 +52,10 @@ def main(argv):
         print(timeObj)
         print('Original number of sequences: ', len(frame), end="\n\n")
         # sample subject without replacement and save to list
-        if len(frame) >= max_num_smaples_per_subject:
+        if max_num_smaples_per_subject is not None and len(frame) >= max_num_smaples_per_subject:
             print('High number of sequences, subject removed.\n')
+        if min_num_samples_per_subject is not None and len(frame) < min_num_samples_per_subject:
+            print('Lower number of sequences, subject removed.\n')
         else:
             positive_subjects += 1
             output_data_df = output_data_df.append(Input_data_file.iloc[frame.index])
