@@ -36,7 +36,7 @@ def main():
     if not os.path.isfile(args.data_file) or args.data_file[:-4] == '.csv':
         print('feature file error! Make sure the file exists and it is *.csv file.\nExiting...')
         sys.exit(1)
-    data_file = pd.read_csv(args.data_file)
+    data_file = pd.read_csv(args.data_file, sep='\t')
     print('Data file loaded, originial file length: ', str(len(data_file)))
     
     if not args.labels_col_name in data_file.columns:

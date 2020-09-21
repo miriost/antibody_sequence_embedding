@@ -39,7 +39,7 @@ def main(argv):
            sys.exit(1)
     
     
-    feature_file = pd.read_csv(args.feature_file)     ## removed index_col=0!!!
+    feature_file = pd.read_csv(args.feature_file, sep='\t')     ## removed index_col=0!!!
     labels_file = pd.read_csv(args.labels_file) 
     if not args.observation_col_name in labels_file.columns:
         print(labels_file.columns)
@@ -66,7 +66,7 @@ def main(argv):
     feature_file['labels'] = labels
     
     path = os.path.join(os.path.dirname(args.feature_file), os.path.split(args.feature_file)[-1].split(os.path.extsep)[0]+'_with_labels.csv')
-    feature_file.to_csv(path, index = False)
+    feature_file.to_csv(path, index = False, sep='\t')
     print('~~~\nlabels add to feature file, new file is: ' + path)
     
 
