@@ -8,6 +8,7 @@ Created on Thu Apr  9 14:57:21 2020
 # sample file 
 
 import pandas as pd
+import numpy as np
 import sys, argparse
 from datetime import datetime
 
@@ -17,7 +18,8 @@ def main(argv):
         description='''sample sequences by subjects from embedded vectors for the clustering/classification stage ''',
         epilog="""All's well that ends well.""")
     parser.add_argument('--max_samples', type=int, help='max number of sampled sequences per subject')
-    parser.add_argument('--min_samples', type=int, help='min number of sampled sequences per subject')
+    parser.add_argument('--min_samples', type=int, help='min number of sampled sequences per subject. Default is 100k.',
+                        default=100000)
     parser.add_argument('--input_data_file', type=str, help='input filtered data file path')
     parser.add_argument('--output_data_file', type=str, help='output filtered data file path')
     parser.add_argument('--input_vector_file', type=str, help='input vectors file path')
@@ -43,6 +45,7 @@ def main(argv):
     output_data_df = pd.DataFrame(columns = list(Input_data_file.columns))
     output_vectors_df = pd.DataFrame(columns = list(Input_vectors_file.columns))
 
+    np.random.seed(0)
     for subject, frame in by_subject:
         sub_num += 1
         print("------------------------")
@@ -54,12 +57,13 @@ def main(argv):
         # sample subject without replacement and save to list
         if max_num_smaples_per_subject is not None and len(frame) >= max_num_smaples_per_subject:
             print('High number of sequences, subject removed.\n')
-        if min_num_samples_per_subject is not None and len(frame) < min_num_samples_per_subject:
+        if len(frame) < min_num_samples_per_subject:
             print('Lower number of sequences, subject removed.\n')
         else:
             positive_subjects += 1
-            output_data_df = output_data_df.append(Input_data_file.iloc[frame.index])
-            output_vectors_df = output_vectors_df.append(Input_vectors_file.iloc[frame.index])
+            sampled_frame_indexes = np.random.choice(frame.index, min_num_samples_per_subject, replace=False)
+            output_data_df = output_data_df.append(Input_data_file.iloc[sampled_frame_indexes])
+            output_vectors_df = output_vectors_df.append(Input_vectors_file.iloc[sampled_frame_indexes])
             print('Subject added.')
 
     print('----- Summary -----')
