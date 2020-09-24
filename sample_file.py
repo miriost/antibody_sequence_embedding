@@ -18,8 +18,8 @@ def main(argv):
         description='''sample sequences by subjects from embedded vectors for the clustering/classification stage ''',
         epilog="""All's well that ends well.""")
     parser.add_argument('--max_samples', type=int, help='max number of sampled sequences per subject')
-    parser.add_argument('--min_samples', type=int, help='min number of sampled sequences per subject. Default is 100k.',
-                        default=100000)
+    parser.add_argument('--min_samples', type=int, help='min number of sampled sequences per subject. Default is 10k.',
+                        default=10000)
     parser.add_argument('--input_data_file', type=str, help='input filtered data file path')
     parser.add_argument('--output_data_file', type=str, help='output filtered data file path')
     parser.add_argument('--input_vector_file', type=str, help='input vectors file path')
