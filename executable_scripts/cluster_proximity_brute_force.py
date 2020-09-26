@@ -84,7 +84,7 @@ def main():
     parser.add_argument('-od', '--output_description',
                         help='description to use inside output file names')
     parser.add_argument('--cpus', type=int, default=1, help='How many cores to run in parallel -  default is 1.')
-    parser.add_argument('--steps', type=int, default=10000, help='How many rows to calculate in parallel, '
+    parser.add_argument('--step', type=int, default=10000, help='How many rows to calculate in parallel, '
                                                                  'default is 10k.')
     parser.add_argument('--perform_NN', type=str2bool, default=True, help='Perform KD-tree and nearest neighbors '
                                                                           'analysis, and save NN list and distances')
@@ -120,18 +120,20 @@ def main():
     output_file_name = args.output_description + '.csv'
     if args.perform_NN:
         cluster(args.vectors_file_path, args.output_folder_path, output_file_name, cluster_size=100, cpus=args.cpus,
-                steps=args.steps)
+                step=args.step)
 
 
 @ray.remote
 def build_distance_and_knn_maps(data, sub_row_range, k, cpus=2):
     t0 = time.time()
+    print("building distance map for range {}".format(sub_row_range))
     distances_map = pairwise_distances(X=data[sub_row_range[0]:sub_row_range[1]], Y=data, metric='euclidean', n_jobs=cpus)
-    print("build_distance_map: creating sub map took {}".format(time.time() - t0))
+    print("building distance map for range {} took {}".format(sub_row_range, time.time() - t0))
 
     t0 = time.time()
+    print("building knn map for range {}".format(sub_row_range))
     knn_map = np.argpartition(distances_map, k, axis=1)[:, 0:k]
-    print("build_knn_map: creating sub map took {}".format(time.time() - t0))
+    print("building knn map for range {} took {}".format(sub_row_range, time.time() - t0))
 
     return distances_map[:, 0:k], knn_map
 
@@ -161,8 +163,9 @@ def build_maps(data, cluster_size, cpus=2, step=10000):
 
     for major_row_range in ranges:
         t0 = time.time()
+        print("calling build_sub_map for range {}".foramt(major_row_range))
         sub_distances_map, sub_knn_map = build_sub_map(data, major_row_range, cluster_size, cpus)
-        print("build_maps: creating sub map (step {}) took {}".format(major_row_range[1], time.time()-t0))
+        print("build_sub_map: creating sub map (range {}) took {}".format(major_row_range, time.time()-t0))
         distances_map[major_row_range[0]:major_row_range[1], :] = sub_distances_map
         knn_map[major_row_range[0]:major_row_range[1], :] = sub_knn_map
 
@@ -176,12 +179,12 @@ def test_build_dist_and_knn_maps(dim_one=1000, dim_two=10, cluster_size=5, cpus=
     print("building maps completed after {}".format(time.time() - t0))
 
 
-def cluster(data_file, output_file_path, output_file_name, cluster_size=100, cpus=2, steps=10000):
+def cluster(data_file, output_file_path, output_file_name, cluster_size=100, cpus=2, step=10000):
     """Cluster the data and write the result to output file"""
     vectors = read_vector_data(data_file)
 
     t0 = time.time()
-    distance_map, knn_map = build_maps(vectors, cluster_size, cpus=cpus, steps=steps)
+    distance_map, knn_map = build_maps(vectors, cluster_size, cpus=cpus, step=step)
     print("cluster: building maps completed after {}".format(time.time() - t0))
 
     write_output_file(os.path.join(output_file_path, 'NN_' + output_file_name), knn_map)
