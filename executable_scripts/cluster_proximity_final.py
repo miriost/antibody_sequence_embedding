@@ -305,7 +305,7 @@ def analyze_data_parallel_input_generator(data, neighbors_list, fields_to_extrac
 def analyze_data_parallel(neighbors_list, data_file, id_field='FILENAME', status_field='labels', cpus=4):
     """Return a dataframe with """
     logger.info(f'{str(datetime.now())} | Begin data analyze of nearest neighbors')
-    data = pd.read_csv(data_file)
+    data = pd.read_csv(data_file, sep='\t')
     # print(data.head())
     status_types = data[status_field].unique()
     subject_status = build_subject_status(data, id_field, status_field)
@@ -335,7 +335,7 @@ def analyze_data_parallel(neighbors_list, data_file, id_field='FILENAME', status
 def analyze_data(neighbors_list, data_file, id_field='FILENAME', status_field='labels'):
     """Return a dataframe with """
     logger.info(f'{str(datetime.now())} | Begin data analyze of nearest neighbors')
-    data = pd.read_csv(data_file)
+    data = pd.read_csv(data_file, sep='\t')
     #print(data.head())
     status_types = data[status_field].unique()
     subject_status = build_subject_status(data, id_field, status_field)
