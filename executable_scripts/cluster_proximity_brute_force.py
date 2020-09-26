@@ -12,7 +12,7 @@ import logging
 from sklearn.metrics.pairwise import pairwise_distances
 import ray
 
-ray.init()
+ray.init(memory=20*1024*1024*1024, object_store_memory=20*1024*1024*1024)
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,9 @@ def main():
                              'and results anaylsis file')
     parser.add_argument('-od', '--output_description',
                         help='description to use inside output file names')
-    parser.add_argument('--cpus', type=int, default=1, help='How many cores to run in parallel')
+    parser.add_argument('--cpus', type=int, default=1, help='How many cores to run in parallel -  default is 1.')
+    parser.add_argument('--steps', type=int, default=10000, help='How many rows to calculate in parallel, '
+                                                                 'default is 10k.')
     parser.add_argument('--perform_NN', type=str2bool, default=True, help='Perform KD-tree and nearest neighbors '
                                                                           'analysis, and save NN list and distances')
     parser.add_argument('--perform_results_analysis', type=str2bool, default=False, help='Analyse nearest neighbors '
@@ -117,7 +119,8 @@ def main():
     print('-----------------------')
     output_file_name = args.output_description + '.csv'
     if args.perform_NN:
-        cluster(args.vectors_file_path, args.output_folder_path, output_file_name, cluster_size=100, cpus=args.cpus)
+        cluster(args.vectors_file_path, args.output_folder_path, output_file_name, cluster_size=100, cpus=args.cpus,
+                steps=args.steps)
 
 
 @ray.remote
@@ -151,7 +154,7 @@ def build_sub_map(data, major_row_range, cluster_size, cpus=2):
     return distances_map, knn_map
 
 
-def build_maps(data, cluster_size, cpus=2, step=20000):
+def build_maps(data, cluster_size, cpus=2, step=10000):
     knn_map = np.zeros(shape=[data.shape[0], cluster_size+1], dtype=int)
     distances_map = np.zeros(shape=[data.shape[0], cluster_size+1])
     ranges = [[round(step*i), round(step*(i+1))] for i in range(round(data.shape[0]/step))]
@@ -173,12 +176,12 @@ def test_build_dist_and_knn_maps(dim_one=1000, dim_two=10, cluster_size=5, cpus=
     print("building maps completed after {}".format(time.time() - t0))
 
 
-def cluster(data_file, output_file_path, output_file_name, cluster_size=100, cpus=2):
+def cluster(data_file, output_file_path, output_file_name, cluster_size=100, cpus=2, steps=10000):
     """Cluster the data and write the result to output file"""
     vectors = read_vector_data(data_file)
 
     t0 = time.time()
-    distance_map, knn_map = build_maps(vectors, cluster_size, cpus)
+    distance_map, knn_map = build_maps(vectors, cluster_size, cpus=cpus, steps=steps)
     print("cluster: building maps completed after {}".format(time.time() - t0))
 
     write_output_file(os.path.join(output_file_path, 'NN_' + output_file_name), knn_map)
