@@ -20,11 +20,11 @@ def main(argv):
     parser.add_argument('labels_file', 
                         help='a file containing the labels for each observation')
     parser.add_argument('-l', '--labels_col_name', 
-                        help='Name of the labels column in lable file, default: "labels"', default= 'labels')
+                        help='Name of the labels column in label file, default: "labels"', default= 'labels')
     parser.add_argument('-o', '--observation_col_name', 
                         help='Name of the observation column in labels file, default: "SUBJECT"', default = "SUBJECT")
     parser.add_argument('-od', '--observation_col_name_data_file', 
-                        help='Name of the observation column in faeture file, default: "SUBJECT"', default = "SUBJECT")
+                        help='Name of the observation column in features file, default: "SUBJECT"', default = "SUBJECT")
     
     args = parser.parse_args()
     print('~~~\nAdding labels to feature file, feature file: {}, labels file: {}, labels column name: {}, observation column name: {}'.format(args.feature_file,
@@ -65,10 +65,10 @@ def main(argv):
     labels = [labels_dict[i] for i in feature_file.loc[:, args.observation_col_name_data_file]]
     feature_file['labels'] = labels
     
-    path = os.path.join(os.path.dirname(args.feature_file), os.path.split(args.feature_file)[-1].split(os.path.extsep)[0]+'_with_labels.csv')
-    feature_file.to_csv(path, index = False, sep='\t')
+    path = os.path.join(os.path.dirname(args.feature_file),
+                        os.path.split(args.feature_file)[-1].split('.tab')[0] + '_with_labels.tab')
+    feature_file.to_csv(path, index=False, sep='\t')
     print('~~~\nlabels add to feature file, new file is: ' + path)
-    
 
       
 if __name__ == "__main__":
