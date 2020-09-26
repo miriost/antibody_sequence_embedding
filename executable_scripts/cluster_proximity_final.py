@@ -17,6 +17,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+#  convert a string to a its boolean representation
 def str2bool(v):
     if isinstance(v, bool):
        return v
@@ -27,30 +29,25 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
-def main():
-    init_logger()
 
-    if False and len(sys.argv) < 2:
-        sys.argv.extend('-d ../../filtered_data_sets/CDR3_from_celiac_trim_3_4_with_labels_unique_sequences_Celiac_model_April_2020_FILTERED_DATA_100_per_subject.csv '
-                        '-nn ../../test_script/NN_test_100.csv '
-                        '-of ../../test_profiling '
-                        '-od test_profiling_100 '
-                        '--perform_NN no --perform_results_analysis yes --cpus 2'.split())
+def date_time_obj():
+    init_logger()
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data_file_path',
-                        help='the filtered data file path')
-    parser.add_argument('-v', '--vectors_file_path',
-                        help='the vectors file path')
-    parser.add_argument('-nn', '--NN_file_path',
-                        help='the NN file path')
-    parser.add_argument('-of', '--output_folder_path',
-                        help='Output folder for the 3 output files - Nearest neighbors file, destances file, and results anaylsis file')
-    parser.add_argument('-od', '--output_description',
-                        help='description to use inside output file names')
+    parser.add_argument('-d', '--data_file_path', help='the tab filtered data file path')
+    parser.add_argument('-v', '--vectors_file_path', help='the csv vectors file path')
+    parser.add_argument('-nn', '--NN_file_path', help='the NN file path')
+    parser.add_argument('-of', '--output_folder_path',  help='Output folder for the 3 output files - Nearest neighbors '
+                                                             'file, distances file, and results analysis file')
+    parser.add_argument('-od', '--output_description',  help='description to use inside output file names')
     parser.add_argument('--cpus', type=int, default=1, help='How many cores to run in parallel')
-    parser.add_argument('--perform_NN', type=str2bool, default=True, help = 'Perform KD-tree and nearest neighbors analysis, and save NN list and distances')
-    parser.add_argument('--perform_results_analysis', type=str2bool, default=False, help = 'Analyse nearest neighbors file, to subject frequencies')
+    parser.add_argument('--perform_NN', type=str2bool, default=True, help='Perform KD-tree and nearest neighbors'
+                                                                          ' analysis, and save NN list and distances')
+    parser.add_argument('--perform_results_analysis', type=str2bool, default=False, help='Analyse nearest neighbors '
+                                                                                         'file, to subject frequencies')
+    parser.add_argument('-l', '--label_column', type=str, default='labels', help='name of the labels column, '
+                                                                                 'default is "labels"')
+
     args = parser.parse_args()
     if not(os.path.isfile(args.data_file_path)):
         print('feature file error, make sure feature and vectors file path\nExiting...')
@@ -79,9 +76,11 @@ def main():
         logger.info(f'NN file path: {args.NN_file_path}')
     print('-----------------------')
     output_file_name = args.output_description + '.csv'
+
     if args.perform_NN:
         neighbors_list = cluster(args.vectors_file_path, args.output_folder_path,
                                  output_file_name, cluster_size=100, cpus=args.cpus)
+
     if args.perform_results_analysis:
         if not(args.perform_NN): #need to load neigbors list as it was not processed
             neighbors_list = np.loadtxt(args.NN_file_path, delimiter=',', skiprows =1)
@@ -152,6 +151,7 @@ def get_proximity_list(data, cluster_size):
 
     return proximity_list, distances_list
 
+
 def worker_query(proximity_list, distances_list, vector_idx, tree, vector, 
                  cluster_size, p, upper_bound, out_q):
     """Run a single query and return the result"""
@@ -170,37 +170,40 @@ def worker_query(proximity_list, distances_list, vector_idx, tree, vector,
               .format(timeObj, str(vector_idx)))
     out_q.put(out_dict)
 
+
 def input_iterator(kd_tree, vectors, cluster_size, p, upper_bound):
     for idx, vector in enumerate(vectors):
-        yield (kd_tree, vector, idx, cluster_size, p, upper_bound)
+        yield(kd_tree, vector, idx, cluster_size, p, upper_bound)
+
 
 def worker_pavel(input_arg):
     (kd_tree, vector, idx, cluster_size, p, upper_bound) = input_arg
     
     assert isinstance(kd_tree, cKDTree)
-#    assert len(vector) == 100
-#    assert isinstance(idx, int)
-#    assert cluster_size == 101
-#    assert isinstance(upper_bound, float)
-    
-    distances, indices = kd_tree.query(vector, cluster_size, p,  
-                                       distance_upper_bound=upper_bound)
+
+    t0 = time.time()
+    distances, indices = kd_tree.query(vector, cluster_size, p, distance_upper_bound=upper_bound)
+    logger.info(str(datetime.now()) + '| kd_tree.query completed. Took {}'.format(time.time() - t0))
+
     while math.inf in distances:
             upper_bound = upper_bound * 1.1
-            distances, indices = kd_tree.query(vector, cluster_size, p,
-                                               distance_upper_bound=upper_bound)
+            t0 = time.time()
+            distances, indices = kd_tree.query(vector, cluster_size, p, distance_upper_bound=upper_bound)
+            logger.info(str(datetime.now()) + '| kd_tree.query after upper_bound update completed. '
+                                              'Took {}'.format(time.time() - t0))
             print('Upper bound updated itertivly to: ' + str(upper_bound))
-    out_dict = {idx:{'distances':distances, 'indices':indices}}
+    out_dict = {idx: {'distances': distances, 'indices': indices} }
     return out_dict
 
 
 def get_proximity_list_parallel(data, cluster_size, cpus=2):
 
-    logger.info(f'{datetime.now()} Started {get_proximity_list_parallel.__name__} data length: {len(data)}. Using {cpus} cpus')
+    logger.info(f'{datetime.now()} Started {get_proximity_list_parallel.__name__}'
+                f' data length: {len(data)}. Using {cpus} cpus')
+    t0 = time.time()
     kd_tree = cKDTree(data)
-    logger.info(str(datetime.now()) + '| cKDtree ready')
+    logger.info(str(datetime.now()) + '| cKDtree ready. Took {}'.format(time.time() - t0))
 
-    
     # initialize pool
     giant_result = {}
     upper_bound = 10.0
@@ -226,14 +229,13 @@ def get_proximity_list_parallel(data, cluster_size, cpus=2):
     return proximity_list, distances_list
 
 
-
 def cluster(data_file, output_file_path, output_file_name, cluster_size=100, cpus=2):
     """Cluster the data and write the result to output file"""
     vectors = read_vector_data(data_file)
-    if False:
-        proximity, distances = get_proximity_list(vectors, cluster_size)
-    else:
-        proximity, distances = get_proximity_list_parallel(vectors, cluster_size, cpus)
+
+    # open for debug
+    #proximity, distances = get_proximity_list(vectors, cluster_size)
+    proximity, distances = get_proximity_list_parallel(vectors, cluster_size, cpus)
     
     write_proximity_file(os.path.join(output_file_path, 'NN_'+output_file_name), proximity)
     write_proximity_file(os.path.join(output_file_path, 'Distances_'+output_file_name), distances)
@@ -294,9 +296,11 @@ def analyze_data_worker(input_arg):
     
     return idx, res
 
+
 def analyze_data_parallel_input_generator(data, neighbors_list, fields_to_extract, id_field, subject_status, status_types):
     for idx, row in enumerate(neighbors_list):
         yield (data, idx, row, fields_to_extract, id_field, subject_status, status_types)
+
 
 def analyze_data_parallel(neighbors_list, data_file, id_field='FILENAME', status_field='labels', cpus=4):
     """Return a dataframe with """
@@ -326,6 +330,7 @@ def analyze_data_parallel(neighbors_list, data_file, id_field='FILENAME', status
     output_df = pd.DataFrame(list_out, columns=['neighbors', 'how_many_subjects'].extend(status_types))
     logger.info(f'{str(datetime.now())} | Finished analysis and transfered to dataframe')
     return output_df
+
 
 def analyze_data(neighbors_list, data_file, id_field='FILENAME', status_field='labels'):
     """Return a dataframe with """
@@ -407,7 +412,7 @@ def test_cluster_small_data():
 
     
 if __name__ == '__main__':
-    main()
+    date_time_obj()
     # test_proximity_list()
     # options = parse_args()
 #    test_analyze_data()
