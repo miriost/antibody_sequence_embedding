@@ -236,7 +236,7 @@ def build_maps(data, cluster_size, cpus=2, step=10000):
 
     for major_row_range in ranges:
         t0 = time.time()
-        print("calling build_sub_map for range {}".foramt(major_row_range))
+        print("calling build_sub_map for range {}".format(major_row_range))
         sub_distances_map, sub_knn_map = build_sub_map(data, major_row_range, cluster_size, cpus)
         print("build_sub_map: creating sub map (range {}) took {}".format(major_row_range, time.time()-t0))
         distances_map[major_row_range[0]:major_row_range[1], :] = sub_distances_map
