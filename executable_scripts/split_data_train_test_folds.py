@@ -100,13 +100,13 @@ def main():
             if subject in testing:
                 sub_test +=1
                 output_test_data_df = output_test_data_df.append(data_file.iloc[frame.index])
-                if vectors_file:
+                if vectors_file is not None:
                     output_test_vectors_df = output_test_vectors_df.append(vectors_file.iloc[frame.index])
                 print(f"subject {subject!r} added to test set")
             elif subject in training:
                 sub_train +=1
                 output_train_data_df = output_train_data_df.append(data_file.iloc[frame.index])
-                if vectors_file:
+                if vectors_file is not None:
                     output_train_vectors_df = output_train_vectors_df.append(vectors_file.iloc[frame.index])
                 print(f"subject {subject!r} added to train set")
             else:
@@ -121,7 +121,7 @@ def main():
         output_test_data_df.to_csv(os.path.splitext(args.data_file)[0]+'_TEST_' + str(fold_id) +
                                    os.path.splitext(args.data_file)[1], sep='\t', index=False)
 
-        if vectors_file:
+        if vectors_file is not None:
             output_train_vectors_df.to_csv(os.path.splitext(args.vectors_file)[0]+'_TRAIN_' + str(fold_id) +
                                            os.path.splitext(args.vectors_file)[1], index=False)
             output_test_vectors_df.to_csv(os.path.splitext(args.vectors_file)[0]+'_TEST_' + str(fold_id) +
