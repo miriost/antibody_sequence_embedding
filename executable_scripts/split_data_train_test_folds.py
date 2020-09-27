@@ -24,7 +24,7 @@ def main():
                          'folds'
     parser.add_argument('data_file', 
                         help='a file containing raws of data, including labals')
-    parser.add_argument('vectors_file', 
+    parser.add_argument('-v', '--vectors_file',
                         help='a file with the same length as data, each raw is the junction vector')
     parser.add_argument('-l', '--labels_col_name', 
                         help='Name of the labels column in data file, default: "labels"', default= 'FILENAME')
