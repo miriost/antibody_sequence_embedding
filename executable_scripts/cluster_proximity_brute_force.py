@@ -273,10 +273,11 @@ def build_sub_map(data, major_row_range, cluster_size, cpus=2):
     return distances_map, knn_map
 
 
-def build_maps(data, cluster_size, cpus=2, step=10000):
+def build_maps(data, cluster_size, cpus=2, step=15000):
     distances_map = np.zeros(shape=[data.shape[0], cluster_size+1])
     knn_map = np.zeros(shape=[data.shape[0], cluster_size+1], dtype=int)
-    ranges = [[round(step*i), round(step*(i+1))] for i in range(round(data.shape[0]/step))]
+    partitions = math.ceil(data.shape[0] / step)
+    ranges = [[round(step*i), min(round(step*(i+1)), data.shape[0])] for i in range(partitions)]
 
     for major_row_range in ranges:
         t0 = time.time()
