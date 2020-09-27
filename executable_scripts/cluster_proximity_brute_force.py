@@ -164,33 +164,87 @@ def main():
         logger.info(str(datetime.now()) + ' | data written to output file: ' + output_file)
 
 
-def analyze_data(knn_map, data_file, id_field='SUBJECT', status_field='labels'):
+def analyze_row(data, row, subject_status, status_types, id_field='SUBJECT', status_field='labels'):
+    cluster_data = data.loc[row, [id_field, status_field]]
+    subjects = cluster_data[id_field].unique()
+    stats = get_subject_stats(subjects, subject_status, status_types)
+    res = {
+        'neighbors': [int(x) for x in row],
+        'how_many_subjects': len(subjects),
+    }
+    res.update(stats)
+    return res
+
+
+def row_unique_count(a):
+    args = np.argsort(a)
+    unique = a[np.indices(a.shape)[0], args]
+    changes = np.pad(unique[:, 1:] != unique[:, :-1], ((0, 0), (1, 0)), mode="constant", constant_values=1)
+    return np.sum(changes, axis=1)
+
+
+def analyze_data(knn_map, data_file, id_field='SUBJECT', status_field='labels', cpus=2):
     logger.info(f'{str(datetime.now())} | Begin data analyze of nearest neighbors')
     data = pd.read_csv(data_file, sep='\t')
     status_types = data[status_field].unique()
-    subject_status = build_subject_status(data, id_field, status_field)
-    logger.info(f'{str(datetime.now())} | Build subject status complete')
-    list_out = [np.nan]*len(knn_map)
-    fields_to_extract = [id_field, status_field]
+
+    step = len(data)/cpus
+    ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
+
+    results_ids = []
+    for sub_range in ranges:
+        results_ids += [analyze_sub_data.remote(knn_map, data, sub_range, status_types)]
+
+    output_df = pd.concat([ray.get(result_id) for result_id in results_ids], ignore_index=True)
+
+    return output_df
+
+
+@ray.remote
+def analyze_sub_data(knn_map, data, sub_range, status_types, id_field='SUBJECT', status_field='labels'):
+    print("adding neighbors column")
     t0 = time.time()
-    for idx, row in enumerate(knn_map):
+    sub_output_df = pd.DataFrame(columns=['neighbors', 'how_many_subjects'])
+    sub_output_df['neighbors'] = knn_map[sub_range[0]:sub_range[1], :].tolist()
+    print("neighbors column added, took {}".format(time.time() - t0))
 
-        cluster_data = data.loc[row, fields_to_extract]
-        subjects = cluster_data[id_field].unique()
-        stats = get_subject_stats(subjects, subject_status, status_types)
-        res = {
-            'neighbors': [int(x) for x in row],
-            'how_many_subjects': len(subjects),
-        }
-        res.update(stats)
-        list_out[idx] = res
+    print("adding how_many_subjects column")
+    t0 = time.time()
+    arr = np.array(data[[id_field]].transpose())[np.arange(1)[:, None], knn_map[sub_range[0]:sub_range[1], :]]
+    sub_output_df['how_many_subjects'] = row_unique_count(arr)
+    print("how_many_subjects column added, took {}".format(time.time() - t0))
 
-        if idx % 1000 == 0:
-            logger.info('{} | index = {}, finished 1000 vectors in {:.3} sec'.format(str(datetime.now()), str(row[:6]), time.time()-t0))
-            t0 = time.time()
+    print("adding status columns")
+    t0 = time.time()
+    arr = np.array(data[[status_field]].transpose())[np.arange(1)[:, None], knn_map[sub_range[0]:sub_range[1], :]]
+    tmp = pd.DataFrame(arr).apply(lambda x: x.value_counts(normalize=True), axis=1)
+    for status in status_types:
+        if status in tmp:
+            sub_output_df[status] = tmp[status]
+        else:
+            sub_output_df[status] = 0
+    print("status columns added, took {}".format(time.time() - t0))
 
-    output_df = pd.DataFrame(list_out,columns = ['neighbors', 'how_many_subjects'].extend(status_types))
-    logger.info(f'{str(datetime.now())} | Finished analysis and transfered to dataframe')
+    return sub_output_df
+
+
+def test_analyze_sub_data():
+    data = pd.DataFrame()
+    data['SUBJECT'] = random.choices(['P1_I1', 'P1_I2', 'P1_I3', 'P1_I4', 'P1_I5', 'P1_I6', 'P1_I7', 'P1_I8'], k=1000)
+    data['labels'] = random.choices(['healthy', 'celiac'], k=1000)
+    knn_map = np.array([random.sample(range(1000), 10) for i in range(1000)])
+    status_types = data['labels'].unique()
+
+    cpus = 3
+    step = len(data)/cpus
+    ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
+
+    results_ids = []
+    for sub_range in ranges:
+        results_ids += [analyze_sub_data.remote(knn_map, data, sub_range, status_types)]
+
+    output_df = pd.concat([ray.get(result_id) for result_id in results_ids], ignore_index=True)
+
     return output_df
 
 
@@ -200,12 +254,13 @@ def build_distance_and_knn_maps(data, sub_row_range, k, cpus=2):
     print("building distance map for range {}".format(sub_row_range))
     distances_map = pairwise_distances(X=data[sub_row_range[0]:sub_row_range[1]], Y=data, metric='euclidean',
                                        n_jobs=cpus)
-    distances_map = np.sort(distances_map, axis=1)
     print("building distance map for range {} took {}".format(sub_row_range, time.time() - t0))
 
     t0 = time.time()
     print("building knn map for range {}".format(sub_row_range))
     knn_map = np.argpartition(distances_map, k, axis=1)[:, 0:k]
+    knn_map = knn_map[np.arange(knn_map.shape[0])[:, None],
+                      np.argsort(distances_map[np.arange(distances_map.shape[0])[:, None], knn_map])]
     print("building knn map for range {} took {}".format(sub_row_range, time.time() - t0))
 
     return distances_map[np.arange(distances_map.shape[0])[:, None], knn_map], knn_map
