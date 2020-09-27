@@ -157,23 +157,11 @@ def main():
 
     if args.perform_results_analysis:
         if not args.perform_NN:
-            knn_map = np.loadtxt(args.NN_file_path, delimiter=',', skiprows=1)
+            knn_map = np.loadtxt(args.NN_file_path, delimiter=',', dtype='int',  skiprows=1)
         out = analyze_data(knn_map, args.data_file_path, cpus=args.cpus)
         output_file = args.output_description + '_analysis.csv'
         out.to_csv(os.path.join(args.output_folder_path, output_file))
         logger.info(str(datetime.now()) + ' | data written to output file: ' + output_file)
-
-
-def analyze_row(data, row, subject_status, status_types, id_field='SUBJECT', status_field='labels'):
-    cluster_data = data.loc[row, [id_field, status_field]]
-    subjects = cluster_data[id_field].unique()
-    stats = get_subject_stats(subjects, subject_status, status_types)
-    res = {
-        'neighbors': [int(x) for x in row],
-        'how_many_subjects': len(subjects),
-    }
-    res.update(stats)
-    return res
 
 
 def row_unique_count(a):
@@ -202,19 +190,20 @@ def analyze_data(knn_map, data_file, id_field='SUBJECT', status_field='labels', 
 
 @ray.remote
 def analyze_sub_data(knn_map, data, sub_range, status_types, id_field='SUBJECT', status_field='labels'):
-    print("adding neighbors column")
+    print("adding neighbors column: range {}".format(sub_range))
     t0 = time.time()
     sub_output_df = pd.DataFrame(columns=['neighbors', 'how_many_subjects'])
     sub_output_df['neighbors'] = knn_map[sub_range[0]:sub_range[1], :].tolist()
     print("neighbors column added, took {}".format(time.time() - t0))
 
-    print("adding how_many_subjects column")
+    print("adding how_many_subjects column range {}".format(sub_range))
+
     t0 = time.time()
     arr = np.array(data[[id_field]].transpose())[np.arange(1)[:, None], knn_map[sub_range[0]:sub_range[1], :]]
     sub_output_df['how_many_subjects'] = row_unique_count(arr)
     print("how_many_subjects column added, took {}".format(time.time() - t0))
 
-    print("adding status columns")
+    print("adding status columns: range {}".format(sub_range))
     t0 = time.time()
     arr = np.array(data[[status_field]].transpose())[np.arange(1)[:, None], knn_map[sub_range[0]:sub_range[1], :]]
     tmp = pd.DataFrame(arr).apply(lambda x: x.value_counts(normalize=True), axis=1)
