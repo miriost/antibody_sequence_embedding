@@ -70,7 +70,7 @@ def main():
     
     # load files    
     feature_list = pd.read_csv(args.features_list, index_col=0)
-    data_file = pd.read_csv(args.data_file_path)
+    data_file = pd.read_csv(args.data_file_path, sep='\t')
     vectors_file = pd.read_csv(args.vectors_file_path)
 
     if not args.labels_col_name in data_file.columns:
