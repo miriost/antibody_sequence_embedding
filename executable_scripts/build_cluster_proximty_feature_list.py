@@ -32,7 +32,7 @@ def main():
     parser.add_argument('-v', '--vectors_file_path',
                         help='the vectors file path')
     parser.add_argument('-of', '--output_folder_path',
-                        help='Output folder for the 3 output files - Nearest neighbors file, destances file, and '
+                        help='Output folder for the 3 output files - Nearest neighbors file, distances file, and '
                              'results analysis file')
     parser.add_argument('-od', '--output_description',
                         help='description to use inside output file names')
@@ -40,7 +40,7 @@ def main():
                         help='name of the column in the analysis file with the label frequency')
     parser.add_argument('-S','--significance', help='minimal significance score for cluster selection',
                         default=0.6, type=float)
-    parser.add_argument('-m','--min_subjects', help='minimal significance score for cluster selection',
+    parser.add_argument('-m','--min_subjects', help='minimal number of subjects for cluster selection',
                         default=10, type=int)
     args = parser.parse_args()
     
