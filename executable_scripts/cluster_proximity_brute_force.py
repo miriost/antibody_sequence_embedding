@@ -160,7 +160,7 @@ def main():
             knn_map = np.loadtxt(args.NN_file_path, delimiter=',', dtype='int',  skiprows=1)
         out = analyze_data(knn_map, args.data_file_path, cpus=args.cpus)
         output_file = args.output_description + '_analysis.csv'
-        out.to_csv(os.path.join(args.output_folder_path, output_file))
+        out.to_csv(os.path.join(args.output_folder_path, output_file), index=False)
         logger.info(str(datetime.now()) + ' | data written to output file: ' + output_file)
 
 
