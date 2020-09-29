@@ -67,7 +67,7 @@ def main():
         sys.exit(1) 
 
     # load files
-    feature_list = pd.read_csv(args.features_list, index_col=0)
+    feature_list = pd.read_csv(args.features_list)
     data_file = pd.read_csv(args.data_file_path, sep='\t')
     vectors_file = pd.read_csv(args.vectors_file_path)
 
