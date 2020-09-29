@@ -85,11 +85,18 @@ def main():
         print(f'feature indexes: {feature_list.index}')
 
     by_subject = data_file.groupby(args.subject_col_name)
-    # for each subject
+    # for each subject - add feature frequency columns
     result_ids = []
     for subject, frame in by_subject:
-        result_ids += [get_subject_feature_table.remote(subject, feature_list, vectors_file, frame, cpus)]
+        subject_vectors = vectors_file.iloc[frame.index]
+        result_ids += [get_subject_feature_table.remote(subject, feature_list, subject_vectors, cpus)]
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
+
+    # add subject labels column
+    features_table[args.labels_col_name] = None
+    for subject, frame in by_subject:
+        label = frame[args.labels_col_name].unique()[0]
+        features_table.loc[subject, args.labels_col_name] = label
 
     # normalize the feature table
     normalized_features_table = features_table.div(features_table.sum(axis=1), axis=0)
@@ -101,19 +108,18 @@ def main():
 
 
 @ray.remote
-def get_subject_feature_table(subject, feature_list, vectors, frame, cpus=2):
+def get_subject_feature_table(subject, feature_list, subject_vectors, cpus=2):
     # create an empty matrix, each raw is a subject, each column is a feature (cluster)
     features = feature_list.iloc[:, -100:]
     max_distance = feature_list.loc[:, 'max_distance']
 
+    print('Start creating feature table for subject {}'.format(subject))
     t0 = time.time()
     subject_features_table = pd.DataFrame(0, index=[subject], columns=feature_list['feature_index'])
     total_feature_count = 0
     # for each vector belonging to the subject
-    for vector_index, row in frame.iterrows():
+    for idx, vector_u in subject_vectors.iterrows():
 
-        # vector in data file
-        vector_u = vectors.iloc[vector_index, :]
         # compute distance from the vector to all features center
         distances = pairwise_distances(X=np.array(vector_u, ndmin=2), Y=features, metric='euclidean', n_jobs=cpus)
         # distances = distance_matrix(features, np.array(vector_u, ndmin=2))
@@ -126,8 +132,6 @@ def get_subject_feature_table(subject, feature_list, vectors, frame, cpus=2):
         if features_count >= 1:
             add_feature_index = np.where(distance_close_enough_vec)
             subject_features_table.loc[subject, feature_list.loc[add_feature_index[0], 'feature_index']] += 1
-
-    subject_features_table.loc[subject, 'labels'] = frame['labels'].unique()[0]
 
     print('Finished creating feature table for subject {}, feature count {}, took {}'.format(subject,
                                                                                              total_feature_count,
@@ -151,10 +155,17 @@ def test_get_subject_feature_table():
 
     result_ids = []
     for subject, frame in by_subject:
-        result_ids += [get_subject_feature_table.remote(subject, feature_list, vectors, frame)]
-    output = pd.concat([ray.get(id) for id in result_ids])
+        subject_vectors = vectors.iloc[frame.index]
+        result_ids += [get_subject_feature_table.remote(subject, feature_list, subject_vectors)]
+    features_table = pd.concat([ray.get(id) for id in result_ids])
 
-    return output
+    # add subject labels column
+    features_table['labels'] = None
+    for subject, frame in by_subject:
+        label = frame['labels'].unique()[0]
+        features_table.loc[subject, 'labels'] = label
+
+    return features_table
 
 
 if __name__ == '__main__':
