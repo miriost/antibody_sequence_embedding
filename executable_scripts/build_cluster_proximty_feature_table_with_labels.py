@@ -50,6 +50,8 @@ def main():
                         help='labels column name in data file, default "labels"', default='labels', type=str)
     parser.add_argument('-c', '--cpus',
                         help='number of cpus to run parallel computing', default=2, type=int)
+    parser.add_argument('-dm', '--dist_metric',
+                        help='type of distance to use, default=', default='euclidean', type=int)
     args = parser.parse_args()
     
     if not(os.path.isfile(args.features_list)):
@@ -66,6 +68,7 @@ def main():
 
     # load files
     cpus = args.cpus
+    dist_metric = args.dist_metric
     feature_list = pd.read_csv(args.features_list)
     data_file = pd.read_csv(args.data_file_path, sep='\t')
     vectors_file = pd.read_csv(args.vectors_file_path)
@@ -89,7 +92,7 @@ def main():
     result_ids = []
     for subject, frame in by_subject:
         subject_vectors = vectors_file.iloc[frame.index]
-        result_ids += [get_subject_feature_table.remote(subject, feature_list, subject_vectors, cpus)]
+        result_ids += [get_subject_feature_table.remote(subject, feature_list, subject_vectors, cpus, dist_metric)]
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
     # normalize the feature table
@@ -109,7 +112,7 @@ def main():
 
 
 @ray.remote
-def get_subject_feature_table(subject, feature_list, subject_vectors, cpus=2):
+def get_subject_feature_table(subject, feature_list, subject_vectors, cpus=2, dist_metric='euclidean'):
     # create an empty matrix, each raw is a subject, each column is a feature (cluster)
     features = feature_list.iloc[:, -100:]
     max_distance = np.array(feature_list.loc[:, 'max_distance']).reshape(1, len(feature_list))
@@ -118,7 +121,7 @@ def get_subject_feature_table(subject, feature_list, subject_vectors, cpus=2):
     t0 = time.time()
     subject_features_table = pd.DataFrame(0, index=[subject], columns=feature_list['feature_index'].to_list())
     # for each vector belonging to the subject
-    distances = pairwise_distances(X=subject_vectors, Y=features, metric='euclidean', n_jobs=cpus)
+    distances = pairwise_distances(X=subject_vectors, Y=features, metric=dist_metric, n_jobs=cpus)
     distance_close_enough_mat = np.less_equal(distances, max_distance)
     features_count = np.sum(distance_close_enough_mat)
     if features_count >= 1:
