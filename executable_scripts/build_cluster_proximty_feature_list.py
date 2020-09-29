@@ -104,11 +104,9 @@ def main():
         print(f'Beginning builiding feature list with {number_of_features_neto} features')
     
     features_df = pd.DataFrame(0, index=range(0,number_of_features_neto), columns=c)
-    for index, value in enumerate(selected_features):
-        local_max_distance = max(distance_file.iloc[value])
-        tmp = [value, local_max_distance]
-        tmp.extend(list(vectors_file.iloc[value]))
-        features_df.iloc[index] = tmp
+    features_df['feature_index'] = selected_features
+    features_df['max_distance'] = distance_file.iloc[selected_features].max(axis=1)
+    features_df.iloc[:, 2:] = vectors_file.iloc[selected_features]
 
     features_df.to_csv(os.path.join(args.output_folder_path, args.output_description + '.csv'), index=False)
     print('file saved to ', os.path.join(args.output_folder_path, args.output_description + '.csv'))
