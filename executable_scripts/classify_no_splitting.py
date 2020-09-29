@@ -1,9 +1,10 @@
 import sys, argparse
 import os
 import matplotlib.pyplot as plt
+import pathlib
 
-sys.path.insert(0, os.path.join(os.pardir, os.path.pardir))
-from miris_tools.classifier import classifier
+sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('antibody_sequence_embedding')[0])            
+from antibody_sequence_embedding.classifier import classifier
 import pandas as pd
 import numpy as np
 
