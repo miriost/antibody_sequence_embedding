@@ -93,7 +93,7 @@ def main():
     
     # ====
     # build a feature list file, each raw contains feature center, and maximal radius
-    c = ['feature_index','max_distance']
+    c = ['feature_index', 'max_distance']
     c.extend(vectors_file.columns)
     print(c)
     selected_features = np.nonzero(~np.isnan(selected_feature_indexes))[0]
@@ -110,7 +110,7 @@ def main():
         tmp.extend(list(vectors_file.iloc[value]))
         features_df.iloc[index] = tmp
 
-    features_df.to_csv(os.path.join(args.output_folder_path, args.output_description + '.csv'))
+    features_df.to_csv(os.path.join(args.output_folder_path, args.output_description + '.csv'), index=False)
     print('file saved to ', os.path.join(args.output_folder_path, args.output_description + '.csv'))
 
     
