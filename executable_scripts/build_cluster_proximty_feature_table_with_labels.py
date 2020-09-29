@@ -112,7 +112,7 @@ def main():
 def get_subject_feature_table(subject, feature_list, subject_vectors, cpus=2):
     # create an empty matrix, each raw is a subject, each column is a feature (cluster)
     features = feature_list.iloc[:, -100:]
-    max_distance = np.array(feature_list.loc[:, 'max_distance']).reshape(1, 100)
+    max_distance = np.array(feature_list.loc[:, 'max_distance']).reshape(1, len(feature_list))
 
     print('Start creating feature table for subject {}'.format(subject))
     t0 = time.time()
