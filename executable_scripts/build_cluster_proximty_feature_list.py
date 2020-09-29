@@ -101,12 +101,12 @@ def main():
     if len(selected_features) != number_of_features_neto:
         print('Error! selected features number mismatch!!')
     else:
-        print(f'Beginning builiding feature list with {number_of_features_neto} features')
+        print(f'Beginning building feature list with {number_of_features_neto} features')
     
-    features_df = pd.DataFrame(0, index=range(0,number_of_features_neto), columns=c)
+    features_df = pd.DataFrame(0, index=list(range(0, number_of_features_neto)), columns=c)
     features_df['feature_index'] = selected_features
-    features_df['max_distance'] = distance_file.iloc[selected_features].max(axis=1)
-    features_df.iloc[:, 2:] = vectors_file.iloc[selected_features]
+    features_df['max_distance'] = distance_file.iloc[selected_features].max(axis=1).values
+    features_df.iloc[:, 2:] = vectors_file.iloc[selected_features].values
 
     features_df.to_csv(os.path.join(args.output_folder_path, args.output_description + '.csv'), index=False)
     print('file saved to ', os.path.join(args.output_folder_path, args.output_description + '.csv'))
