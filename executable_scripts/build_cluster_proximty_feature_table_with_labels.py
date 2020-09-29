@@ -32,7 +32,7 @@ import time
 from datetime import datetime
 from sklearn.metrics.pairwise import pairwise_distances
 
-ray.init()
+ray.init(memory=20*1024*1024*1024, object_store_memory=20*1024*1024*1024)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -83,19 +83,13 @@ def main():
         sys.exit(1)
     else:
         print(f'feature indexes: {feature_list.index}')
-    # create an empty matrix, each raw is a subject, each column is a feature (cluster)
-    features_table = pd.DataFrame(0,
-                                  index=pd.unique(data_file[args.subject_col_name]),
-                                  columns=feature_list['feature_index'])
-                            
-    by_subject = data_file.groupby(args.subject_col_name)
-    sub_num = 0
 
+    by_subject = data_file.groupby(args.subject_col_name)
     # for each subject
     result_ids = []
     for subject, frame in by_subject:
-        result_ids += [get_subject_feature_table.remote(subject, feature_list, vectors_file, frame)]
-    features_table = pd.concat([ray.get(id) for id in result_ids])
+        result_ids += [get_subject_feature_table.remote(subject, feature_list, vectors_file, frame, cpus)]
+    features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
     # normalize the feature table
     normalized_features_table = features_table.div(features_table.sum(axis=1), axis=0)
@@ -113,7 +107,7 @@ def get_subject_feature_table(subject, feature_list, vectors, frame, cpus=2):
     max_distance = feature_list.loc[:, 'max_distance']
 
     t0 = time.time()
-    subject_features_table = pd.DataFrame(0, index=[subject], columns=list(range(len(features))))
+    subject_features_table = pd.DataFrame(0, index=[subject], columns=feature_list['feature_index'])
     total_feature_count = 0
     # for each vector belonging to the subject
     for vector_index, row in frame.iterrows():
