@@ -141,7 +141,7 @@ def test_get_subject_feature_table():
     for subject in data['SUBJECT'].unique():
         data.loc[data['SUBJECT'] == subject, 'labels'] = random.sample(['healthy', 'celiac'], k=1)[0]
     vectors = pd.DataFrame(np.random.rand(1000, 100))
-    feature_list = pd.DataFrame(np.random.rand(100, 100), list(range(100)))
+    feature_list = pd.DataFrame(np.random.rand(100, 100), columns=list(range(100)))
     feature_list['feature_index'] = list(range(100))
     feature_list['max_distance'] = np.random.rand(100, 1) + 4
     cols = feature_list.columns.tolist()
