@@ -92,17 +92,18 @@ def main():
         result_ids += [get_subject_feature_table.remote(subject, feature_list, subject_vectors, cpus)]
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
+    # normalize the feature table
+    features_table = features_table.div(features_table.sum(axis=1), axis=0)
+
     # add subject labels column
     features_table[args.labels_col_name] = None
     for subject, frame in by_subject:
         label = frame[args.labels_col_name].unique()[0]
         features_table.loc[subject, args.labels_col_name] = label
 
-    # normalize the feature table
-    normalized_features_table = features_table.div(features_table.sum(axis=1), axis=0)
     # save to file
-    normalized_features_table.to_csv(os.path.join(args.output_folder_path, args.output_description +
-                                                  '_feature_table.csv'))
+    features_table.to_csv(os.path.join(args.output_folder_path, args.output_description + '_feature_table.csv'),
+                          index_label='SUBJECT')
       
     print('file saved to ', os.path.join(args.output_folder_path, args.output_description + '_feature_table.csv'))
 
@@ -111,30 +112,24 @@ def main():
 def get_subject_feature_table(subject, feature_list, subject_vectors, cpus=2):
     # create an empty matrix, each raw is a subject, each column is a feature (cluster)
     features = feature_list.iloc[:, -100:]
-    max_distance = feature_list.loc[:, 'max_distance']
+    max_distance = np.array(feature_list.loc[:, 'max_distance']).reshape(1, 100)
 
     print('Start creating feature table for subject {}'.format(subject))
     t0 = time.time()
-    subject_features_table = pd.DataFrame(0, index=[subject], columns=feature_list['feature_index'])
-    total_feature_count = 0
+    subject_features_table = pd.DataFrame(0, index=[subject], columns=feature_list['feature_index'].to_list())
     # for each vector belonging to the subject
-    for idx, vector_u in subject_vectors.iterrows():
-
-        # compute distance from the vector to all features center
-        distances = pairwise_distances(X=np.array(vector_u, ndmin=2), Y=features, metric='euclidean', n_jobs=cpus)
-        # distances = distance_matrix(features, np.array(vector_u, ndmin=2))
-        # distances = distances.reshape((len(features), ))
-        # filter features for which the vector is inside
-        distance_close_enough_vec = distances[0] <= max_distance
-        features_count = np.sum(distance_close_enough_vec)
-        total_feature_count += features_count
-        # increment features frequency counter
-        if features_count >= 1:
+    distances = pairwise_distances(X=subject_vectors, Y=features, metric='euclidean', n_jobs=cpus)
+    distance_close_enough_mat = np.less_equal(distances, max_distance)
+    features_count = np.sum(distance_close_enough_mat)
+    if features_count >= 1:
+        for distance_close_enough_vec in distance_close_enough_mat:
+            if np.sum(distance_close_enough_vec) == 0:
+                continue
             add_feature_index = np.where(distance_close_enough_vec)
             subject_features_table.loc[subject, feature_list.loc[add_feature_index[0], 'feature_index']] += 1
 
     print('Finished creating feature table for subject {}, feature count {}, took {}'.format(subject,
-                                                                                             total_feature_count,
+                                                                                             features_count,
                                                                                              time.time()-t0))
     return subject_features_table
 
@@ -158,6 +153,8 @@ def test_get_subject_feature_table():
         subject_vectors = vectors.iloc[frame.index]
         result_ids += [get_subject_feature_table.remote(subject, feature_list, subject_vectors)]
     features_table = pd.concat([ray.get(id) for id in result_ids])
+
+    features_table = features_table.div(features_table.sum(axis=1), axis=0)
 
     # add subject labels column
     features_table['labels'] = None
