@@ -117,9 +117,12 @@ def read_vector_data(input_file):
     return my_data
 
 
-def write_proximity_file(output_file, proximity):
+def write_proximity_file(output_file, proximity, fmt=None):
     header = ', '.join(str(el) for el in range(proximity.shape[1]))
-    np.savetxt(output_file, proximity, delimiter=',', header=header)
+    if fmt is None:
+        np.savetxt(output_file, proximity, delimiter=',', header=header)
+    else:
+        np.savetxt(output_file, proximity, delimiter=',', header=header, fmt=fmt)
 
 
 def get_proximity_list(data, cluster_size):
@@ -235,7 +238,7 @@ def cluster(data_file, output_file_path, output_file_name, cluster_size=100, cpu
     else:
         proximity, distances = get_proximity_list_parallel(vectors, cluster_size, cpus)
     
-    write_proximity_file(os.path.join(output_file_path, 'NN_'+output_file_name), proximity)
+    write_proximity_file(os.path.join(output_file_path, 'NN_'+output_file_name), proximity, fmt="%d")
     write_proximity_file(os.path.join(output_file_path, 'Distances_'+output_file_name), distances)
     print(str(datetime.now()) + ' | finished clustering, files saved to: ')
     logger.info(str(datetime.now()) + ' | finished clustering, files saved to: ')
