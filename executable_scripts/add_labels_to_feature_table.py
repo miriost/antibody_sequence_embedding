@@ -25,7 +25,8 @@ def main(argv):
                         help='Name of the observation column in labels file, default: "SUBJECT"', default = "SUBJECT")
     parser.add_argument('-od', '--observation_col_name_data_file', 
                         help='Name of the observation column in features file, default: "SUBJECT"', default = "SUBJECT")
-    
+    parser.add_argument('--sep', help='feature file separator. deafult is "\t"', default='\t', type=str)
+
     args = parser.parse_args()
     print('~~~\nAdding labels to feature file, feature file: {}, labels file: {}, labels column name: {}, observation column name: {}'.format(args.feature_file,
           args.labels_file, args.labels_col_name, args.observation_col_name))
@@ -39,7 +40,7 @@ def main(argv):
            sys.exit(1)
     
     
-    feature_file = pd.read_csv(args.feature_file, sep='\t')     ## removed index_col=0!!!
+    feature_file = pd.read_csv(args.feature_file, sep=args.sep)     ## removed index_col=0!!!
     labels_file = pd.read_csv(args.labels_file) 
     if not args.observation_col_name in labels_file.columns:
         print(labels_file.columns)
@@ -65,9 +66,13 @@ def main(argv):
     labels = [labels_dict[i] for i in feature_file.loc[:, args.observation_col_name_data_file]]
     feature_file['labels'] = labels
     
+    suffix = '.csv'
+    if args.sep == '\t':
+        suffix = '.tab'
+
     path = os.path.join(os.path.dirname(args.feature_file),
-                        os.path.split(args.feature_file)[-1].split('.tab')[0] + '_with_labels.tab')
-    feature_file.to_csv(path, index=False, sep='\t')
+                        os.path.split(args.feature_file)[-1].split(suffix)[0] + '_with_labels' + suffix)
+    feature_file.to_csv(path, index=False, sep=args.sep)
     print('~~~\nlabels add to feature file, new file is: ' + path)
 
       
