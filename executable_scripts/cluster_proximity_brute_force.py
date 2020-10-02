@@ -126,6 +126,8 @@ def main():
                         help='type of distance to use, default=euclidean', default='euclidean', type=str)
     parser.add_argument('-tm', '--thread_memory', help='memory size for ray thread (bytes)', type=int)
     parser.add_argument('-cs', '--cluster_size', help='size of the cluster, deafult=100', type=int, default=100)
+    parser_add_argument('-id', '--id_field', help='name of the subject id column, default=SUBJECT',
+                        type=str, default='SUBJECT')
 
     args = parser.parse_args()
     if not(os.path.isfile(args.data_file_path)):
@@ -167,7 +169,7 @@ def main():
     if args.perform_results_analysis:
         if not args.perform_NN:
             knn_map = np.loadtxt(args.NN_file_path, delimiter=',', dtype='int',  skiprows=1)
-        out = analyze_data(knn_map, args.data_file_path, cpus=args.cpus)
+        out = analyze_data(knn_map, args.data_file_path, id_field=args.id_field cpus=args.cpus)
         output_file = args.output_description + '_analysis.csv'
         out.to_csv(os.path.join(args.output_folder_path, output_file), index=False)
         logger.info(str(datetime.now()) + ' | data written to output file: ' + output_file)
@@ -190,7 +192,7 @@ def analyze_data(knn_map, data_file, id_field='SUBJECT', status_field='labels', 
 
     results_ids = []
     for sub_range in ranges:
-        results_ids += [analyze_sub_data.remote(knn_map, data, sub_range, status_types)]
+        results_ids += [analyze_sub_data.remote(knn_map, data, sub_range, status_types, id_field=id_field)]
 
     output_df = pd.concat([ray.get(result_id) for result_id in results_ids], ignore_index=True)
 
@@ -205,8 +207,7 @@ def analyze_sub_data(knn_map, data, sub_range, status_types, id_field='SUBJECT',
     sub_output_df['neighbors'] = knn_map[sub_range[0]:sub_range[1], :].tolist()
     print("neighbors column added, took {}".format(time.time() - t0))
 
-    print("adding how_many_subjects column range {}".format(sub_range))
-
+    print("adding how_many_subjects column: range {}".format(sub_range))
     t0 = time.time()
     arr = np.array(data[[id_field]].transpose())[np.arange(1)[:, None], knn_map[sub_range[0]:sub_range[1], :]]
     sub_output_df['how_many_subjects'] = row_unique_count(arr)
