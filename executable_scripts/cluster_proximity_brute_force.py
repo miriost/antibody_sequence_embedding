@@ -123,8 +123,9 @@ def main():
     parser.add_argument('--perform_results_analysis', type=str2bool, default=False, help='Analyse nearest neighbors '
                                                                                          'file, to subject frequencies')
     parser.add_argument('-dm', '--dist_metric',
-                        help='type of distance to use, default=', default='euclidean', type=str)
+                        help='type of distance to use, default=euclidean', default='euclidean', type=str)
     parser.add_argument('-tm', '--thread_memory', help='memory size for ray thread (bytes)', type=int)
+    parser.add_argument('-cs', '--cluster_size', help='size of the cluster, deafult=100', type=int, default=100)
 
     args = parser.parse_args()
     if not(os.path.isfile(args.data_file_path)):
@@ -160,8 +161,8 @@ def main():
     print('-----------------------')
     output_file_name = args.output_description + '.csv'
     if args.perform_NN:
-        knn_map = cluster(args.vectors_file_path, args.output_folder_path, output_file_name, cluster_size=100,
-                          dist_metric=args.dist_metric, cpus=args.cpus, step=args.step)
+        knn_map = cluster(args.vectors_file_path, args.output_folder_path, output_file_name,
+                          cluster_size=args.cluster_size, dist_metric=args.dist_metric, cpus=args.cpus, step=args.step)
 
     if args.perform_results_analysis:
         if not args.perform_NN:
