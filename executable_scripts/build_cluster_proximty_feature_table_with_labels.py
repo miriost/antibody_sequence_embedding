@@ -32,7 +32,6 @@ import time
 from datetime import datetime
 from sklearn.metrics.pairwise import pairwise_distances
 
-ray.init(memory=20*1024*1024*1024, object_store_memory=20*1024*1024*1024)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -52,6 +51,7 @@ def main():
                         help='number of cpus to run parallel computing', default=2, type=int)
     parser.add_argument('-dm', '--dist_metric',
                         help='type of distance to use, default=', default='euclidean', type=str)
+    parser.add_argument('-tm', '--thread_memory', help='memory size for ray thread (bytes)', type=int)
     args = parser.parse_args()
     
     if not(os.path.isfile(args.features_list)):
@@ -86,6 +86,11 @@ def main():
         sys.exit(1)
     else:
         print(f'feature indexes: {feature_list.index}')
+
+    if args.thread_memory is not None:
+        ray.init(memory=args.thread_memory, object_store_memory=args.thread_memory)
+    else:
+        ray.init()
 
     by_subject = data_file.groupby(args.subject_col_name)
     # for each subject - add feature frequency columns
