@@ -51,7 +51,7 @@ def main():
     parser.add_argument('-c', '--cpus',
                         help='number of cpus to run parallel computing', default=2, type=int)
     parser.add_argument('-dm', '--dist_metric',
-                        help='type of distance to use, default=', default='euclidean', type=int)
+                        help='type of distance to use, default=', default='euclidean', type=str)
     args = parser.parse_args()
     
     if not(os.path.isfile(args.features_list)):
