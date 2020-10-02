@@ -12,7 +12,6 @@ import logging
 from sklearn.metrics.pairwise import pairwise_distances
 import ray
 
-ray.init(memory=20*1024*1024*1024, object_store_memory=20*1024*1024*1024)
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +122,8 @@ def main():
                                                                           'analysis, and save NN list and distances')
     parser.add_argument('--perform_results_analysis', type=str2bool, default=False, help='Analyse nearest neighbors '
                                                                                          'file, to subject frequencies')
+    parser.add_argument('-tm', '--thread_memory', help='memory size for ray thread (bytes)', type=int)
+
     args = parser.parse_args()
     if not(os.path.isfile(args.data_file_path)):
         print('feature file error, make sure feature and vectors file path\nExiting...')
@@ -139,6 +140,11 @@ def main():
     if not(args.perform_NN) and not(os.path.isfile(args.NN_file_path)):
         print('Nearest neighbors file error, make sure the file exists\nExiting...')
         sys.exit(1)
+
+    if args.thread_memory is not None:
+        ray.init(memory=args.thread_memory, object_store_memory=args.thread_memory)
+    else:
+        ray.init()
     
     dateTimeObj = datetime.now()
     timeObj = dateTimeObj.time()
