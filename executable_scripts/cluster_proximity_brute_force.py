@@ -273,8 +273,8 @@ def build_sub_map(data, major_row_range, cluster_size, dist_metric='euclidean', 
     distances_map = np.zeros(shape=[major_row_range[1]-major_row_range[0], cluster_size+1])
     for minor_row_range in ranges:
         sub_row_range = [major_row_range[0] + minor_row_range[0], major_row_range[0] + minor_row_range[1]]
-        results_ids += [build_distance_and_knn_maps.remote(data, sub_row_range, k=cluster_size+1, metric=dist_metric,
-                                                           cpus=cpus)]
+        results_ids += [build_distance_and_knn_maps.remote(data, sub_row_range, k=cluster_size+1,
+                                                           dist_metric=dist_metric, cpus=cpus)]
     for i, minor_row_range in enumerate(ranges):
         sub_distances_map, sub_knn_map = ray.get(results_ids[i])
         distances_map[minor_row_range[0]:minor_row_range[1], :] = sub_distances_map
