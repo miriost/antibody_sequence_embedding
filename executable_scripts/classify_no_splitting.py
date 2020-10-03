@@ -84,11 +84,11 @@ def main(argv):
     labels_all = pd.concat([y_train, y_test])
     feature_table = pd.concat([x_train, x_test])
 
-    if len(x_train) == 0:
+    if len(x_train.columns) == 0:
         print('No features in training file.\nExiting...')
         sys.exit(1)
 
-    if len(x_test) == 0:
+    if len(x_test.columns) == 0:
         print('No features in test file.\nExiting...')
         sys.exit(1)
 

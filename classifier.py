@@ -258,7 +258,7 @@ class classifier():
             output.loc[idx, 'key'] = key
             idx = idx + 1
         
-        output.loc[list(range(start, idx)), 'report'] = 'train'
+        output.loc[list(range(start, idx)), 'report'] = 'test'
         output.loc[list(range(start, idx)), 'accuracy'] = accuracy
 
         output['model'] = self.modelname
