@@ -26,7 +26,8 @@ from sklearn.svm import SVC
 from sklearn import tree
 from sklearn.neural_network import MLPClassifier
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
 
 def add(a,b):
     return(a+b)
@@ -224,11 +225,28 @@ class classifier():
         self.model.fit(X_train, y_train)
 
         # Make predictions
-        preds = self.model.predict(X_test)
-        print('predication: {}'.format(list(preds)))
+        train_predictions = self.model.predict(X_train)
+        test_predictions = self.model.predict(X_test)
 
-        # Evaluate accuracy
-        print(f'accuracy score for model {self.model} is: {accuracy_score(y_test, preds)}')
+        train_report = classification_report(y_train, train_predictions, output_dict=True)
+        test_report = classification_report(y_test, test_predictions, output_dict=True)
 
-        return(self)
-    
+        output = pd.DataFrame()
+        for key, item in train_report.items():
+            if key == 'accuracy':
+                output['accuracy'] = item
+                continue
+            if key == 'macro avg':
+                output['macro_avg_precision'] = item['precision']
+                output['macro_avg_recall'] = item['recall']
+                output['macro_avg_f1_score'] = item['f1-score']
+            if key == 'weighted avg':
+                continue
+            output[key + '_precision'] = item['precision']
+            output[key + '_recall'] = item['recall']
+            output[key + '_f1_score'] = item['f1-score']
+        output['model'] = self.modelname
+
+        output = output.reindex(sorted(df.columns), axis=1)
+
+        return output

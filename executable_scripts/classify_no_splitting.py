@@ -1,12 +1,9 @@
 import sys, argparse
 import os
-import matplotlib.pyplot as plt
 import pathlib
-
+import pandas as pd
 sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('antibody_sequence_embedding')[0])            
 from antibody_sequence_embedding.classifier import classifier
-import pandas as pd
-import numpy as np
 
 
 def str2bool(v):
@@ -22,19 +19,23 @@ def str2bool(v):
 
 def main(argv):
     parser = argparse.ArgumentParser(
-        description='''classify_no_splitting.py function performs classification based on a train and test feature tables where each row is an observation and each column is a feature. It's output is a confusion matrix and a score.  ''',
+        description='''classify_no_splitting.py function performs classification based on a train and test feature 
+                       tables where each row is an observation and each column is a feature. It's output is a confusion 
+                       matrix and a score.''',
         epilog="""All's well that ends well.""")
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', help='a *.csv file containing the TRAIN features table, including labels column')
+    parser.add_argument('--train_file', help='a *.csv file containing the TRAIN features table, including labels '
+                                             'column')
     parser.add_argument('--test_file', help='a *.csv file containing the TEST features table, including labels column')
     parser.add_argument('--labels_col_name', help='Name of the labels column, default: "labels"', default='labels')
+    parser.add_argument('--output_file', help='name of the output file, default is None (no output file)', type=str)
+    parser.add_argument('--col_names', help='comma separated list of columns names to add to output', type=str)
+    parser.add_argument('--col_values', help='comma separated list of columns values to add to output', type=str)
     parser.add_argument('-M', '--model',
-                        help='Classification model. current supported models: logistic_regression, decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, MLP, naive_bayes, QDA" , default: "decision_tree"',
+                        help='Classification model. current supported models: logistic_regression, decision_tree, kNN, '
+                             'linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, MLP, naive_bayes, QDA" , '
+                             'default: "decision_tree"',
                         default="decision_tree")
-
-    if len(sys.argv) <= 1:
-        sys.argv.extend(r"--train_file C:\Users\mirio\research\cross_validation\10K_TRAIN_0_S_60_feature_table_with_labels.csv"
-                        r" --test_file C:\Users\mirio\research\cross_validation\10K_TEST_0_S_60_feature_table_with_labels.csv -M all".split())
 
     args = parser.parse_args()
 
@@ -42,13 +43,12 @@ def main(argv):
         print('train file {} error! Make sure the file exists and it is *.csv file.\nExiting...'.format(
             args.train_file))
         sys.exit(1)
-    train_file = pd.read_csv(args.train_file, index_col = 0)
+    train_file = pd.read_csv(args.train_file, index_col=0)
     if not (os.path.isfile(args.test_file) and os.path.splitext(os.path.split(args.test_file)[1])[1] == '.csv'):
         print('test file {} error! Make sure the file exists and it is *.csv file.\nExiting...'.format(
             args.test_file))
         sys.exit(1)
-    test_file = pd.read_csv(args.test_file, index_col = 0)
-
+    test_file = pd.read_csv(args.test_file, index_col=0)
 
     if args.labels_col_name:
         if (not args.labels_col_name in train_file.columns) or (not args.labels_col_name in test_file.columns):
@@ -59,29 +59,62 @@ def main(argv):
     else:
         labels_col_name = 'labels'
 
-    print(
-        "~~~~~~~~ Begin classifing...\nTrain file: {}\nTest file: {}\nLabels column name: {}\nModel: {}\n~~~~~~~".format(
-            os.path.abspath(args.train_file), os.path.abspath(args.test_file), labels_col_name, args.model))
+    if (args.col_names is None) != (args.col_values is None):
+        print('col_names and col_values arguments must be provided together.\nExiting...')
+        sys.exit(1)
 
-    x_train = train_file.drop(labels_col_name, axis = 1)
+    if args.col_names is not None:
+        col_names = args.col_names.split(',')
+        col_values = args.col_values.split(',')
+        if len(col_names) != len(col_values):
+            print('col_names and col_values lists must be of the same length.\nExiting...')
+            sys.exit(1)
+
+    print("~~~~~~~~ Begin classifing...\nTrain file: {}\nTest file: {}\nLabels column name: {}\nModel: "
+          "{}\n~~~~~~~".format(os.path.abspath(args.train_file), os.path.abspath(args.test_file), labels_col_name,
+                               args.model))
+
+    x_train = train_file.drop(labels_col_name, axis=1)
     y_train = train_file[labels_col_name]
     x_test = test_file.drop(labels_col_name, axis=1)
     y_test = test_file[labels_col_name]
 
     labels_all = pd.concat([y_train, y_test])
-
     feature_table = pd.concat([x_train, x_test])
+
+    if len(x_train) == 0:
+        print('No features in training file.\nExiting...')
+        sys.exit(1)
+
+    if len(x_test) == 0:
+        print('No features in test file.\nExiting...')
+        sys.exit(1)
+
+    output = None
     if args.model == 'all':
         models = ["logistic_regression", "decision_tree", "kNN", "linear_svm", "RBF_SVM", "Gaussian",
                   "Random_Forest", "MLP", "ADA", "MLP", "naive_bayes", "QDA"]
         for mod in models:
             our_classifier = classifier(feature_table=feature_table, labels=labels_all, model=mod, C=.9)
-            our_classifier.run_once(x_train, x_test, y_train, y_test)
+            if output is None:
+                output = our_classifier.run_once(x_train, x_test, y_train, y_test)
+            else:
+                output = pd.concat([output, our_classifier.run_once(x_train, x_test, y_train, y_test)])
             print(f'original test labels: {list(y_test)}')
     else:
-
         our_classifier = classifier(feature_table= feature_table, labels=labels_all, model = args.model, C=.9)
-        our_classifier.run_once(x_train, x_test, y_train, y_test)
+        output = our_classifier.run_once(x_train, x_test, y_train, y_test)
+
+    if col_names is not None:
+        for idx in range(len(col_names)):
+            output[col_names[idx]] = col_values[idx]
+
+    # save output if output_file argument was provided
+    if args.output_file is not None:
+        output.to_csv(args.output_file, index=False)
+    # print output
+    print(output.to_csv(index=False))
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
