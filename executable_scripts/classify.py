@@ -8,8 +8,9 @@ Created on Sun Aug 12 11:21:56 2018
 import sys, argparse
 import os
 import matplotlib.pyplot as plt
-sys.path.insert(0, os.path.join(os.pardir, os.path.pardir))
-from miris_tools.classifier import classifier
+import pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('antibody_sequence_embedding')[0]) 
+from antibody_sequence_embedding.classifier import classifier
 import pandas as pd
 import numpy as np
 
@@ -130,11 +131,11 @@ def main(argv):
         else:
             our_classifier = classifier(features, labels, model)
             if not args.verify:
-                print('Performing classification, cross correlation without verification')
+                print('Performing classification, cross validation without verification')
                 our_classifier.run()
                 print(our_classifier.score)  #score on test set
             else:
-                print('Performing classification, cross correlation with verification')
+                print('Performing classification, cross validation with verification')
                 our_classifier.run(validate=True, X_validate=X_verify, y_validate=y_verify)
                 print('Scores on test set:')
                 print(our_classifier.score)  #score on test set
