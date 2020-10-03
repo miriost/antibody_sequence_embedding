@@ -126,7 +126,7 @@ def main():
                         help='type of distance to use, default=euclidean', default='euclidean', type=str)
     parser.add_argument('-tm', '--thread_memory', help='memory size for ray thread (bytes)', type=int)
     parser.add_argument('-cs', '--cluster_size', help='size of the cluster, deafult=100', type=int, default=100)
-    parser_add_argument('-id', '--id_field', help='name of the subject id column, default=SUBJECT',
+    parser.add_argument('-id', '--id_field', help='name of the subject id column, default=SUBJECT',
                         type=str, default='SUBJECT')
 
     args = parser.parse_args()
@@ -169,7 +169,7 @@ def main():
     if args.perform_results_analysis:
         if not args.perform_NN:
             knn_map = np.loadtxt(args.NN_file_path, delimiter=',', dtype='int',  skiprows=1)
-        out = analyze_data(knn_map, args.data_file_path, id_field=args.id_field cpus=args.cpus)
+        out = analyze_data(knn_map, args.data_file_path, id_field=args.id_field, cpus=args.cpus)
         output_file = args.output_description + '_analysis.csv'
         out.to_csv(os.path.join(args.output_folder_path, output_file), index=False)
         logger.info(str(datetime.now()) + ' | data written to output file: ' + output_file)
