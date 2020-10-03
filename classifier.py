@@ -228,8 +228,8 @@ class classifier():
         train_predictions = self.model.predict(X_train)
         test_predictions = self.model.predict(X_test)
 
-        train_report = classification_report(y_train, train_predictions, output_dict=True)
-        test_report = classification_report(y_test, test_predictions, output_dict=True)
+        train_report = classification_report(y_train, train_predictions, zero_division=0, output_dict=True)
+        test_report = classification_report(y_test, test_predictions, zero_division=0, output_dict=True)
 
         output = pd.DataFrame()
         idx = 0

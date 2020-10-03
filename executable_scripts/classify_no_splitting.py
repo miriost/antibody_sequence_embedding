@@ -102,7 +102,6 @@ def main(argv):
                 output = our_classifier.run_once(x_train, x_test, y_train, y_test)
             else:
                 output = pd.concat([output, our_classifier.run_once(x_train, x_test, y_train, y_test)], ignore_index=True)
-            print(f'original test labels: {list(y_test)}')
     else:
         our_classifier = classifier(feature_table= feature_table, labels=labels_all, model = args.model, C=.9)
         output = our_classifier.run_once(x_train, x_test, y_train, y_test)
