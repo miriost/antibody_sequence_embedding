@@ -63,6 +63,8 @@ def main(argv):
         print('col_names and col_values arguments must be provided together.\nExiting...')
         sys.exit(1)
 
+    col_names = None
+    col_values = None
     if args.col_names is not None:
         col_names = args.col_names.split(',')
         col_values = args.col_values.split(',')
@@ -99,7 +101,7 @@ def main(argv):
             if output is None:
                 output = our_classifier.run_once(x_train, x_test, y_train, y_test)
             else:
-                output = pd.concat([output, our_classifier.run_once(x_train, x_test, y_train, y_test)])
+                output = pd.concat([output, our_classifier.run_once(x_train, x_test, y_train, y_test)], ignore_index=True)
             print(f'original test labels: {list(y_test)}')
     else:
         our_classifier = classifier(feature_table= feature_table, labels=labels_all, model = args.model, C=.9)

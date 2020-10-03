@@ -232,21 +232,38 @@ class classifier():
         test_report = classification_report(y_test, test_predictions, output_dict=True)
 
         output = pd.DataFrame()
+        idx = 0
+        accuracy = 0
         for key, item in train_report.items():
             if key == 'accuracy':
-                output['accuracy'] = item
+                accuracy = item
                 continue
-            if key == 'macro avg':
-                output['macro_avg_precision'] = item['precision']
-                output['macro_avg_recall'] = item['recall']
-                output['macro_avg_f1_score'] = item['f1-score']
-            if key == 'weighted avg':
+            output.loc[idx, 'precision'] = item['precision']
+            output.loc[idx, 'recall'] = item['recall']
+            output.loc[idx, 'f1_score'] = item['f1-score']
+            output.loc[idx, 'key'] = key
+            idx = idx + 1
+
+        output['report'] = 'train'
+        output['accuracy'] = accuracy
+        start = idx
+
+        for key, item in test_report.items():
+            if key == 'accuracy':
+                accuracy = item
                 continue
-            output[key + '_precision'] = item['precision']
-            output[key + '_recall'] = item['recall']
-            output[key + '_f1_score'] = item['f1-score']
+            output.loc[idx, 'precision'] = item['precision']
+            output.loc[idx, 'recall'] = item['recall']
+            output.loc[idx, 'f1_score'] = item['f1-score']
+            output.loc[idx, 'key'] = key
+            idx = idx + 1
+        
+        output.loc[list(range(start, idx)), 'report'] = 'train'
+        output.loc[list(range(start, idx)), 'accuracy'] = accuracy
+
         output['model'] = self.modelname
 
-        output = output.reindex(sorted(df.columns), axis=1)
+        # sort columns
+        output = output.reindex(sorted(output.columns), axis=1)
 
         return output
