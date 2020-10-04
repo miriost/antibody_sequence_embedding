@@ -28,6 +28,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import GridSearchCV
 
 def add(a,b):
     return(a+b)
@@ -132,40 +133,53 @@ class classifier():
                                                 intercept_scaling=1, max_iter=100, multi_class='multinomial', n_jobs=1,
                                                 penalty='l2', random_state=None, solver='newton-cg', tol=0.0001,
                                                 verbose=0, warm_start=True)
+
         elif self.modelname in ['decision_tree','DT']:
-            self.model = tree.DecisionTreeClassifier(max_depth=5)
-            
+            tuned_parameters = [{'max_depth': list(range(3, 14))}]
+            self.clf = GridSearchCV(tree.DecisionTreeClassifier(), tuned_parameters, scoring='f1_macro')
+
         elif self.modelname in ['kNN','k-NN','knn']:
-            self.model = KNeighborsClassifier(n_neighbors=3)
-            
+            tuned_parameters = [{'n_neighbors': list(range(1, 11))}]
+            self.clf = GridSearchCV(tree.DecisionTreeClassifier(), tuned_parameters, scoring='f1_macro')
+
         elif self.modelname in ['linear_svm', 'LSVM']:
-            self.model = SVC(kernel="linear", C=0.025)
-        
+            tuned_parameters = {'C': [0.1, 1, 10, 100, 1000], 'kernel': ['linear']}
+            self.clf = GridSearchCV(SVC(), tuned_parameters, scoring='f1_macro')
+
         elif self.modelname in ['rbf_svm', 'RBF_SVM']:
-            self.model = SVC(gamma=2, C=1)
-        
+            tuned_parameters = {'C': [0.1, 1, 10, 100, 1000], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001], 'kernel': ['rbf']}
+            self.clf = GridSearchCV(SVC(), tuned_parameters, scoring='f1_macro')
+
         elif self.modelname in ['Gaussian', 'gaussian']:
             self.model = GaussianProcessClassifier(1.0 * RBF(1.0))
             
         elif self.modelname in ['RF', 'Random_forest', 'Random_Forest', 'random_forest']:
-            self.model = RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1)
-            
+            tuned_parameters = [{'max_depth': list(range(3, 14)), 'max_features': list(range(1, 5))}]
+            self.clf = GridSearchCV(RandomForestClassifier(), tuned_parameters, scoring='f1_macro')
+
         elif self.modelname in ['MLP', 'Neural_net']:
-            self.model = MLPClassifier(alpha=1, max_iter=1000)
-        
+            tuned_parameters = {
+                'hidden_layer_sizes': [(50, 50, 50), (50, 100, 50), (100,)],
+                'activation': ['tanh', 'relu'],
+                'solver': ['sgd', 'adam'],
+                'alpha': [0.0001, 0.05],
+                'learning_rate': ['constant', 'adaptive'],
+            }
+            self.clf = GridSearchCV(MLPClassifier(), tuned_parameters, scoring='f1_macro')
+
         elif self.modelname in ['ADA', 'Ada', 'Adaboost', 'Ada_boost']:
             self.model = AdaBoostClassifier()
             
         elif self.modelname in ['NB', 'naive_bayes','Naive_Bayes','Naive_bayes']:
-            self.model = GaussianNB()
-        
+            tuned_parameters = [{'var_smoothing': [ n*1e-9 for n in range(1, 5)]}]
+            self.clf = GridSearchCV(GaussianNB(), tuned_parameters, scoring='f1_macro')
+
         elif self.modelname in ['QDA','qda']:
             self.model = QuadraticDiscriminantAnalysis()
                 
         else:
             raise Exception("Classifier model un-recognized, current supported models: logistic_regression, decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, naive_bayes, QDA")
-      
-    
+
     def run(self, n = 1000, test_size = .2, validate=False, X_validate=None, y_validate=None):
         predictions_all =[]
         actual_all = []
@@ -180,14 +194,23 @@ class classifier():
         
         for i in range(n):
             X_train, X_test, y_train, y_test = train_test_split(self.feature_table, self.labels_num, test_size=test_size)
-            
-            self.model.fit(X_train,y_train)
+
+            if self.model is not None:
+                self.model.fit(X_train, y_train)
+                validata_pred = self.model.predict(X_validate)
+                test_preds = self.model.predict(X_test)
+            elif self.clf is not None:
+                validata_pred = self.clf.predict(X_validate)
+                test_preds = self.clf.predict(X_test)
+            else:
+                return(self)
+
             if self.modelname in ["LR", "RLR", 'logistic_regression', 'regulized_logistic_regression']:
                 self.coef = list(map(add, self.coef, self.model.coef_))
-            predictions_all.extend(list(self.model.predict(X_test)))
+            predictions_all.extend(list(test_preds))
             actual_all.extend(y_test)
             if validate:
-                validate_prediction.extend(list(self.model.predict(X_validate)))
+                validate_prediction.extend(list(validata_pred))
                 validate_actual.extend(y_validate_num)
             #coefs = coefs + self.model.coef_
          
@@ -209,8 +232,8 @@ class classifier():
             
         #print('classifier ' + self.modelname +' score: ' + "%.3f" % self.score)
         
-        if self.model == 'decision_tree' or self.model == 'DT':
-            dot_data = tree.export_graphviz(self.model, out_file='../../results/tmp.dot', 
+        if self.model is not None and self.modelname == 'decision_tree' or self.modelname == 'DT':
+            dot_data = tree.export_graphviz(self.model, out_file='../../results/tmp.dot',
                                  feature_names=self.feature_table.columns,  
                                  class_names=self.classes,  
                                  filled=True, rounded=True,  
@@ -221,12 +244,22 @@ class classifier():
 
     def run_once(self, X_train, X_test, y_train, y_test):
 
-        # Train our classifier
-        self.model.fit(X_train, y_train)
-
-        # Make predictions
-        train_predictions = self.model.predict(X_train)
-        test_predictions = self.model.predict(X_test)
+        parameters = {}
+        if self.model is not None:
+            # Train our classifier
+            self.model.fit(X_train, y_train)
+            # Make predictions
+            train_predictions = self.model.predict(X_train)
+            test_predictions = self.model.predict(X_test)
+        elif self.clf is not None:
+            self.clf.fit(X_train, y_train)
+            parameters = self.clf.best_params_
+            # Make predictions
+            train_predictions = self.clf.predict(X_train)
+            test_predictions = self.clf.predict(X_test)
+        else:
+            # return empty data frame
+            return pd.DataFrame()
 
         train_report = classification_report(y_train, train_predictions, zero_division=0, output_dict=True)
         test_report = classification_report(y_test, test_predictions, zero_division=0, output_dict=True)
@@ -257,11 +290,12 @@ class classifier():
             output.loc[idx, 'f1_score'] = item['f1-score']
             output.loc[idx, 'key'] = key
             idx = idx + 1
-        
+
         output.loc[list(range(start, idx)), 'report'] = 'test'
         output.loc[list(range(start, idx)), 'accuracy'] = accuracy
 
         output['model'] = self.modelname
+        output['parameters'] = format(parameters)
 
         # sort columns
         output = output.reindex(sorted(output.columns), axis=1)

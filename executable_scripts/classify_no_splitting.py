@@ -95,7 +95,7 @@ def main(argv):
     output = None
     if args.model == 'all':
         models = ["logistic_regression", "decision_tree", "kNN", "linear_svm", "RBF_SVM", "Gaussian",
-                  "Random_Forest", "MLP", "ADA", "MLP", "naive_bayes", "QDA"]
+                  "Random_Forest", "ADA", "naive_bayes", "QDA"]
         for mod in models:
             our_classifier = classifier(feature_table=feature_table, labels=labels_all, model=mod, C=.9)
             if output is None:
