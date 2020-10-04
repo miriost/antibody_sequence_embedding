@@ -110,7 +110,10 @@ class classifier():
          "Decision Tree (DT)", "Random Forest (RF)", "Neural Net (MLP)", "AdaBoost ('Ada')",
          "Naive Bayes (NB)", "QDA"]
 
-        
+       
+        self.model = None
+        self.clf = None
+
         if self.modelname == 'logistic_regression' or self.modelname == 'LR':
             if len(self.classes) == 2: #binomial logistic regression case
                 self.model = LogisticRegression(C=C, class_weight=None, dual=False, fit_intercept=True,
@@ -136,11 +139,11 @@ class classifier():
 
         elif self.modelname in ['decision_tree','DT']:
             tuned_parameters = [{'max_depth': list(range(3, 14))}]
-            self.clf = GridSearchCV(tree.DecisionTreeClassifier(), tuned_parameters, scoring='f1_macro')
+            self.clf = GridSearchCV(DecisionTreeClassifier(), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['kNN','k-NN','knn']:
             tuned_parameters = [{'n_neighbors': list(range(1, 11))}]
-            self.clf = GridSearchCV(tree.DecisionTreeClassifier(), tuned_parameters, scoring='f1_macro')
+            self.clf = GridSearchCV(KNeighborsClassifier(), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['linear_svm', 'LSVM']:
             tuned_parameters = {'C': [0.1, 1, 10, 100, 1000], 'kernel': ['linear']}
