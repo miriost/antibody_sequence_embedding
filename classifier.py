@@ -29,6 +29,8 @@ from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
+from scipy.stats import randint
 
 def add(a,b):
     return(a+b)
@@ -110,7 +112,7 @@ class classifier():
          "Decision Tree (DT)", "Random Forest (RF)", "Neural Net (MLP)", "AdaBoost ('Ada')",
          "Naive Bayes (NB)", "QDA"]
 
-       
+        self.models = None
         self.model = None
         self.clf = None
 
@@ -138,12 +140,17 @@ class classifier():
                                                 verbose=0, warm_start=True)
 
         elif self.modelname in ['decision_tree','DT']:
-            tuned_parameters = [{'max_depth': list(range(3, 14))}]
-            self.clf = GridSearchCV(DecisionTreeClassifier(), tuned_parameters, scoring='f1_macro')
+            tuned_parameters = [{'max_depth': randint(3, 8),
+                                 "max_features": randint(1, 9),
+                                 "min_samples_leaf": randint(1, 9),
+                                 "criterion": ["gini", "entropy"}]
+            self.clf = RandomizedSearchCV(DecisionTreeClassifier(), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['kNN','k-NN','knn']:
-            tuned_parameters = [{'n_neighbors': list(range(1, 11))}]
-            self.clf = GridSearchCV(KNeighborsClassifier(), tuned_parameters, scoring='f1_macro')
+            tuned_parameters = [{'n_neighbors': list(range(1, 11)),
+                                 'weights': ['uniform', 'distance'],
+                                 'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']}]
+            self.models = GridSearchCV(KNeighborsClassifier(), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['linear_svm', 'LSVM']:
             tuned_parameters = {'C': [0.1, 1, 10, 100, 1000], 'kernel': ['linear']}
@@ -172,7 +179,7 @@ class classifier():
 
         elif self.modelname in ['ADA', 'Ada', 'Adaboost', 'Ada_boost']:
             self.model = AdaBoostClassifier()
-            
+
         elif self.modelname in ['NB', 'naive_bayes','Naive_Bayes','Naive_bayes']:
             tuned_parameters = [{'var_smoothing': [ n*1e-9 for n in range(1, 5)]}]
             self.clf = GridSearchCV(GaussianNB(), tuned_parameters, scoring='f1_macro')
