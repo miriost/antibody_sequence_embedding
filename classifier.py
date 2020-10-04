@@ -164,8 +164,8 @@ class classifier():
             self.model = GaussianProcessClassifier(1.0 * RBF(1.0))
             
         elif self.modelname in ['RF', 'Random_forest', 'Random_Forest', 'random_forest']:
-            tuned_parameters = [{'max_depth': list(range(3, 14)), 'max_features': list(range(1, 5))}]
-            self.clf = GridSearchCV(RandomForestClassifier(), tuned_parameters, scoring='f1_macro')
+            tuned_parameters = [{'max_depth': randint(3, 14), 'max_features': randint(1, 5)}]
+            self.clf = RandomizedSearchCV(RandomForestClassifier(), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['MLP', 'Neural_net']:
             tuned_parameters = {
