@@ -21,13 +21,13 @@ done
 for fold in $(seq ${lower} 1 ${upper}) ; do
 	fold_dir=FOLD${fold}
 	# loop cluster size
-	for cs in seq(100 10 130); do
+	for cs in $(seq 100 10 130); do
 		cs_dir=${fold_dir}/cs_${cs}
 		# loop segnificant level
-		for seg_level in seq(60 2 74) ; do
+		for seg_level in $(seq 60 2 74) ; do
 			sig=$(echo "scale=2;${seg_level}/100" | bc)
 			# loop min subjects
-			for min_subj in seq(8 1 14); do 
+			for min_subj in $(seq 8 1 14); do 
 				output_dir=${cs_dir}/seg_level_${seg_level}_min_subj_${min_subj}
 				mkdir -p ${output_dir}
 				if ! [ -f ${output_dir}/feature_list.csv ] ; then 
