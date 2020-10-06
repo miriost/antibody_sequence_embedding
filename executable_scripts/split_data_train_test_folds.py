@@ -82,7 +82,6 @@ def main():
     print('Total number of subjects: ' , str(n_subjects))
     n_folds = args.number_of_folds
 
-    by_subject = data_file.groupby([args.id_col_name])
     if not args.repeated:
         output_folds = create_folds_no_repetitions(subjects_df, n_folds)
     else:
@@ -91,36 +90,18 @@ def main():
             sys.exit(1)
         output_folds = create_folds_with_repetitions(subjects_df, n_folds, args.test_fraction)
 
-    output_train_data_df = pd.DataFrame(columns=list(data_file.columns))
-    output_test_data_df = pd.DataFrame(columns=list(data_file.columns))
-    output_test_vectors_df = None
-    output_train_vectors_df = None
-    if vectors_file is not None:
-        output_train_vectors_df = pd.DataFrame(columns=list(vectors_file.columns))
-        output_test_vectors_df = pd.DataFrame(columns = list(vectors_file.columns))
-
     fold_id = 0
     for (training, testing) in output_folds:
-        sub_test = 0
-        sub_train = 0
-        for subject, frame in by_subject:
-            if subject in testing:
-                sub_test += 1
-                output_test_data_df = output_test_data_df.append(data_file.iloc[frame.index])
-                if vectors_file is not None:
-                    output_test_vectors_df = output_test_vectors_df.append(vectors_file.iloc[frame.index])
-                print(f"subject {subject!r} added to test set")
-            elif subject in training:
-                sub_train += 1
-                output_train_data_df = output_train_data_df.append(data_file.iloc[frame.index])
-                if vectors_file is not None:
-                    output_train_vectors_df = output_train_vectors_df.append(vectors_file.iloc[frame.index])
-                print(f"subject {subject!r} added to train set")
-            else:
-                print(f'Error, subject {subject!r} not found in train or test lists')
 
-        print(f'----- Summary fold {fold_id} -----')
-        print(f'{sub_train} subjects to train set, {sub_test} subjects to test set')
+        print(f'----- fold {fold_id} training: {training} testing: {testing} -----')
+
+        output_train_data_df = data_file.loc[data_file[args.id_col_name].isin(training), :]
+        output_test_data_df = data_file.loc[data_file[args.id_col_name].isin(testing), :]
+        output_train_vectors_df = None
+        output_test_vectors_df = None
+        if vectors_file is not None:
+            output_train_vectors_df = vectors_file.loc[data_file[args.id_col_name].isin(training), :]
+            output_test_vectors_df = vectors_file.loc[data_file[args.id_col_name].isin(testing), :]
 
         output_train_data_df.to_csv(os.path.splitext(args.data_file)[0] + '_TRAIN_' + str(fold_id) +
                                     os.path.splitext(args.data_file)[1], sep='\t', index=False)
