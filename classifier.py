@@ -143,7 +143,7 @@ class classifier():
             tuned_parameters = [{'max_depth': randint(3, 8),
                                  "max_features": randint(1, 9),
                                  "min_samples_leaf": randint(1, 9),
-                                 "criterion": ["gini", "entropy"}]
+                                 "criterion": ["gini", "entropy"]}]
             self.clf = RandomizedSearchCV(DecisionTreeClassifier(), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['kNN','k-NN','knn']:
@@ -175,7 +175,7 @@ class classifier():
                 'alpha': [0.0001, 0.05],
                 'learning_rate': ['constant', 'adaptive'],
             }
-            self.clf = GridSearchCV(MLPClassifier(), tuned_parameters, scoring='f1_macro')
+            self.clf = GridSearchCV(MLPClassifier(max_iter=1000), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['ADA', 'Ada', 'Adaboost', 'Ada_boost']:
             self.model = AdaBoostClassifier()
