@@ -44,11 +44,13 @@ def main(argv):
             args.train_file))
         sys.exit(1)
     train_file = pd.read_csv(args.train_file, index_col=0)
+    train_file.fillna(0)
     if not (os.path.isfile(args.test_file) and os.path.splitext(os.path.split(args.test_file)[1])[1] == '.csv'):
         print('test file {} error! Make sure the file exists and it is *.csv file.\nExiting...'.format(
             args.test_file))
         sys.exit(1)
     test_file = pd.read_csv(args.test_file, index_col=0)
+    test_file.fillna(0)
 
     if args.labels_col_name:
         if (not args.labels_col_name in train_file.columns) or (not args.labels_col_name in test_file.columns):
