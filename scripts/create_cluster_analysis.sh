@@ -2,26 +2,27 @@
 
 trap "exit" INT
 
-lower=100
-upper=130
-while getopts "hl:u:s" opt; do
+usage="USAGE: create_cluster_anlysis.sh -f [list of fold numbers] -c [list of cluster sizes]"
+folds=$(seq 0 1 39)
+cluster_sizes=$(seq 100 10 130)
+while getopts "hf:c:s:m:o:" opt; do
 	case ${opt} in
-    		h ) echo "USAGE: create_cluster_analysis.sh -l [lower fold number] -u [upper fold number]"
+		h ) echo ${usage} ; exit 1
       			;;
-    		l ) lower=${OPTARG}
+    		f ) folds=${OPTARG}
       			;;
-    		u ) upper=${OPTARG}
-		     	;;
-		\? ) echo $USAGE; exit 1
-      		;;
+		c ) cluster_sizes=${OPTARG}
+			;;
+		\? ) echo ${usage}; exit 1
+      			;;
 	esac
 done
 
 # loop folds
-for fold in $(seq ${lower} 1 ${upper}) ; do
+for fold in ${folds} ; do
 	fold_dir=FOLD${fold}
 	# loop cluster size
-	for cs in $(seq 100 10 130); do
+	for cs in ${cluster_sizes}; do
 		output_dir=${fold_dir}/cs_${cs}
 		mkdir -p ${output_dir}
 		if [ -f ${output_dir}/feautre_list.csv ] ; then

@@ -2,32 +2,40 @@
 
 trap "exit" INT
 
-lower=100
-upper=130
-while getopts "hl:u:s" opt; do
+usage="USAGE: create_feature_list.sh -f [list of fold numbers] -c [list of cluster sizes] -s [list of segnificant levels] -m [list of min subjects]"
+folds=$(seq 0 1 39)
+cluster_sizes=$(seq 100 10 130)
+segnificant_levels=$(seq 60 2 74)
+min_subjects=$(seq 8 1 14)
+while getopts "hf:c:s:m:o:" opt; do
 	case ${opt} in
-		h ) echo "USAGE: create_feature_list.sh -l [lower fold number] -u [upper fold number]"
+		h ) echo ${usage} ; exit 1
       			;;
-    		l ) lower=${OPTARG}
+    		f ) folds=${OPTARG}
       			;;
-    		u ) upper=${OPTARG}
+		c ) cluster_sizes=${OPTARG}
+			;;
+    		s ) segnificant_levels=${OPTARG}
 		     	;;
-		\? ) echo $USAGE; exit 1
-      		;;
+		m ) min_subjects=${OPTARG}
+			;;
+		\? ) echo ${usage}; exit 1
+      			;;
 	esac
 done
 
+
 # loop folds
-for fold in $(seq ${lower} 1 ${upper}) ; do
+for fold in ${folds} ; do
 	fold_dir=FOLD${fold}
 	# loop cluster size
-	for cs in $(seq 100 10 130); do
+	for cs in ${cluster_sizes}; do
 		cs_dir=${fold_dir}/cs_${cs}
 		# loop segnificant level
-		for seg_level in $(seq 60 2 74) ; do
+		for seg_level in ${segnificant_levels} ; do
 			sig=$(echo "scale=2;${seg_level}/100" | bc)
 			# loop min subjects
-			for min_subj in $(seq 8 1 14); do 
+			for min_subj in ${min_subjects}; do 
 				output_dir=${cs_dir}/seg_level_${seg_level}_min_subj_${min_subj}
 				mkdir -p ${output_dir}
 				if ! [ -f ${output_dir}/feature_list.csv ] ; then 

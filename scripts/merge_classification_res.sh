@@ -28,7 +28,7 @@ while getopts "hf:c:s:m:o:" opt; do
 done
 
 # reset file if exists
-echo "" > all_${classification_file}
+rm -f all_${classification_file}
 # loop all folds
 for fold in ${folds} ; do
 	fold_dir=FOLD${fold}
@@ -44,6 +44,9 @@ for fold in ${folds} ; do
 				if ! [ -f ${output_dir}/${classification_file} ]; then
 					continue
 				fi
+				if ! [ -f all_${classification_file} ] ; then
+					head -n1 ${output_dir}/${classification_file} > all_${classification_file}	 
+				fi	
 				echo "merging ${output_dir}/${classification_file}"
 				tail -n+2 ${output_dir}/${classification_file} >> all_${classification_file}	
 			done		
