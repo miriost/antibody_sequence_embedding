@@ -224,7 +224,7 @@ class classifier():
                 validate_actual.extend(y_validate_num)
             #coefs = coefs + self.model.coef_
          
-    # Compute confusion matrix
+        # Compute confusion matrix
         cnf_matrix = confusion_matrix(actual_all, predictions_all)
         np.set_printoptions(precision=2)        
         plot_confusion_matrix(cnf_matrix, classes=self.classes, normalize=True,
@@ -303,6 +303,8 @@ class classifier():
 
         output.loc[list(range(start, idx)), 'report'] = 'test'
         output.loc[list(range(start, idx)), 'accuracy'] = accuracy
+
+        output.loc['n_features'] = X_train.shape[1]
 
         output['model'] = self.modelname
         output['parameters'] = format(parameters)
