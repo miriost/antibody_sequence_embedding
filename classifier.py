@@ -304,8 +304,7 @@ class classifier():
         output.loc[list(range(start, idx)), 'report'] = 'test'
         output.loc[list(range(start, idx)), 'accuracy'] = accuracy
 
-        output.loc['n_features'] = X_train.shape[1]
-
+        output['n_features'] = X_train.shape[1]
         output['model'] = self.modelname
         output['parameters'] = format(parameters)
 
