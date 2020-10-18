@@ -140,11 +140,12 @@ class classifier():
                                                 verbose=0, warm_start=True)
 
         elif self.modelname in ['decision_tree','DT']:
-            tuned_parameters = [{'max_depth': randint(3, 8),
-                                 "max_features": randint(1, 9),
-                                 "min_samples_leaf": randint(1, 9),
-                                 "criterion": ["gini", "entropy"]}]
-            self.clf = RandomizedSearchCV(DecisionTreeClassifier(), tuned_parameters, scoring='f1_macro')
+            self.models = [(DecisionTreeClassifier(max_depth=depth), {'max_depth': depth}) for depth in range(3, 8)]
+           # tuned_parameters = [{'max_depth': randint(3, 8),
+           #                      "max_features": randint(1, 9),
+           #                      "min_samples_leaf": randint(1, 9),
+           #                      "criterion": ["gini", "entropy"]}]
+           # self.clf = RandomizedSearchCV(DecisionTreeClassifier(), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['kNN','k-NN','knn']:
             tuned_parameters = [{'n_neighbors': list(range(1, 11)),
@@ -261,6 +262,19 @@ class classifier():
             # Make predictions
             train_predictions = self.model.predict(X_train)
             test_predictions = self.model.predict(X_test)
+        elif self.models is not None:
+            best_accuracy_score = 0
+            train_predictions = []
+            test_predictions = []
+            for model in self.models:
+                self.model[0].fit(X_train, y_train)
+                # Make predictions
+                tmp_train_predictions = self.model[0].predict(X_train)
+                tmp_test_predictions = self.model[0].predict(X_test)
+                if accuracy_score(y_test, tmp_test_predictions) > best_accuracy_score:
+                    train_predictions = tmp_train_predictions
+                    test_predictions = tmp_test_predictions
+                    parameters = model[1]
         elif self.clf is not None:
             self.clf.fit(X_train, y_train)
             parameters = self.clf.best_params_
