@@ -55,7 +55,7 @@ def main():
 
 	group_by_columns = args.group_by.split(',')
 	for column in group_by_columns:
-		if column is not in input_file.columns:
+		if column not in input_file.columns:
 			print("{} is not in input_file columns".format(column))
 			exit(1)
 
@@ -69,10 +69,11 @@ def main():
 	if df is None:
 		df = group_by_metric(input_file, group_by_columns)
 
-	output_dir = args.outputdir
-	os.mkdir(output_dir)
+	output_dir = args.output_dir
+	if not os.path.exists(output_dir):
+		os.mkdir(output_dir)
 
-	min_folds = parser.min_folds
+	min_folds = args.min_folds
 	if min_folds is None:
 		min_folds = int(len(input_file['fold'].unique()) * 0.7)
 
@@ -87,7 +88,6 @@ def main():
 	                                                   df_filtered.iloc[0, df_filtered.columns == 'f1_score_mean'][0]))
 	best_model_df = df_filtered.loc[df_filtered['model'] == best_model, :]
 	best_model_df = best_model_df.sort_values(by='f1_score_mean', ascending=False);
-	chart = sns.lineplot(data=best_model_df, x="n_features_mean", y="f1_score_mean")
 
 	ticks = best_model_df['n_features_mean'].unique().astype(int).tolist()
 	threshold = (max(ticks) - min(ticks)) / (len(ticks) * 2)
@@ -109,6 +109,9 @@ def main():
 		else:
 			ticks_labels += ['']
 
+	sns.set(rc={'figure.figsize': (18, 10)})
+
+	chart = sns.lineplot(data=best_model_df, x="n_features_mean", y="f1_score_mean")
 	chart.set_xticks(ticks)
 	chart.set_xticklabels(ticks_labels, rotation=90)
 	chart.get_figure().savefig(os.path.join(output_dir, "n_features_vs_f1_score.png"))
@@ -150,6 +153,7 @@ def main():
 	           (input_file['report'] == 'test') & (input_file['key'] == 'macro avg')
 	chart = sns.histplot(data=input_file.loc[indexing, :], x="f1_score")
 	chart.get_figure().savefig(os.path.join(output_dir, "best_model_f1_score_hist.png"))
+	print(input_file.loc[indexing, 'parameters'].value_counts())
 
 	plt.clf()
 	best_models = df_filtered['model'].unique()[0:min(4, len(df_filtered['model'].unique()))]
@@ -165,8 +169,11 @@ def main():
 		           (input_file['report'] == 'test') & (input_file['key'] == 'macro avg')
 		best_models_df_list += [input_file.loc[ indexing, : ]]
 	best_models_df = pd.concat(best_models_df_list)
-	chart = sns.scatterplot(data=best_models_df, x="fold", y="f1_score", hue="model")
+	chart = sns.scatterplot(data=best_models_df, x="fold", y="f1_score", hue="model", x_jitter=0.2, y_jitter=0.2)
 	chart.set_xticks(best_models_df['fold'].unique())
 	chart.set_xticklabels(best_models_df['fold'].unique())
 	chart.get_figure().savefig(os.path.join(output_dir, "{}_best_models.png".format(len(best_models))))
 
+
+if __name__ == "__main__":
+    main()
