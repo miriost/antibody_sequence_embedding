@@ -39,7 +39,8 @@ for fold in ${folds} ; do
 		for sig_level in ${significance_levels} ; do
 			# loop min subjects
 			for min_subj in ${min_subjects}; do 
-				output_dir=${cs_dir}/sig_level_${sig_level}_min_subj_${min_subj}
+				output_dir=${cs_dir}/seg_level_${sig_level}_min_subj_${min_subj}
+				echo  ${output_dir}/${classification_file} 
 				if ! [ -f ${output_dir}/${classification_file} ]; then
 					continue
 				fi
