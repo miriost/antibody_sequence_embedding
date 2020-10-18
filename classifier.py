@@ -267,10 +267,10 @@ class classifier():
             train_predictions = []
             test_predictions = []
             for model in self.models:
-                self.model[0].fit(X_train, y_train)
+                model[0].fit(X_train, y_train)
                 # Make predictions
-                tmp_train_predictions = self.model[0].predict(X_train)
-                tmp_test_predictions = self.model[0].predict(X_test)
+                tmp_train_predictions = model[0].predict(X_train)
+                tmp_test_predictions = model[0].predict(X_test)
                 if accuracy_score(y_test, tmp_test_predictions) > best_accuracy_score:
                     train_predictions = tmp_train_predictions
                     test_predictions = tmp_test_predictions
