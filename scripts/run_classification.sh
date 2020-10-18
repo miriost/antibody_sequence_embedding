@@ -2,14 +2,15 @@
 
 trap "exit" INT
 
-usage="USAGE: run_classification.sh -f [list of fold numbers] -c [list of cluster sizes] -s [list of significance levels] -m [list of min subjects] -o [output file name] -r [replace existing results results]"
+usage="USAGE: run_classification.sh -f [list of fold numbers] -c [list of cluster sizes] -s [list of significance levels] -m [list of min subjects] -o [output file name] -r [replace existing results results] -M [models to run]"
 folds=$(seq 0 1 39)
 cluster_sizes=$(seq 100 10 130)
 significance_levels=$(seq 60 2 74)
 min_subjects=$(seq 8 1 14)
 output_file=classification_res.csv
 replace=true
-while getopts "hf:c:s:m:o:r:" opt; do
+models=all
+while getopts "hf:c:s:m:o:r:M:" opt; do
 	case ${opt} in
 		h ) echo ${usage} ; exit 1
       			;;
@@ -24,6 +25,8 @@ while getopts "hf:c:s:m:o:r:" opt; do
 		o ) output_file=${OPTARG}
 			;;
 		r ) replace=${OPTARG}
+			;;
+		M ) models=${OPTARG}
 			;;
 		\? ) echo ${usage}; exit 1
       			;;
@@ -46,7 +49,7 @@ for fold in ${folds} ; do
 					continue
 				fi
 				# runt the classification
-				python -u ~/antibody_sequence_embedding/executable_scripts/classify_no_splitting.py --train_file ${output_dir}/train_feature_table.csv  --test_file ${output_dir}/test_feature_table.csv --col_names="min_subj,fold,cluster_size,significance" --col_values="${min_subj},${fold},${cs},${sig}" --output_file ${output_dir}/${output_file} -M all 2>&1 | tee ${output_dir}/classifiy_no_splitting.log.txt
+				python -u ~/antibody_sequence_embedding/executable_scripts/classify_no_splitting.py --train_file ${output_dir}/train_feature_table.csv  --test_file ${output_dir}/test_feature_table.csv --col_names="min_subj,fold,cluster_size,significance" --col_values="${min_subj},${fold},${cs},${sig}" --output_file ${output_dir}/${output_file} -M ${models} 2>&1 | tee ${output_dir}/classifiy_no_splitting.log.txt
 			done # min subjects loop
 		done # significance level loop
 	done # cluster size loop
