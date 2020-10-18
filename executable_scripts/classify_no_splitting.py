@@ -4,6 +4,7 @@ import pathlib
 import pandas as pd
 sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('antibody_sequence_embedding')[0])            
 from antibody_sequence_embedding.classifier import classifier
+import pickle
 
 
 def str2bool(v):
@@ -31,6 +32,12 @@ def main(argv):
     parser.add_argument('--output_file', help='name of the output file, default is None (no output file)', type=str)
     parser.add_argument('--col_names', help='comma separated list of columns names to add to output', type=str)
     parser.add_argument('--col_values', help='comma separated list of columns values to add to output', type=str)
+    parser.add_argument('--grid_search', help='use grid search', type=bool, default=False)
+    parser.add_argument('--output_model_file', help='Suffix of file saving the trained models. if not provided models '
+                                                    'will not be saved',
+                        type=str)
+    parser.add_argument('--input_model_file', help='Input file to load the model from. Makes the models argument '
+                                                   'redundant', type=str)
     parser.add_argument('-M', '--models',
                         help='comma separated list of classifiers. current supported models: logistic_regression, '
                              'decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, MLP, '
@@ -95,17 +102,31 @@ def main(argv):
         sys.exit(1)
 
     output = None
-    if args.models == 'all':
-        models = ["logistic_regression", "decision_tree", "kNN", "linear_svm", "RBF_SVM", "Gaussian",
-                  "Random_Forest", "ADA", "naive_bayes", "QDA"]
+
+    if args.input_model_file:
+        loaded_model = pickle.load(open(args.input_model_file, 'rb'))
+        file_name = os.path.basename(args.output_model_file)
+        our_classifier = classifier(feature_table=feature_table, labels=labels_all, model_name=file_name, C=.9,
+                                    grid_search=args.grid_searc, model=loaded_model)
+        output, model = our_classifier.run_once(x_train, x_test, y_train, y_test)
     else:
-        models = args.models.split(",")
-    for mod in models:
-        our_classifier = classifier(feature_table=feature_table, labels=labels_all, model=mod, C=.9)
-        if output is None:
-            output = our_classifier.run_once(x_train, x_test, y_train, y_test)
+        if args.models == 'all':
+            models = ["logistic_regression", "decision_tree", "kNN", "linear_svm", "RBF_SVM", "Gaussian",
+                      "Random_Forest", "ADA", "naive_bayes", "QDA"]
         else:
-            output = pd.concat([output, our_classifier.run_once(x_train, x_test, y_train, y_test)], ignore_index=True)
+            models = args.models.split(",")
+        for model_name in models:
+            our_classifier = classifier(feature_table=feature_table, labels=labels_all, model_name=model_name, C=.9,
+                                        grid_search=args.grid_search)
+            if output is None:
+                output, model = our_classifier.run_once(x_train, x_test, y_train, y_test)
+            else:
+                tmp, model = our_classifier.run_once(x_train, x_test, y_train, y_test)
+                output = pd.concat([output, tmp], ignore_index=True)
+            if args.output_model_file is not None:
+                file_name = os.path.basename(args.output_model_file)
+                dir_name = os.path.dirname(args.output_model_file)
+                pickle.dump(model, open(os.path.join(dir_name, model_name + '_' + file_name), 'wb'))
 
     if col_names is not None:
         for idx in range(len(col_names)):
