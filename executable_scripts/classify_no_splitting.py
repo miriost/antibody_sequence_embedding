@@ -31,10 +31,10 @@ def main(argv):
     parser.add_argument('--output_file', help='name of the output file, default is None (no output file)', type=str)
     parser.add_argument('--col_names', help='comma separated list of columns names to add to output', type=str)
     parser.add_argument('--col_values', help='comma separated list of columns values to add to output', type=str)
-    parser.add_argument('-M', '--model',
-                        help='Classification model. current supported models: logistic_regression, decision_tree, kNN, '
-                             'linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, MLP, naive_bayes, QDA" , '
-                             'default: "decision_tree"',
+    parser.add_argument('-M', '--models',
+                        help='comma separated list of classifiers. current supported models: logistic_regression, '
+                             'decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, MLP, '
+                             'naive_bayes, QDA. default: "decision_tree"',
                         default="decision_tree")
 
     args = parser.parse_args()
@@ -95,18 +95,17 @@ def main(argv):
         sys.exit(1)
 
     output = None
-    if args.model == 'all':
+    if args.models == 'all':
         models = ["logistic_regression", "decision_tree", "kNN", "linear_svm", "RBF_SVM", "Gaussian",
                   "Random_Forest", "ADA", "naive_bayes", "QDA"]
-        for mod in models:
-            our_classifier = classifier(feature_table=feature_table, labels=labels_all, model=mod, C=.9)
-            if output is None:
-                output = our_classifier.run_once(x_train, x_test, y_train, y_test)
-            else:
-                output = pd.concat([output, our_classifier.run_once(x_train, x_test, y_train, y_test)], ignore_index=True)
     else:
-        our_classifier = classifier(feature_table= feature_table, labels=labels_all, model = args.model, C=.9)
-        output = our_classifier.run_once(x_train, x_test, y_train, y_test)
+        models = args.models.split(",")
+    for mod in models:
+        our_classifier = classifier(feature_table=feature_table, labels=labels_all, model=mod, C=.9)
+        if output is None:
+            output = our_classifier.run_once(x_train, x_test, y_train, y_test)
+        else:
+            output = pd.concat([output, our_classifier.run_once(x_train, x_test, y_train, y_test)], ignore_index=True)
 
     if col_names is not None:
         for idx in range(len(col_names)):
