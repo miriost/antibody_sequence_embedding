@@ -17,6 +17,8 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+def str2bool(v):
+  return v.lower() in ("yes", "true", "t", "1")
 
 def main(argv):
     parser = argparse.ArgumentParser(
@@ -32,7 +34,7 @@ def main(argv):
     parser.add_argument('--output_file', help='name of the output file, default is None (no output file)', type=str)
     parser.add_argument('--col_names', help='comma separated list of columns names to add to output', type=str)
     parser.add_argument('--col_values', help='comma separated list of columns values to add to output', type=str)
-    parser.add_argument('--grid_search', help='use grid search', type=bool, default=False)
+    parser.add_argument('--grid_search', help='use grid search', type=str2bool, default=False)
     parser.add_argument('--output_model_file', help='Suffix of file saving the trained models. if not provided models '
                                                     'will not be saved',
                         type=str)
@@ -102,12 +104,11 @@ def main(argv):
         sys.exit(1)
 
     output = None
-
     if args.input_model_file:
         loaded_model = pickle.load(open(args.input_model_file, 'rb'))
-        file_name = os.path.basename(args.output_model_file)
+        file_name = os.path.basename(args.input_model_file)
         our_classifier = classifier(feature_table=feature_table, labels=labels_all, model_name=file_name, C=.9,
-                                    grid_search=args.grid_searc, model=loaded_model)
+                                    grid_search=args.grid_search, model=loaded_model)
         output, model = our_classifier.run_once(x_train, x_test, y_train, y_test)
     else:
         if args.models == 'all':
@@ -120,6 +121,7 @@ def main(argv):
                                         grid_search=args.grid_search)
             if output is None:
                 output, model = our_classifier.run_once(x_train, x_test, y_train, y_test)
+                print(model)
             else:
                 tmp, model = our_classifier.run_once(x_train, x_test, y_train, y_test)
                 output = pd.concat([output, tmp], ignore_index=True)

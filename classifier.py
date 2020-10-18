@@ -90,7 +90,7 @@ class classifier():
     
     """
     
-    def __init__(self, feature_table, labels, model_name, classes, C=1.0, grid_search=True, model=None):
+    def __init__(self, feature_table, labels, model_name, classes=None, C=1.0, grid_search=True, model=None):
         self.feature_table = feature_table
         self.labels = labels
         self.model_name = model_name
@@ -115,9 +115,10 @@ class classifier():
         self.models = None
         self.model = None
         self.clf = None
+        self.trained_model = None
 
         if model is not None:
-            self.model = model
+            self.trained_model = model
             return
 
         if self.model_name == 'logistic_regression' or self.model_name == 'LR':
@@ -278,13 +279,19 @@ class classifier():
         parameters = {}
         model = None
 
-        if self.model is not None:
+        if self.trained_model is not None:
+            model = self.trained_model
+            train_predictions = model.predict(X_train)
+            test_predictions = model.predict(X_test)
+
+        elif self.model is not None:
             # Train our classifier
             model = self.model
             model.fit(X_train, y_train)
             # Make predictions
             train_predictions = model.predict(X_train)
             test_predictions = model.predict(X_test)
+        
         elif self.models is not None:
             best_accuracy_score = 0
             train_predictions = []
@@ -295,17 +302,19 @@ class classifier():
                 tmp_train_predictions = model_it[0].predict(X_train)
                 tmp_test_predictions = model_it[0].predict(X_test)
                 if accuracy_score(y_test, tmp_test_predictions) >= best_accuracy_score:
-                    model = self.model
+                    model = model_it[0]
                     best_accuracy_score = accuracy_score(y_test, tmp_test_predictions)
                     train_predictions = tmp_train_predictions
                     test_predictions = tmp_test_predictions
-                    parameters = model[1]
+                    parameters = model_it[1]
+        
         elif self.clf is not None:
             self.clf.fit(X_train, y_train)
             model = self.clf.best_estimator_
             parameters = model.best_params_
             train_predictions = model.predict(X_train)
             test_predictions = model.predict(X_test)
+        
         else:
             # return empty data frame
             return pd.DataFrame()
