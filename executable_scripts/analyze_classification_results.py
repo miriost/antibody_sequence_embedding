@@ -65,15 +65,13 @@ def main():
 	# filter only test reports
 	df_filtered = df.loc[(df['report'] == 'test') & (df['n_folds'] >= min_folds) & (df['key'] == 'macro avg'), : ]
 
-	# print best 3 results in terms of avg_f1_score
 	df_filtered = df_filtered.sort_values(by='f1_score_mean', ascending=False);
-	print(df_filtered.head(3).transpose())
+	df.to_csv("accumlated_" + args.input_file, index=False)
 
 	rbf_svm_df = df_filtered.loc[df_filtered['model'] == 'RBF_SVM', :]
 	sns.lineplot(data=rbf_svm_df, x="n_features_mean", y="f1_score_mean")
+	plt.show()
+
 	sns.lineplot(data=rbf_svm_df, x="cluster_size", y="f1_score_mean")
 	sns.lineplot(data=rbf_svm_df, x="min_subj", y="f1_score_mean")
 	sns.lineplot(data=rbf_svm_df, x="significance", y="f1_score_mean")
-
-indexing = (input_file['model'] == "ADA") & (input_file['significance'] == 0.6) & (input_file['cluster_size'] == 100) & (input_file['min_subj'] == 9)
-input_file.loc[indexing, :]
