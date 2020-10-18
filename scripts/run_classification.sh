@@ -41,7 +41,7 @@ for fold in ${folds} ; do
 			sig=$(echo "scale=2;${sig_level}/100" | bc)
 			# loop min subjects
 			for min_subj in ${min_subjects}; do 
-				output_dir=${cs_dir}/sig_level_${sig_level}_min_subj_${min_subj}
+				output_dir=${cs_dir}/seg_level_${sig_level}_min_subj_${min_subj}
 				if [ -f ${output_dir}/${output_file} ] && [ ${replace} != true ] ; then
 					continue
 				fi
