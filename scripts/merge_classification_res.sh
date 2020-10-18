@@ -3,7 +3,7 @@
 trap "exit" INT
 
 usage="USAGE: merge_classification_res.sh -f [list of fold numbers] -c [list of cluster sizes] -s [list of significance levels] -m [list of min subjects] -o [classification res file name]"
-folds=$(seq 0 1 38)
+folds=$(seq 0 1 39)
 cluster_sizes=$(seq 100 10 130)
 significance_levels=$(seq 60 2 74)
 min_subjects=$(seq 8 1 14)
