@@ -76,7 +76,7 @@ def main(argv):
 
     print("~~~~~~~~ Begin classifing...\nTrain file: {}\nTest file: {}\nLabels column name: {}\nModel: "
           "{}\n~~~~~~~".format(os.path.abspath(args.train_file), os.path.abspath(args.test_file), labels_col_name,
-                               args.model))
+                               args.models))
 
     x_train = train_file.drop(labels_col_name, axis=1)
     y_train = train_file[labels_col_name]
