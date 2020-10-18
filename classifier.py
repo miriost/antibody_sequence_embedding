@@ -294,7 +294,7 @@ class classifier():
                 # Make predictions
                 tmp_train_predictions = model_it[0].predict(X_train)
                 tmp_test_predictions = model_it[0].predict(X_test)
-                if accuracy_score(y_test, tmp_test_predictions) > best_accuracy_score:
+                if accuracy_score(y_test, tmp_test_predictions) >= best_accuracy_score:
                     model = self.model
                     best_accuracy_score = accuracy_score(y_test, tmp_test_predictions)
                     train_predictions = tmp_train_predictions
