@@ -81,7 +81,7 @@ def main():
 	df_filtered = df.loc[(df['report'] == 'test') & (df['n_folds'] >= min_folds) & (df['key'] == 'macro avg'), : ]
 
 	df_filtered = df_filtered.sort_values(by='f1_score_mean', ascending=False);
-	df.to_csv(os.path.join(output_dir, "accumlated_" + args.input_file), index=False)
+	df_filtered.to_csv(os.path.join(output_dir, "accumlated_" + args.input_file), index=False)
 
 	best_model = df_filtered.iloc[0, df_filtered.columns == 'model'][0]
 	print("best model is {} with f1_score_mean {}".format(best_model,
@@ -143,7 +143,7 @@ def main():
 	                                        (best_model_df["significance"] == best_significance)],
 	                     x="min_subj",
 	                     y="f1_score_mean")
-	chart.get_figure().savefig(os.path.join(output_dir, best_model + "min_subj_vs_f1_score.png"))
+	chart.get_figure().savefig(os.path.join(output_dir, best_model + "_min_subj_vs_f1_score.png"))
 	chart = sns.lineplot(data=df_filtered, x="min_subj", y="f1_score_mean")
 	chart.get_figure().savefig(os.path.join(output_dir, "min_subj_vs_f1_score.png"))
 
@@ -151,7 +151,7 @@ def main():
 	indexing = (input_file['cluster_size'] == best_cluster_size) & (input_file['min_subj'] == best_min_subj) & \
 	           (input_file['significance'] == best_significance) & (input_file['model'] == best_model) & \
 	           (input_file['report'] == 'test') & (input_file['key'] == 'macro avg')
-	chart = sns.histplot(data=input_file.loc[indexing, :], x="f1_score")
+	chart = sns.distplot(a=input_file.loc[indexing, 'f1_score'], hist=True)
 	chart.get_figure().savefig(os.path.join(output_dir, "best_model_f1_score_hist.png"))
 	print(input_file.loc[indexing, 'parameters'].value_counts())
 
