@@ -151,7 +151,7 @@ class classifier():
             tuned_parameters = [{'n_neighbors': list(range(1, 11)),
                                  'weights': ['uniform', 'distance'],
                                  'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']}]
-            self.models = GridSearchCV(KNeighborsClassifier(), tuned_parameters, scoring='f1_macro')
+            self.clf = GridSearchCV(KNeighborsClassifier(), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['linear_svm', 'LSVM']:
             tuned_parameters = {'C': [0.1, 1, 10, 100, 1000], 'kernel': ['linear']}
