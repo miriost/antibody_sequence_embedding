@@ -148,9 +148,9 @@ class classifier():
            # self.clf = RandomizedSearchCV(DecisionTreeClassifier(), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['kNN','k-NN','knn']:
-            tuned_parameters = [{'n_neighbors': list(range(1, 11)),
+            tuned_parameters = [{'n_neighbors': list(range(3, 11)),
                                  'weights': ['uniform', 'distance'],
-                                 'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']}]
+                                 'algorithm': ['brute']}]
             self.clf = GridSearchCV(KNeighborsClassifier(), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['linear_svm', 'LSVM']:
@@ -170,7 +170,6 @@ class classifier():
 
         elif self.modelname in ['MLP', 'Neural_net']:
             tuned_parameters = {
-                'hidden_layer_sizes': [(50, 50, 50), (50, 100, 50), (100,)],
                 'activation': ['tanh', 'relu'],
                 'solver': ['sgd', 'adam'],
                 'alpha': [0.0001, 0.05],
@@ -182,7 +181,7 @@ class classifier():
             self.model = AdaBoostClassifier()
 
         elif self.modelname in ['NB', 'naive_bayes','Naive_Bayes','Naive_bayes']:
-            tuned_parameters = [{'var_smoothing': [ n*1e-9 for n in range(1, 5)]}]
+            tuned_parameters = [{'var_smoothing': [n*1e-9 for n in range(1, 5)]}]
             self.clf = GridSearchCV(GaussianNB(), tuned_parameters, scoring='f1_macro')
 
         elif self.modelname in ['QDA','qda']:
@@ -272,6 +271,7 @@ class classifier():
                 tmp_train_predictions = model[0].predict(X_train)
                 tmp_test_predictions = model[0].predict(X_test)
                 if accuracy_score(y_test, tmp_test_predictions) > best_accuracy_score:
+                    best_accuracy_score = accuracy_score(y_test, tmp_test_predictions)
                     train_predictions = tmp_train_predictions
                     test_predictions = tmp_test_predictions
                     parameters = model[1]
