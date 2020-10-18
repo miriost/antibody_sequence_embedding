@@ -140,7 +140,7 @@ class classifier():
                                                 verbose=0, warm_start=True)
 
         elif self.modelname in ['decision_tree','DT']:
-            self.models = [(DecisionTreeClassifier(max_depth=depth), {'max_depth': depth}) for depth in range(3, 8)]
+            self.models = [(DecisionTreeClassifier(max_depth=depth), {'max_depth': depth}) for depth in range(3, 15)]
            # tuned_parameters = [{'max_depth': randint(3, 8),
            #                      "max_features": randint(1, 9),
            #                      "min_samples_leaf": randint(1, 9),
