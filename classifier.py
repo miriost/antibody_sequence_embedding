@@ -146,14 +146,14 @@ class classifier():
 
         elif self.model_name in [ 'decision_tree', 'DT' ]:
             if not grid_search:
-                self.model = DecisionTreeClassifier(max_depth=10)
+                self.model = DecisionTreeClassifier(max_depth=3)
             else:
                 self.models = [(DecisionTreeClassifier(max_depth=depth),
                                 {'max_depth': depth}) for depth in range(3, 15)]
 
         elif self.model_name in [ 'kNN', 'k-NN', 'knn' ]:
             if not grid_search:
-                tuned_parameters = [{'n_neighbors': 3}]
+                tuned_parameters = [{'n_neighbors': [3]}]
             else:
                 tuned_parameters = [{'n_neighbors': list(range(3, 11)),
                                      'weights': ['uniform', 'distance'],
@@ -311,7 +311,7 @@ class classifier():
         elif self.clf is not None:
             self.clf.fit(X_train, y_train)
             model = self.clf.best_estimator_
-            parameters = model.best_params_
+            parameters = self.clf.best_params_
             train_predictions = model.predict(X_train)
             test_predictions = model.predict(X_test)
         
