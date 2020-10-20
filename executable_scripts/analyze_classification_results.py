@@ -37,6 +37,7 @@ def main():
 	parser.add_argument('--processed_input_file', help='already processed classification results csv file')
 	parser.add_argument('--group_by', help='comma separated list of columns based on do the analysis', type=str,
 	                    default="cluster_size,significance,min_subj,model,report,key")
+	parser.add_argument('--model', help='Run analysis for a specific model', type=str)
 	parser.add_argument('--min_folds', help='min number of folds for analysis and ranking. By default will be the '
 	                                        'max number of folds', type=str)
 	parser.add_argument('--output_dir', help='output_dir to save analysis output files. Default: ./analysis', type=str,
@@ -48,6 +49,8 @@ def main():
 		print("bad input_file argument")
 		exit(1)
 	input_file = pd.read_csv(args.input_file)
+	if args.model:
+		input_file = input_file.loc[input_file[ 'model' ] == args.model, :]
 
 	if args.group_by is None:
 		print("missing or bad input_file argument")
@@ -65,6 +68,8 @@ def main():
 			print("bad processed_input_file argument")
 			exit(1)
 		df = pd.read_csv(args.processed_input_file)
+		if args.model:
+			df = df.loc[df['model'] == args.model, :]
 
 	if df is None:
 		df = group_by_metric(input_file, group_by_columns)
@@ -159,7 +164,7 @@ def main():
 	best_models = df_filtered['model'].unique()[0:min(4, len(df_filtered['model'].unique()))]
 	best_models_df_list = []
 	for model in best_models:
-		model_df = df_filtered.loc[ df_filtered[ 'model' ] == model, : ]
+		model_df = df_filtered.loc[df_filtered['model'] == model, : ]
 		model_df = model_df.sort_values(by='f1_score_mean', ascending=False);
 		model_cluster_size = model_df.iloc[0, df_filtered.columns == 'cluster_size'][0]
 		model_min_subj= model_df.iloc[0, df_filtered.columns == 'min_subj'][0]
