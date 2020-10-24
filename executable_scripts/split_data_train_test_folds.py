@@ -10,12 +10,11 @@ Created on Tue Aug  4 10:12:56 2020
 # output - 2 files, test and train
 
 import sys, argparse, os
-sys.path.insert(0, "/media/miri-o/Documents")
 from random import shuffle, seed, sample
 import numpy as np
 import pandas as pd
 import math
-
+import pathlib
 
 def main():
     seed(0)
@@ -23,20 +22,22 @@ def main():
     parser.description = 'Split a data file to train and test data sets based on labels, according to the number of ' \
                          'folds'
     parser.add_argument('data_file', 
-                        help='a file containing raws of data, including labals')
-    parser.add_argument('-r', '--repeated',
+                        help='a file containing raw of data, including a label and subject id columns')
+    parser.add_argument('--repeated',
                         help='use repeated sampling for the folds. default=False', type=bool, default=False)
     parser.add_argument('--test_fraction',
-                        help='Fraction of the set size from all data size. If repeated is False this argument is ignored.'
-                             ' Default=.2', type=float, default=.2)
-    parser.add_argument('-v', '--vectors_file',
-                        help='a file with the same length as data, each raw is the junction vector')
-    parser.add_argument('-id', '--id_col_name',
-                        help='Name of the subjects id column in data file, default: "FILENAME"', type=str,
-                        default= 'FILENAME')
-    parser.add_argument('-l', '--labels_col_name', 
-                        help='Name of the labels column in data file, default: "labels"', type=str, default= 'labels')
-    parser.add_argument('-f', '--number_of_folds', 
+                        help='Fraction of the set size from all data size. If repeated is False this argument '
+                             'is ignored. Default=.2', type=float, default=.2)
+    parser.add_argument('--id_col_name',
+                        help='Name of the subjects id column in data file, default: "repertoire.subject_id"', type=str,
+                        default='repertoire.subject_id')
+    parser.add_argument('--labels_col_name',
+                        help='Name of the labels column in data file, default: "repertoire.disease_diagnosis"',
+                        type=str, default='repertoire.disease_diagnosis')
+    parser.add_argument('--output_dir',
+                        help='output directory where the folds directories will be created, default: "./"',
+                        default='./')
+    parser.add_argument('--number_of_folds',
                         help='the number of folds, influences the test size [number of subjects/number of folds], '
                              'default: "5"', default=5, type=int)
 
@@ -46,7 +47,7 @@ def main():
         print('feature file error! Make sure the file exists and it is *.csv file.\nExiting...')
         sys.exit(1)
     data_file = pd.read_csv(args.data_file, sep='\t')
-    print('Data file loaded, originial file length: ', str(len(data_file)))
+    print('Data file loaded, original file length: ', str(len(data_file)))
     
     if not (args.labels_col_name in data_file.columns):
         print(data_file.columns)
@@ -57,62 +58,45 @@ def main():
         print(data_file.columns)
         print(args.id_col_name + ' column is missing in data file\nExiting...')
         sys.exit(1)
-        
-    if not os.path.isfile(args.vectors_file) or args.vectors_file[:-4] == '.csv':
-        print('vectors file error! Make sure the file exists and it is *.csv file.\nExiting...')
-        sys.exit(1)
-
-    vectors_file = None
-    if args.vectors_file is not None:
-        vectors_file = pd.read_csv(args.vectors_file)
-        print('vectors_file file loaded, original file length: ', str(len(vectors_file)))
-    
-    if len(vectors_file) != len(data_file):
-        print('vectors file and data file length mismatch!\nExiting...')
-        sys.exit(1)
 
     if args.repeated and (args.test_fraction < 0.1 or args.test_fraction > 0.5):
         print('test_fraction argument is given in percentage, value should be in the range [0.1,0.5]\nExiting...')
         sys.exit(1)
 
-    subjects_df = pd.DataFrame(np.unique(data_file[args.id_col_name]), columns=['subject'])
-    subjects_df['labels'] = [data_file.loc[data_file[args.id_col_name] == subject, args.labels_col_name].iloc[0]
-                             for subject in subjects_df.loc[:, 'subject']]
-    n_subjects = len(subjects_df) #Number of subjects
-    print('Total number of subjects: ' , str(n_subjects))
+    subjects_df = pd.DataFrame(data_file[args.id_col_name].unique(), columns=['subject'])
+    subjects_df['labels'] = [data_file.loc[data_file[args.id_col_name] == subject, args.labels_col_name].iloc[0] for 
+                             subject in subjects_df.loc[:, 'subject']]
+    # filter NaN labels
+    subjects_df = subjects_df.loc[subjects_df['labels'] == subjects_df['labels'], :]
+    n_subjects = len(subjects_df)
+    print('Total number of subjects:', str(n_subjects))
+    for label in subjects_df['labels'].unique():
+        print('{} {}'.format(label, len(subjects_df.loc[subjects_df['labels'] == label, :])))
     n_folds = args.number_of_folds
 
     if not args.repeated:
         output_folds = create_folds_no_repetitions(subjects_df, n_folds)
     else:
-        if round(args.test_fraction * len(subjects_df)) < len(np.unique(subjects_df.loc[:,'labels'])):
+        if round(args.test_fraction * len(subjects_df)) < len(subjects_df['labels'].unique()):
             print('test_fraction is too small\nExiting...')
             sys.exit(1)
         output_folds = create_folds_with_repetitions(subjects_df, n_folds, args.test_fraction)
 
     fold_id = 0
-    for (training, testing) in output_folds:
+    for training, testing in output_folds:
 
         print(f'----- fold {fold_id} training: {training} testing: {testing} -----')
 
         output_train_data_df = data_file.loc[data_file[args.id_col_name].isin(training), :]
         output_test_data_df = data_file.loc[data_file[args.id_col_name].isin(testing), :]
-        output_train_vectors_df = None
-        output_test_vectors_df = None
-        if vectors_file is not None:
-            output_train_vectors_df = vectors_file.loc[data_file[args.id_col_name].isin(training), :]
-            output_test_vectors_df = vectors_file.loc[data_file[args.id_col_name].isin(testing), :]
 
-        output_train_data_df.to_csv(os.path.splitext(args.data_file)[0] + '_TRAIN_' + str(fold_id) +
-                                    os.path.splitext(args.data_file)[1], sep='\t', index=False)
-        output_test_data_df.to_csv(os.path.splitext(args.data_file)[0] + '_TEST_' + str(fold_id) +
-                                   os.path.splitext(args.data_file)[1], sep='\t', index=False)
-
-        if vectors_file is not None:
-            output_train_vectors_df.to_csv(os.path.splitext(args.vectors_file)[0] + '_TRAIN_' + str(fold_id) +
-                                           os.path.splitext(args.vectors_file)[1], index=False)
-            output_test_vectors_df.to_csv(os.path.splitext(args.vectors_file)[0] + '_TEST_' + str(fold_id) +
-                                          os.path.splitext(args.vectors_file)[1], index=False)
+        output_dir = os.path.join(args.output_dir, 'FOLD' + str(fold_id))
+        pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
+        file_name = os.path.basename(args.data_file).replace('.tsv', '')
+        output_train_data_df.to_csv(os.path.join(output_dir, file_name + '_TRAIN_' +  str(fold_id) + '.tcv'),
+                                                 sep='\t', index=False)
+        output_test_data_df.to_csv(os.path.join(output_dir, file_name + '_TEST_' + str(fold_id) + '.tcv'),
+                                                sep='\t', index=False)
 
         print(f'----- fold {fold_id} files saved -----')
         fold_id += 1
@@ -121,8 +105,8 @@ def main():
 def create_folds_with_repetitions(subjects_df, n_folds, test_fraction):
 
     n_test_subjects = round(len(subjects_df) * test_fraction)
-    labels = np.unique(subjects_df['labels'])
-    subjects = np.array(subjects_df.loc[:, 'subject'])
+    labels = subjects_df['labels'].unique()
+    subjects = subjects_df['subject'].to_numpy()
 
     tries = 0
     output_folds = []
@@ -155,7 +139,7 @@ def create_folds_with_repetitions(subjects_df, n_folds, test_fraction):
                 found = True
                 break
 
-        if found == True:
+        if found is True:
             # this test fold already exists, try again
             continue
 
@@ -182,12 +166,12 @@ def create_folds_no_repetitions(subjects_df, n_folds):
 
     fold_size = len(subjects_df) // n_folds
 
-    subjects = np.array(subjects_df.loc[:, 'subject'])
+    subjects = subjects_df['subject'].to_numpy()
     shuffle(subjects)
     output_folds = []
     for split_index in range(0, len(subjects)-fold_size, fold_size):
         testing = subjects[split_index:(split_index + fold_size)]
-        training = np.concatenate((subjects[:split_index],subjects[(split_index + fold_size):]), axis = None)
+        training = np.concatenate((subjects[:split_index], subjects[(split_index + fold_size):]), axis = None)
         print('Testing indices [{}:{}], training indices: [{}:{}, {}:]'.format(split_index, split_index + fold_size, 0,
                                                                                split_index, split_index + fold_size))
         output_folds += [(training, testing)]
@@ -209,4 +193,5 @@ def test_create_folds_no_repetitions():
 
 
 if __name__ == "__main__":
-   main()
+    main()
+
