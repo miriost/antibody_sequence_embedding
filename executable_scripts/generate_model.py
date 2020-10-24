@@ -6,79 +6,60 @@ Created on Mon Jul 23 15:16:13 2018
 @author: miri-o
 """
 
-import sys, getopt, os
+import sys, os
 import time
 import pathlib
+import argparse
+import pandas as pd
+
 sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('antibody_sequence_embedding')[0])
 from antibody_sequence_embedding.sequence_modeling import ProtVec
 
 def main(argv):
-   fasta_file = None
-   corpus_object = None
-   output_corpus_file = 'corpus.txt'
-   output_model = 'output_model'
-   reading_frame = None
-   n_len = 3
-   fasta_type = True
-   trim_range = None
-   portion = 1.0
-   random_seed = 5
-   try:
-      opts, args = getopt.getopt(argv,"hf:c:o:n:r:t:p:s:",["fasta-file=","corpus-object=","output=","n=","Reading_frame=","trimming=","portion=","seed="])
-   except getopt.GetoptError:
-      print('generate_model.py -f <fasta_file> -c <corpus_object> -o <outputfile> -n <n_length> -r <reading_frame> -t <trimming> -p <portion> -s <seed>')
-      sys.exit(2)
-   reading_frame = None
-   for opt, arg in opts:
-      if opt == '-h':
-         print('generate_model.py -f <fasta_file> -c <corpus_object> -o <outputfile> -n <n_length> -r <reading_frame> -t <trimming>')
-         sys.exit()
-      elif opt in ("-f", "--fasta-file"):
-         fasta_file = arg
-      elif opt in ("-c", "--corpus-object"):
-         corpus_object = arg
-         fasta_type = False
-      elif opt in ("-o", "--output"):
-         output_corpus_file = arg
-      elif opt in ("-r", "--reading_frame"):
-         reading_frame = int(arg)
-      elif opt in ("-t", "--trimming"):
-         trim_range = arg.replace('(','')
-         trim_range = trim_range.replace(')','')
-         trim_range = trim_range.split(',')
-         trim_range = (int(trim_range[0]), int(trim_range[1]))
-      elif opt in ("-n", "--n-gram"):
-          n_pharse = arg.replace('(','')
-          n_pharse = n_pharse.replace(')','')
-          n_pharse = n_pharse.split(',')
-          if len(n_pharse) == 1:
-              n_len = int(n_pharse[0])
-          else:
-              n_len = (int(n_pharse[0]), int(n_pharse[1]))
-      elif opt in ("-p", "--portion"):
-          portion = float(arg)
-          if portion > 1.0 or portion <= 0:
-              print("illegal portion value, should be in the range (0, 1]");
-              sys.exit(2)
-      elif opt in ("-s", "--seed"):
-          random_seed = int(arg)
 
-   t0 = time.time()              
-   if fasta_type and not fasta_file:
-       print('Missing fasta file or corpus file\ngenerate_model.py -f <fasta_file> -c <corpus_object> -o <outputfile> -n <n_length> -r <reading_frame> -t <trimming>')
-       sys.exit(2)
-   elif fasta_file:
-       pv = ProtVec(corpus_fname=fasta_file, corpus=None, n=n_len, reading_frame=reading_frame, trim=trim_range,size=100, out=output_corpus_file, sg=1, window=5, min_count=2, workers=3, portion=portion, random_seed=random_seed)
-       process_time = (time.time() - t0)/60 # in minutes
-       print('Model built in {} minutes, saving...'.format(process_time))
-       pv.save(output_corpus_file+ '.model')
-       print('generated a model from fasta file "{}"\nModel saved to: {}\nCorpus file saved to: {}'.format(fasta_file, output_corpus_file + '.model', output_corpus_file + '_corpus.txt'))
-   elif corpus_object:
-       pv = ProtVec(corpus_fname=None, corpus=corpus_object, n=n_len, reading_frame=reading_frame, trim = trim_range, size=100, out=output_corpus_file, sg=1, window=5, min_count=2, workers=3)
-       process_time = (time.time() - t0)/60 # in minutes
-       print('Model built in {} minutes, saving...'.format(process_time))
-       pv.save(output_model + '.model')
-       print('generated a model based on corpus object "{}"\nModel saved to: {}\Corpus file saved to: {}'.format(corpus_object, output_corpus_file + '.model', output_corpus_file + '_corpus.txt'))
-   
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_file', help='an input tsv file with', type=str)
+    parser.add_argument('--data_column', help='name of the column with the data for the model generation', type=str)
+    parser.add_argument('--corpus_file', help='an input corpus file - if data-file was not provided', type=str)
+    parser.add_argument('--desc', help='desc for the output files names', type=str)
+    parser.add_argument('--reading_frame', help='reading frame parameter for the prot to vec', type=int)
+    parser.add_argument('--trimming', help='start end trimming to the junction', type=int, nargs=2)
+    parser.add_argument('--n_gram', help='n-gram parameter from the prot to vec', type=int)
+    parser.add_argument('--sample', help='part of data used for creating the model (default 1.0)', type=float,
+                        default=1.0)
+    parser.add_argument('--seed', help='seed used for sampling the data used for the model', type=int, default=0)
+
+    args = parser.parse_args()
+
+    data = None
+    if args.data_file is not None:
+        if not os.path.isfile(args.data_file):
+            print('Invalid data_file argument: {}\n Existing...'.format(args.data_file))
+            sys.exit(2)
+        data_df = pd.read_csv(args.data_file, sep='\t')
+        if args.data_column not in data_df.columns:
+            print('{}} is not in {} columns\n Existing...'.format(args.data_column, args.data_file))
+            sys.exit(2)
+        data = data_df[args.data_column]
+
+        print('Generated a model from fasta file "{}"\nModel saved to: {}\nCorpus file saved to: {}'.format(
+            args.data_file, args.desc + '.model', args.desc + '_corpus.txt'))
+    elif args.corpus_file is not None:
+        if not os.path.isfile(args.corpus_file):
+            print('Invalid corpus_file argument: {}\n Existing...'.format(args.corpus_file))
+            sys.exit(2)
+    else:
+        print('Must provide a data file or a corpus file\n Existing...'.format(args.corpus_file))
+        sys.exit(2)
+
+    pv = ProtVec(data=data, corpus=args.corpus_file, n=args.n_gram, reading_frame=args.reading_frame,
+                 trim=args.trimming, size=100, out=args.output_file, sg=1, window=5, min_count=2, workers=3,
+                 sample=args.sample, random_seed=args.random_seed)
+
+    process_time = (time.time() - t0) / 60  # in minutes
+    print('Model built in {} minutes, saving...'.format(process_time))
+    pv.save(args.desc + '.model')
+
+
 if __name__ == "__main__":
-   main(sys.argv[1:])   
+    main()

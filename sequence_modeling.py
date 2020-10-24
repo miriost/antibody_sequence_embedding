@@ -9,7 +9,6 @@ original @author: https://github.com/kyu999/biovec/blob/master/biovec/models.py
 """
 
 from gensim.models import word2vec
-from Bio import SeqIO
 from random import randint
 import random
 
@@ -27,6 +26,7 @@ def split_ngrams_with_repetition(seq, n):
         str_ngrams.append(x)
     return str_ngrams
 
+
 def split_ngrams_no_repetition(seq, n, reading_frame):
     """
     'acccgtgtctgg', n=3, reading frame = 1: ['acc', 'cgt', 'gtc', 'tgg']
@@ -42,6 +42,7 @@ def split_ngrams_no_repetition(seq, n, reading_frame):
         str_ngrams.append(x)
     return str_ngrams[reading_frame-1]
 
+
 def split_to_random_n_grams(seq, n):
     """
     n = a tuple (start, end) indicating the range of n's for random sampling 
@@ -56,8 +57,9 @@ def split_to_random_n_grams(seq, n):
         current_n = randint(n[0], n[1])
     str_ngrams.append(str(seq))
     return str_ngrams
-    
-def generate_corpusfile(corpus_fname, n, out, reading_frame = None, trim = None, portion=1.0, random_seed=5):
+
+
+def generate_corpusfile(records, n, out, reading_frame = None, trim = None, sample=1.0, random_seed=5):
     '''
     Args:
         corpus_fname: corpus file name
@@ -75,8 +77,7 @@ def generate_corpusfile(corpus_fname, n, out, reading_frame = None, trim = None,
     '''
     f = open(out, "w")
 
-    records = list(SeqIO.parse(corpus_fname, "fasta"))
-    if portion != 1.0:
+    if sample != 1.0:
         random.seed(random_seed)
         records = random.sample(records, int(portion * len(records)))
     for r in records:
@@ -89,7 +90,8 @@ def generate_corpusfile(corpus_fname, n, out, reading_frame = None, trim = None,
         elif type(n) == tuple:
             ngram_patterns = split_to_random_n_grams(r.seq, n)
         else:
-            print('Error building corpus file, make sure n is and integer for contant n-grams, or a tuple for random length n-grams')
+            print('Error building corpus file, make sure n is and integer for contant n-grams, '
+                  'or a tuple for random length n-grams')
             f.close()
             break
         if type(ngram_patterns[0])==list:
@@ -99,14 +101,15 @@ def generate_corpusfile(corpus_fname, n, out, reading_frame = None, trim = None,
             f.write(" ".join(ngram_patterns) + "\n")
     f.close()
 
+
 def load_protvec(model_fname):
     return word2vec.Word2Vec.load(model_fname)
 
 
 class ProtVec(word2vec.Word2Vec):
 
-    def __init__(self, corpus_fname=None, corpus=None, n=3, reading_frame = None, trim = None, size=100, out="corpus.txt",
-                 sg=1, window=25, min_count=2, workers=3, portion=1.0, random_seed=5):
+    def __init__(self, data=None, corpus=None, n=3, reading_frame=None, trim=None, size=100, out="corpus.txt",
+                 sg=1, window=25, min_count=2, workers=3, sample=1.0, random_seed=5):
         """
         Either fname or corpus is required.
         corpus_fname: fasta file for corpus
@@ -123,18 +126,17 @@ class ProtVec(word2vec.Word2Vec):
         self.n = n
         self.reading_frame = reading_frame
         self.size = size
-        self.corpus_fname = corpus_fname
+        self.data = data
         self.trim = trim
         self.window = window
 
-        if corpus is None and corpus_fname is None:
+        if corpus is None and data is None:
             raise Exception("Either corpus_fname or corpus is needed!")
 
-        if corpus_fname is not None:
+        if data is not None:
             print('Generate Corpus file from fasta file...')
-            generate_corpusfile(corpus_fname, n, out + '_corpus.txt', reading_frame, trim, portion, random_seed)
+            generate_corpusfile(data, n, out + '_corpus.txt', reading_frame, trim, sample, random_seed)
             corpus = word2vec.Text8Corpus(out + '_corpus.txt')
-            
 
         word2vec.Word2Vec.__init__(self, corpus, size=size, sg=sg, window=window, min_count=min_count, workers=workers)
         print('word2vec model, size={}, window={}, min_count={}, workers={})'.format(size, window, min_count, workers))
@@ -155,53 +157,5 @@ class ProtVec(word2vec.Word2Vec):
                 except:
                     raise KeyError("Model has never trained this n-gram: " + ngram)
             protvecs.append(sum(ngram_vecs))
-            return protvecs
-        
-        
-class AAVec(word2vec.Word2Vec):
 
-    def __init__(self, corpus_fname=None, corpus=None, n=3, reading_frame=1, trim = None, size=100, out="corpus.txt",  sg=1, window=25, min_count=2, workers=3):
-        """
-        Either fname or corpus is required.
-        corpus_fname: fasta file for corpus
-        corpus: corpus object implemented by gensim
-        n: n of n-gram
-        out: corpus output file path
-        min_count: least appearance count in corpus. if the n-gram appear k times which is below min_count, the model does not remember the n-gram
-        """
-
-        self.n = n
-        self.size = size
-        self.corpus_fname = corpus_fname
-        self.reading_frame = reading_frame
-        self.trim = trim
-
-        if corpus is None and corpus_fname is None:
-            raise Exception("Either corpus_fname or corpus is needed!")
-
-        if corpus_fname is not None:
-            print('Generate Corpus file from fasta file...')
-            generate_corpusfile(corpus_fname, n, out, reading_frame)
-            corpus = word2vec.Text8Corpus(out)
-            
-
-        word2vec.Word2Vec.__init__(self, corpus, size=size, sg=sg, window=window, min_count=min_count, workers=workers)
-        print('word2vec model, size={}, window={}, min_count={}, workers={})'.format(size, window, min_count, workers))
-
-    def to_vecs(self, seq):
-        """
-        convert sequence to n-length vector
-        e.g. 'AGAMQSASM' => [ array([  ... * 100 ])]
-        """
-        ngrams = split_ngrams_no_repetition(seq, self.n, self.reading_frame)
-
-        protvecs = []
-        ngram_vecs = []
-        for ngram in ngrams:
-            try:
-                ngram_vecs.append(self[ngram])
-            except:
-                raise Exception("Model has never trained this n-gram: " + ngram)
-        # Boaz todo: check doc2vec as an alternative for the summing
-        protvecs.append(sum(ngram_vecs))
         return protvecs
