@@ -93,9 +93,9 @@ def main():
         output_dir = os.path.join(args.output_dir, 'FOLD' + str(fold_id))
         pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
         file_name = os.path.basename(args.data_file).replace('.tsv', '')
-        output_train_data_df.to_csv(os.path.join(output_dir, file_name + '_TRAIN_' +  str(fold_id) + '.tcv'),
+        output_train_data_df.to_csv(os.path.join(output_dir, file_name + '_TRAIN_' +  str(fold_id) + '.tsv'),
                                                  sep='\t', index=False)
-        output_test_data_df.to_csv(os.path.join(output_dir, file_name + '_TEST_' + str(fold_id) + '.tcv'),
+        output_test_data_df.to_csv(os.path.join(output_dir, file_name + '_TEST_' + str(fold_id) + '.tsv'),
                                                 sep='\t', index=False)
 
         print(f'----- fold {fold_id} files saved -----')
