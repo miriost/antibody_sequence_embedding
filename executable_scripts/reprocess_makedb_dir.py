@@ -67,7 +67,8 @@ def main():
             if args.trim:
                 local_df = local_df[local_df.junction.str.len() - args.trim[0] - args.trim[1] >=3]
                 print('trimming {} AAs from he beginning, {} AAs from to end'.format(args.trim[0], args.trim[1]))
-                local_df['junction_aa'] = local_df.junction_aa.str[args.trim[0]:-args.trim[1]]
+                local_df['junction_aa_trim_' + str(args.trim[0]) + '_' + str(args.trim[1])] = \
+                        local_df.junction_aa.str[args.trim[0]:-args.trim[1]]
                 print(' - After trimming: {}'.format(len(local_df)))
 
             if len(local_df) >= args.min_seq_per_subject:
