@@ -29,6 +29,6 @@ for fold in ${folds} ; do
 			# already has a feature_list.csv file - skipping
 			continue
 		fi
-		python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py -d ${fold_dir}/FILTERED_DATA_TRAIN.tab -v ${fold_dir}/VECTORS_TRAIN.csv --perform_NN=True --perform_results_analysis=True -of ${output_dir} -od cs_${cs} -cs ${cs} -tm 11474836480 --cpus=12 --step=10000 -id FILENAME 2>&1 | tee -a ${output_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
+		eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --perform_NN=True --perform_results_analysis=True --output_folder_path ${output_dir} --vector_column celiac_light_chain_trim_1_1_prot2vec --output_description cs_${cs} --cluster_size ${cs} --thread_memory 11474836480 --cpus=12 --step=10000 --id repertoire.subject_id 2>&1 | tee -a ${output_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
 	done
 done 
