@@ -33,13 +33,14 @@ def main():
         local_df = pd.read_csv(file, sep='\t')
         total_rows += len(local_df)
 
-        print('file {} total rows: '.format(file, len(local_df)))
+        print('file {} total rows: {}'.format(file, len(local_df)))
 
         if 'repertoire_id' not in local_df.columns:
             local_df['repertoire_id'] = os.path.basename(file).replace('.tsv', '')
 
         # 1. REMOVE NON-FUNCTIONAL SEQUENCES
-        local_df = local_df[local_df.productive.iloc[:]]
+        print(local_df.productive)
+        local_df = local_df.loc[local_df.productive == True, :]
         print(' - After removing non functional sequences: {}'.format(len(local_df)))
 
         # 2. REMOVE ROWS WHERE JUNCTION LENGTH IS SHORTER THAN 12 OR DOESN'T DEVIDE BY 3
@@ -67,6 +68,10 @@ def main():
             df_list += [local_df]
         else:
             print('file not added due to low number of sequences')
+
+    if len(df_list) == 0:
+        print("zero sequences where filtered")
+        return
 
     big_df = pd.concat(df_list)
 
