@@ -29,29 +29,31 @@ import os
 import random
 import ray
 import time
-from datetime import datetime
+import json
 from sklearn.metrics.pairwise import pairwise_distances
 
 
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-f', '--features_list',
+    parser.add_argument('--features_list',
                         help='feature list file, contains the list of relevent features, including feature '
                              'center and maximal distance from it')
-    parser.add_argument('-d', '--data_file_path',  help='the filtered data file path')
-    parser.add_argument('-v', '--vectors_file_path',  help='the vectors file path')
-    parser.add_argument('-of', '--output_folder_path', default="./",  help='Output folder for the feature table')
-    parser.add_argument('-od', '--output_description',  help='description to use inside output file names')
-    parser.add_argument('-s', '--subject_col_name',
-                        help='subject column name in data file, default "FILENAME"', default='FILENAME', type=str)
-    parser.add_argument('-l', '--labels_col_name',
-                        help='labels column name in data file, default "labels"', default='labels', type=str)
-    parser.add_argument('-c', '--cpus',
+    parser.add_argument('--data_file_path',  help='the filtered data file path')
+    parser.add_argument('--vector_column', help='the name of the column with the vector', type=str)
+    parser.add_argument('--output_folder_path', default="./",  help='Output folder for the feature table')
+    parser.add_argument('--output_description',  help='description to use inside output file names')
+    parser.add_argument('--subject_col_name',
+                        help='subject column name in data file, default "repertoire.subject_id"',
+                        default='repertoire.subject_id', type=str)
+    parser.add_argument('--labels_col_name',
+                        help='labels column name in data file, default "repertoire.disease_diagnosis"',
+                        default='repertoire.disease_diagnosis', type=str)
+    parser.add_argument('--cpus',
                         help='number of cpus to run parallel computing', default=2, type=int)
-    parser.add_argument('-dm', '--dist_metric',
+    parser.add_argument('--dist_metric',
                         help='type of distance to use, default=euclidean', default='euclidean', type=str)
-    parser.add_argument('-tm', '--thread_memory', help='memory size for ray thread (bytes)', type=int)
+    parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
     args = parser.parse_args()
     
     if not(os.path.isfile(args.features_list)):
@@ -62,16 +64,21 @@ def main():
         print('feature file error, make sure file path exists\nExiting...')
         sys.exit(1)
 
-    if not os.path.isfile(args.vectors_file_path):
-        print('vectors file error, make sure file path exists\nExiting...')
-        sys.exit(1) 
+    if args.vector_column is None:
+        print("Missing vector_column argument\nExisting...")
+        sys.exit(1)
 
     # load files
     cpus = args.cpus
     dist_metric = args.dist_metric
     feature_list = pd.read_csv(args.features_list)
     data_file = pd.read_csv(args.data_file_path, sep='\t')
-    vectors_file = pd.read_csv(args.vectors_file_path)
+    if args.vector_column not in data_file.columns:
+        print("{} is not in data file columns: {}\nExisting...".format(args.vector_column, data_file.columns))
+        sys.exit(1)
+
+    vectors = np.array(data_file[args.vector_column].apply(lambda x: json.loads(x)).to_list())
+    vectors = pd.DataFrame(vectors, columns=list(range(vectors.shape[1])))
 
     if args.labels_col_name not in data_file.columns:
         print(f'label "{args.labels_col_name}" column name doesnt exist in data file.\nExiting...')
@@ -96,7 +103,7 @@ def main():
     # for each subject - add feature frequency columns
     result_ids = []
     for subject, frame in by_subject:
-        subject_vectors = vectors_file.iloc[frame.index]
+        subject_vectors = vectors.iloc[frame.index]
         result_ids += [get_subject_feature_table.remote(subject, feature_list, subject_vectors, cpus, dist_metric)]
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
@@ -175,3 +182,4 @@ def test_get_subject_feature_table():
 
 if __name__ == '__main__':
     main()
+
