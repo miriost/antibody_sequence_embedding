@@ -9,81 +9,72 @@ import pandas as pd
 import numpy as np
 import os
 import sys, argparse
-import pathlib
-sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('antibody_sequence_embedding')[0])            
-from antibody_sequence_embedding import sequence_modeling
+import embedding.sequence_modeling as sequence_modeling
 
 
-def main(argv):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('infile', 
-                        help='a *.csv file containing the JUNC_AA column')
-    parser.add_argument('-o', '--odir',
-                        help='output root directory', default = os.path.join(os.pardir, os.path.pardir))
-    parser.add_argument('-c', '--column', 
-                        help = 'column name to convert to vectors, default:"JUNC_AA"', default = "JUNC_AA")
-    parser.add_argument('model', 
-                        help='a saved word embedding model file')
-    parser.add_argument('--size', help = "Vector size", default = 100)
+def str2bool(v):
+    return v.lower() in ("yes", "true", "t", "1")
+
+
+def main():
+    parser = argparse.ArgumentParser(description='embed a column from input file')
+
+    parser.add_argument('--input_file', help='a tsv with the column to vectorize')
+    parser.add_argument('--output_column', help='column name for the output (default model file name)')
+    parser.add_argument('--column', help='column name to convert to vectors', default="junction")
+    parser.add_argument('model', help='a saved word embedding model file')
+    parser.add_argument('--size', help='vector size (default 100)', default=100)
+    parser.add_argument('--inline', help='Save output on the input file', default=True, type=str2bool)
 
     args = parser.parse_args()
 
-    if not os.path.isfile(args.infile) or args.infile[:-4] == '.csv':
-        print('Feature file ({}) error! Make sure the file exists and it is *.csv file.\nExiting...'.format(args.infile))
+    if not os.path.isfile(args.input_file) or args.input_file[:-4] == '.tsv':
+        print('Feature file ({}) error! Make sure the file exists and it is *.tsv file.\n'
+              'Exiting...'.format(args.input_file))
         sys.exit(1)
-    print('Input file for embedding: ',args.infile, '\nModel: ', args.model)
+    print('Input file for embedding: ', args.input_file, '\nModel: ', args.model)
  
-    infile = pd.read_csv(args.infile, sep = '\t')
-    filename = os.path.split(args.infile)[-1].split(os.path.extsep)[0]
-    
-    #load saved model
+    data_file = pd.read_csv(args.input_file, sep ='\t')
+
+    # load saved model
     model = sequence_modeling.load_protvec(args.model)
-    modelname = os.path.split(args.model)[-1].split('.model')[0]
-    
+
     # generate a vector for each junction
-    data_len = len(infile)
+    data_len = len(data_file)
     print('Data length: ' + str(data_len))
-    W2V_vectors = np.zeros((data_len,int(args.size)))
-    to_drop = []
-    for i in range(data_len) :
-        word = infile[args.column].iloc[i]
-        if i%100000==0: 
-            print(str(i) + ': ' + word)
-        # Check for errors (if some sequence doesn't appear in the model)
+
+    if args.output_column is None:
+        output_column = os.path.basename(args.model).split('.model')[0]
+    else:
+        output_column = args.output_column
+
+    def embed_data(word):
         try:
-            W2V_vectors[i] = list(model.to_vecs(word)[0])
+            return list(model.to_vecs(word)[0])
         except:
-            W2V_vectors[i] = np.nan
-            to_drop.append(i)
-            #print(str(i) + ' index not valid')
-    print('{:.3}% of data not transformed'.format((100*len(to_drop)/data_len)))
+            return np.nan
+
+    print(len(data_file[args.column]))
+
+    data_file[output_column] = data_file[args.column].apply(embed_data)
+
+    print('{:.3}% of data not transformed'.format((100*sum(data_file[output_column] == np.nan)/data_len)))
     
     # drop the un translated rows from the file
-    infile = infile.drop(infile.index[to_drop])
-    df = pd.DataFrame(W2V_vectors)
-    df = df.drop(df.index[to_drop])
-    #print(len(infile), len(df))
-    
-    #save to files:
+    data_file = data_file.drop(data_file.index[data_file[output_column] == np.nan])
 
-    path_filtered_files = os.path.join(args.odir, 'filtered_data_sets')
-    if not os.path.exists(path_filtered_files):
-        os.mkdir(path_filtered_files)
-        
-    infile_path = os.path.join(path_filtered_files, filename+'_'+modelname+'_FILTERED_DATA.tab')
-    infile.to_csv(infile_path, sep='\t')
-    print('Data file saved: ' + os.path.abspath(infile_path))
-    
-    path_vectors = os.path.join(args.odir, 'vectors')
-    if not os.path.exists(path_vectors):
-        os.mkdir(path_vectors)
-        
-    df_path = os.path.join(path_vectors, filename+'_'+modelname+ '_VECTORS.csv')
-    df.to_csv(df_path, index = False)
-    print('Vectors file saved: ' + os.path.abspath(df_path))
+    # save to files:
+    if args.inline is True:
+        output_file_name = args.input_file
+    else:
+        file_name = os.path.basename(args.input_file).split(".tsv")[0]
+        dir_name = os.path.dirname(args.input_file)
+        output_file_name = os.path.join(dir_name, file_name + '_and_vectors.tsv')
+
+    data_file.to_csv(output_file_name, sep='\t', index=False)
+    print('Vectors file saved: ' + output_file_name)
 
     
 if __name__ == "__main__":
-   main(sys.argv[1:])   
-   
-  
+    main()
+
