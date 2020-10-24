@@ -59,7 +59,7 @@ def split_to_random_n_grams(seq, n):
     return str_ngrams
 
 
-def generate_corpusfile(records, n, out, reading_frame = None, trim = None, sample=1.0, random_seed=5):
+def generate_corpusfile(records, n, out, reading_frame = None, trim = None, sample_fraction=1.0, random_seed=5):
     '''
     Args:
         corpus_fname: corpus file name
@@ -68,7 +68,7 @@ def generate_corpusfile(records, n, out, reading_frame = None, trim = None, samp
         reading_frame: 1/2/3 for splitting, default: None, including repetition (generating 3 overlaps)
         out: output corpus file path
         trim : typle (from start, drom end) - how many characteres to trim from the beginning and from the end
-        portion: what portion of the sequences in the fasta file will be used for the corpus
+        portion: what portion of the sequences in the data will be used for the corpus
         seed: the random seed for randomly choosing the sequences for the corpus according to the portion parameter
     Description:
         Protvec uses word2vec inside, and it requires to load corpus file
@@ -77,18 +77,18 @@ def generate_corpusfile(records, n, out, reading_frame = None, trim = None, samp
     '''
     f = open(out, "w")
 
-    if sample != 1.0:
+    if sample_fraction != 1.0:
         random.seed(random_seed)
-        records = random.sample(records, int(portion * len(records)))
+        records = random.sample_fraction(records, int(portion * len(records)))
     for r in records:
         if trim:
-            r.seq = r.seq[trim[0]:-trim[1]]
+            r = r[trim[0]:-trim[1]]
         if (reading_frame is None) and type(n) == int:
-            ngram_patterns = split_ngrams_with_repetition(r.seq, n)
+            ngram_patterns = split_ngrams_with_repetition(r, n)
         elif type(n) == int:
-            ngram_patterns = split_ngrams_no_repetition(r.seq, n, reading_frame)
+            ngram_patterns = split_ngrams_no_repetition(r, n, reading_frame)
         elif type(n) == tuple:
-            ngram_patterns = split_to_random_n_grams(r.seq, n)
+            ngram_patterns = split_to_random_n_grams(r, n)
         else:
             print('Error building corpus file, make sure n is and integer for contant n-grams, '
                   'or a tuple for random length n-grams')
@@ -109,17 +109,17 @@ def load_protvec(model_fname):
 class ProtVec(word2vec.Word2Vec):
 
     def __init__(self, data=None, corpus=None, n=3, reading_frame=None, trim=None, size=100, out="corpus.txt",
-                 sg=1, window=25, min_count=2, workers=3, sample=1.0, random_seed=5):
+                 sg=1, window=25, min_count=2, workers=3, sample_fraction=1.0, random_seed=5):
         """
         Either fname or corpus is required.
-        corpus_fname: fasta file for corpus
+        corpus_fname: data for corpus
         corpus: corpus object implemented by gensim
         n: n of n-gramp. single integer for a costant n, and a string ‘(start, end)’ for random splitting.
         reading frame : default None. possible values: 1/2/3/None – for all options
         trim: paramter for trimming the sequences, string format ‘(chars from start, chars from end)’ 
         out: corpus output file path
         min_count: least appearance count in corpus. if the n-gram appear k times which is below min_count, the model does not remember the n-gram
-        portion: what portion of the sequences in the fasta file will be used for the corpus
+        portion: what portion of the sequences in the data will be used for the corpus
         seed: the random seed for randomly choosing the sequences for the corpus according to the portion parameter
         """
 
@@ -134,8 +134,8 @@ class ProtVec(word2vec.Word2Vec):
             raise Exception("Either corpus_fname or corpus is needed!")
 
         if data is not None:
-            print('Generate Corpus file from fasta file...')
-            generate_corpusfile(data, n, out + '_corpus.txt', reading_frame, trim, sample, random_seed)
+            print('Generate Corpus file from data...')
+            generate_corpusfile(data, n, out + '_corpus.txt', reading_frame, trim, sample_fraction, random_seed)
             corpus = word2vec.Text8Corpus(out + '_corpus.txt')
 
         word2vec.Word2Vec.__init__(self, corpus, size=size, sg=sg, window=window, min_count=min_count, workers=workers)
@@ -159,3 +159,4 @@ class ProtVec(word2vec.Word2Vec):
             protvecs.append(sum(ngram_vecs))
 
         return protvecs
+
