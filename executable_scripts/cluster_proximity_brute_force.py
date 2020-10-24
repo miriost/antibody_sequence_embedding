@@ -1,7 +1,5 @@
 import os
-import csv
 import argparse
-from collections import defaultdict
 import math
 import pandas as pd
 import numpy as np
@@ -11,7 +9,7 @@ from datetime import datetime
 import logging
 from sklearn.metrics.pairwise import pairwise_distances
 import ray
-
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -104,16 +102,16 @@ def main():
     init_logger()
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data_file_path',
+    parser.add_argument('--data_file_path',
                         help='the filtered data file path')
-    parser.add_argument('-v', '--vectors_file_path',
-                        help='the vectors file path')
-    parser.add_argument('-nn', '--NN_file_path',
+    parser.add_argument('--vector_column',
+                        help='the name of the column with the vector')
+    parser.add_argument('--NN_file_path',
                         help='the NN file path')
-    parser.add_argument('-of', '--output_folder_path',
+    parser.add_argument('--output_folder_path',
                         help='Output folder for the 3 output files - Nearest neighbors file, destances file, '
                              'and results anaylsis file')
-    parser.add_argument('-od', '--output_description',
+    parser.add_argument('--output_description',
                         help='description to use inside output file names')
     parser.add_argument('--cpus', type=int, default=1, help='How many cores to run in parallel -  default is 1.')
     parser.add_argument('--step', type=int, default=10000, help='How many rows to calculate in parallel, '
@@ -122,20 +120,16 @@ def main():
                                                                           'analysis, and save NN list and distances')
     parser.add_argument('--perform_results_analysis', type=str2bool, default=False, help='Analyse nearest neighbors '
                                                                                          'file, to subject frequencies')
-    parser.add_argument('-dm', '--dist_metric',
+    parser.add_argument('--dist_metric',
                         help='type of distance to use, default=euclidean', default='euclidean', type=str)
-    parser.add_argument('-tm', '--thread_memory', help='memory size for ray thread (bytes)', type=int)
-    parser.add_argument('-cs', '--cluster_size', help='size of the cluster, deafult=100', type=int, default=100)
-    parser.add_argument('-id', '--id_field', help='name of the subject id column, default=SUBJECT',
+    parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
+    parser.add_argument('--cluster_size', help='size of the cluster, deafult=100', type=int, default=100)
+    parser.add_argument('--id_field', help='name of the subject id column, default=SUBJECT',
                         type=str, default='SUBJECT')
 
     args = parser.parse_args()
-    if not(os.path.isfile(args.data_file_path)):
-        print('feature file error, make sure feature and vectors file path\nExiting...')
-        sys.exit(1)
-        
-    if args.perform_NN and not(os.path.isfile(args.vectors_file_path)):
-        print('vectors file error, make sure feature and vectors file path\nExiting...')
+    if not os.path.isfile(args.data_file_path):
+        print('feature file error, make sure data file path\nExiting...')
         sys.exit(1)
         
     if not os.path.exists(args.output_folder_path):
@@ -151,25 +145,28 @@ def main():
     else:
         ray.init()
     
-    dateTimeObj = datetime.now()
-    timeObj = dateTimeObj.time()
-    logger.info(f'{timeObj} Beginning  data analysis')
+    date_time_obj = datetime.now()
+    time_obj = date_time_obj.time()
+
+    logger.info(f'{time_obj} Beginning  data analysis')
     print('Data file path: ' + args.data_file_path)
-    if args.perform_NN:
-        print('Vectors file path: ' + args.vectors_file_path)
-    else:
+    if not args.perform_NN:
         print('NN file path: ' + args.NN_file_path)
         logger.info(f'NN file path: {args.NN_file_path}')
     print('-----------------------')
     output_file_name = args.output_description + '.csv'
+
+    data_file = pd.read_csv(args.data_file_path, sep='\t')
+
     if args.perform_NN:
-        knn_map = cluster(args.vectors_file_path, args.output_folder_path, output_file_name,
+        vectors = np.array(data_file[args.vector_column].apply(lambda x: json.loads(x)).to_list())
+        knn_map = cluster(vectors, args.output_folder_path, output_file_name,
                           cluster_size=args.cluster_size, dist_metric=args.dist_metric, cpus=args.cpus, step=args.step)
 
     if args.perform_results_analysis:
         if not args.perform_NN:
             knn_map = np.loadtxt(args.NN_file_path, delimiter=',', dtype='int',  skiprows=1)
-        out = analyze_data(knn_map, args.data_file_path, id_field=args.id_field, cpus=args.cpus)
+        out = analyze_data(knn_map, data_file, id_field=args.id_field, cpus=args.cpus)
         output_file = args.output_description + '_analysis.csv'
         out.to_csv(os.path.join(args.output_folder_path, output_file), index=False)
         logger.info(str(datetime.now()) + ' | data written to output file: ' + output_file)
@@ -184,15 +181,14 @@ def row_unique_count(a):
 
 def analyze_data(knn_map, data_file, id_field='SUBJECT', status_field='labels', cpus=2):
     logger.info(f'{str(datetime.now())} | Begin data analyze of nearest neighbors')
-    data = pd.read_csv(data_file, sep='\t')
-    status_types = data[status_field].unique()
+    status_types = data_file[status_field].unique()
 
-    step = len(data)/cpus
+    step = len(data_file)/cpus
     ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
 
     results_ids = []
     for sub_range in ranges:
-        results_ids += [analyze_sub_data.remote(knn_map, data, sub_range, status_types, id_field=id_field)]
+        results_ids += [analyze_sub_data.remote(knn_map, data_file, sub_range, status_types, id_field=id_field)]
 
     output_df = pd.concat([ray.get(result_id) for result_id in results_ids], ignore_index=True)
 
@@ -309,11 +305,9 @@ def test_build_dist_and_knn_maps(dim_one=1000, dim_two=10, cluster_size=5, cpus=
     print("building maps completed after {}".format(time.time() - t0))
 
 
-def cluster(data_file, output_file_path, output_file_name, cluster_size=100, dist_metric='euclidean',
+def cluster(vectors, output_file_path, output_file_name, cluster_size=100, dist_metric='euclidean',
             cpus=2, step=10000):
     """Cluster the data and write the result to output file"""
-    vectors = read_vector_data(data_file)
-
     t0 = time.time()
     distance_map, knn_map = build_maps(vectors, cluster_size, dist_metric=dist_metric, cpus=cpus, step=step)
     print("cluster: building maps completed after {}".format(time.time() - t0))
@@ -329,4 +323,6 @@ def cluster(data_file, output_file_path, output_file_name, cluster_size=100, dis
 
 if __name__ == '__main__':
     main()
+
+
 
