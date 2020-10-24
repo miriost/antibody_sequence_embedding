@@ -2,10 +2,11 @@
 
 trap "exit" INT
 
-usage="USAGE: create_cluster_anlysis.sh -f [list of fold numbers] -c [list of cluster sizes]"
+usage="USAGE: create_cluster_anlysis.sh -v <vector column name> -f [list of fold numbers] -c [list of cluster sizes]"
 folds=$(seq 0 1 39)
 cluster_sizes=$(seq 100 10 130)
-while getopts "hf:c:s:m:o:" opt; do
+vector_column=false
+while getopts "hf:c:v:" opt; do
 	case ${opt} in
 		h ) echo ${usage} ; exit 1
       			;;
@@ -13,10 +14,17 @@ while getopts "hf:c:s:m:o:" opt; do
       			;;
 		c ) cluster_sizes=${OPTARG}
 			;;
+		v ) vector_column=${OPTARG}
+			;;
 		\? ) echo ${usage}; exit 1
       			;;
 	esac
 done
+
+if [ vector_column == false ]; then
+	echo ${usage}
+	exit -1
+fi	
 
 # loop folds
 for fold in ${folds} ; do
@@ -29,6 +37,11 @@ for fold in ${folds} ; do
 			# already has a feature_list.csv file - skipping
 			continue
 		fi
-		eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --perform_NN=True --perform_results_analysis=True --output_folder_path ${output_dir} --vector_column celiac_light_chain_trim_1_1_prot2vec --output_description cs_${cs} --cluster_size ${cs} --thread_memory 11474836480 --cpus=12 --step=10000 --id repertoire.subject_id 2>&1 | tee -a ${output_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
+		if [ -f ${output_dir}/NN_cs_${cs}.csv ] ; then
+			eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --NN_file_path=${output_dir}/NN_cs_${cs}.csv  --perform_NN=False --perform_results_analysis=True --output_folder_path ${output_dir} --vector_column ${vector_column} --output_description cs_${cs} --cluster_size ${cs} --thread_memory 11474836480 --cpus=12 --step=10000 --id repertoire.subject_id 2>&1 | tee -a ${output_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
+	
+		else
+			eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --perform_NN=True --perform_results_analysis=True --output_folder_path ${output_dir} --vector_column ${vector_column} --output_description cs_${cs} --cluster_size ${cs} --thread_memory 11474836480 --cpus=12 --step=10000 --id repertoire.subject_id 2>&1 | tee -a ${output_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
+		fi
 	done
 done 
