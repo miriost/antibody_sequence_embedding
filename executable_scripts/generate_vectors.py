@@ -61,7 +61,7 @@ def main():
     print('{:.3}% of data not transformed'.format((100*sum(data_file[output_column] == np.nan)/data_len)))
     
     # drop the un translated rows from the file
-    data_file = data_file.drop(data_file.index[data_file[output_column] == np.nan])
+    data_file = data_file.drop(data_file.index[data_file[output_column].isnull()])
 
     # save to files:
     if args.inline is True:
