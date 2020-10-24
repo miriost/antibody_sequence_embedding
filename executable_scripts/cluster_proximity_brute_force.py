@@ -124,8 +124,8 @@ def main():
                         help='type of distance to use, default=euclidean', default='euclidean', type=str)
     parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
     parser.add_argument('--cluster_size', help='size of the cluster, deafult=100', type=int, default=100)
-    parser.add_argument('--id_field', help='name of the subject id column, default=SUBJECT',
-                        type=str, default='SUBJECT')
+    parser.add_argument('--id_field', help='name of the subject id column, default=repertoire.subject_id',
+                        type=str, default='repertoire.subject_id')
 
     args = parser.parse_args()
     if not os.path.isfile(args.data_file_path):
@@ -140,11 +140,16 @@ def main():
         print('Nearest neighbors file error, make sure the file exists\nExiting...')
         sys.exit(1)
 
+    if args.vector_column is None:
+        print("Missing vector_column argument\nExisting...")
+        sys.exit(1)
+
     if args.thread_memory is not None:
         ray.init(memory=args.thread_memory, object_store_memory=args.thread_memory)
     else:
         ray.init()
-    
+   
+
     date_time_obj = datetime.now()
     time_obj = date_time_obj.time()
 
