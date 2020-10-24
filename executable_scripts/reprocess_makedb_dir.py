@@ -39,7 +39,7 @@ def main():
             local_df['repertoire_id'] = os.path.basename(file).replace('.tsv', '')
 
         # 1. REMOVE NON-FUNCTIONAL SEQUENCES
-        local_df = local_df[local_df.productive.str.lower().str.startswith('t')]
+        local_df = local_df[local_df.productive.iloc[:]]
         print(' - After removing non functional sequences: {}'.format(len(local_df)))
 
         # 2. REMOVE ROWS WHERE JUNCTION LENGTH IS SHORTER THAN 12 OR DOESN'T DEVIDE BY 3
