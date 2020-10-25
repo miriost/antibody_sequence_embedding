@@ -22,7 +22,7 @@ def main():
     parser.add_argument('--seed', type=str, help='seed for the random sampling', default=0)
     parser.add_argument('--output_data_file', help='output filtered data file path', type=str)
     parser.add_argument('--subject_field', help='name of the column which identifies the subjects '
-                                                '(default=repertoire.subject_id)', default='repertoire.subject_id')
+                                                '(default=repertoire.repertoire_name)', default='repertoire.repertoire_name')
     parser.add_argument('--exclude_dup_column', help='Filter subject level duplication by this '
                                                      'column (default=junction_aa)', default='junction_aa')
 
