@@ -44,8 +44,8 @@ def main():
     parser.add_argument('--output_folder_path', default="./",  help='Output folder for the feature table')
     parser.add_argument('--output_description',  help='description to use inside output file names')
     parser.add_argument('--subject_col_name',
-                        help='subject column name in data file, default "repertoire.subject_id"',
-                        default='repertoire.subject_id', type=str)
+                        help='subject column name in data file, default "repertoire.repertoire_name"',
+                        default='repertoire.repertoire_name', type=str)
     parser.add_argument('--labels_col_name',
                         help='labels column name in data file, default "repertoire.disease_diagnosis"',
                         default='repertoire.disease_diagnosis', type=str)

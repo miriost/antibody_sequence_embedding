@@ -29,8 +29,8 @@ def main():
                         help='Fraction of the set size from all data size. If repeated is False this argument '
                              'is ignored. Default=.2', type=float, default=.2)
     parser.add_argument('--id_col_name',
-                        help='Name of the subjects id column in data file, default: "repertoire.subject_id"', type=str,
-                        default='repertoire.subject_id')
+                        help='Name of the subjects id column in data file, default: "repertoire.repertoire_name"', type=str,
+                        default='repertoire.repertoire_name')
     parser.add_argument('--labels_col_name',
                         help='Name of the labels column in data file, default: "repertoire.disease_diagnosis"',
                         type=str, default='repertoire.disease_diagnosis')
@@ -77,9 +77,8 @@ def main():
     if not args.repeated:
         output_folds = create_folds_no_repetitions(subjects_df, n_folds)
     else:
-        if round(args.test_fraction * len(subjects_df)) < len(subjects_df['labels'].unique()):
-            print('test_fraction is too small\nExiting...')
-            sys.exit(1)
+        if math.ceil(args.test_fraction * len(subjects_df)) < len(subjects_df['labels'].unique()):
+            print('Warning: test_fraction is too small for containing repersentive from each label.')
         output_folds = create_folds_with_repetitions(subjects_df, n_folds, args.test_fraction)
 
     fold_id = 0
@@ -104,8 +103,10 @@ def main():
 
 def create_folds_with_repetitions(subjects_df, n_folds, test_fraction):
 
-    n_test_subjects = round(len(subjects_df) * test_fraction)
+    n_test_subjects = math.ceil(len(subjects_df) * test_fraction)
+    # shuffle the labels
     labels = subjects_df['labels'].unique()
+    np.random.shuffle(labels)
     subjects = subjects_df['subject'].to_numpy()
 
     tries = 0
@@ -119,6 +120,8 @@ def create_folds_with_repetitions(subjects_df, n_folds, test_fraction):
 
         testing = np.array([])
         for label in labels:
+            if len(testing) == n_test_subjects:
+                break
             label_subjects = subjects_df.loc[subjects_df['labels'] == label, 'subject']
             # try to create test set as balanced as possible, an equal number of subjects
             # from each label, if the number of subjects with this label allows it

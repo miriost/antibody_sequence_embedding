@@ -124,12 +124,12 @@ def main():
                         help='type of distance to use, default=euclidean', default='euclidean', type=str)
     parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
     parser.add_argument('--cluster_size', help='size of the cluster, deafult=100', type=int, default=100)
-    parser.add_argument('--id_field', help='name of the subject id column, default=repertoire.subject_id',
-                        type=str, default='repertoire.subject_id')
+    parser.add_argument('--id_field', help='name of the subject id column, default=repertoire.repertoire_name',
+                        type=str, default='repertoire.repertoire_name')
 
     args = parser.parse_args()
     if not os.path.isfile(args.data_file_path):
-        print('feature file error, make sure data file path\nExiting...')
+        print('Data file error, make sure data file path: {}\nExiting...'.format(args.data_file_path))
         sys.exit(1)
         
     if not os.path.exists(args.output_folder_path):
@@ -137,7 +137,7 @@ def main():
         print('output_folder_created: ' + str(args.output_folder_path))
 
     if not(args.perform_NN) and not(os.path.isfile(args.NN_file_path)):
-        print('Nearest neighbors file error, make sure the file exists\nExiting...')
+        print('Nearest neighbors file error, make sure the file exists: path {}\nExiting...'.format(args.NN_file_path))
         sys.exit(1)
 
     if args.vector_column is None:
@@ -184,7 +184,7 @@ def row_unique_count(a):
     return np.sum(changes, axis=1)
 
 
-def analyze_data(knn_map, data_file, id_field='repertoire.subject_id', status_field='repertoire.disease_diagnosis', cpus=2):
+def analyze_data(knn_map, data_file, id_field='repertoire.repertoire_name', status_field='repertoire.disease_diagnosis', cpus=2):
     logger.info(f'{str(datetime.now())} | Begin data analyze of nearest neighbors')
     status_types = data_file[status_field].unique()
 
@@ -201,7 +201,7 @@ def analyze_data(knn_map, data_file, id_field='repertoire.subject_id', status_fi
 
 
 @ray.remote
-def analyze_sub_data(knn_map, data, sub_range, status_types, id_field='repertoire.subject_id', status_field='repertoire.disease_diagnosis'):
+def analyze_sub_data(knn_map, data, sub_range, status_types, id_field='repertoire.repertoire_name', status_field='repertoire.disease_diagnosis'):
     print("adding neighbors column: range {}".format(sub_range))
     t0 = time.time()
     sub_output_df = pd.DataFrame(columns=['neighbors', 'how_many_subjects'])

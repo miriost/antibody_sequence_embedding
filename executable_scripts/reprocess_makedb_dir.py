@@ -19,7 +19,7 @@ def main():
     parser.add_argument('--input_files', help='a space separated list of repertoire tsv files '
                                               'for db creation', nargs='+')
     parser.add_argument('--output_file', help='output file', type=str)
-    parser.add_argument('--subject_field', help='output file', type=str, default='repertoire.subject_id')
+    parser.add_argument('--subject_field', help='output file', type=str, default='repertoire.repertoire_name')
     parser.add_argument('--trim', nargs=2, type=int, help='two integers to trim, first from beginning, 2nd from end')
     parser.add_argument('--min_seq_per_subject', type=int, help='min number of sequence per subject', default=10000)
 
@@ -83,8 +83,8 @@ def main():
     big_df = pd.concat(df_list)
 
     big_df.to_csv(args.output_file, index=False, sep='\t')
-    print('*********\nfile generated {} out of {} files\nOriginal rows count: {} After filtering: {}'.format(
-        args.output_file, len(big_df['repertoire.subject_id'].unique()), total_rows, len(big_df)))
+    print('*********\nfile generated {} out of {} repertoires\nOriginal rows count: {} After filtering: {}'.format(
+        args.output_file, len(big_df['repertoire.repertoire_name'].unique()), total_rows, len(big_df)))
 
 
 if __name__ == "__main__":
