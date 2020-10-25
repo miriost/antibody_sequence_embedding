@@ -184,7 +184,7 @@ def row_unique_count(a):
     return np.sum(changes, axis=1)
 
 
-def analyze_data(knn_map, data_file, id_field='SUBJECT', status_field='labels', cpus=2):
+def analyze_data(knn_map, data_file, id_field='repertoire.subject_id', status_field='repertoire.disease_diagnosis', cpus=2):
     logger.info(f'{str(datetime.now())} | Begin data analyze of nearest neighbors')
     status_types = data_file[status_field].unique()
 
@@ -201,7 +201,7 @@ def analyze_data(knn_map, data_file, id_field='SUBJECT', status_field='labels', 
 
 
 @ray.remote
-def analyze_sub_data(knn_map, data, sub_range, status_types, id_field='SUBJECT', status_field='labels'):
+def analyze_sub_data(knn_map, data, sub_range, status_types, id_field='repertoire.subject_id', status_field='repertoire.disease_diagnosis'):
     print("adding neighbors column: range {}".format(sub_range))
     t0 = time.time()
     sub_output_df = pd.DataFrame(columns=['neighbors', 'how_many_subjects'])
@@ -230,7 +230,7 @@ def analyze_sub_data(knn_map, data, sub_range, status_types, id_field='SUBJECT',
 
 def test_analyze_sub_data():
     data = pd.DataFrame()
-    data['SUBJECT'] = random.choices(['P1_I1', 'P1_I2', 'P1_I3', 'P1_I4', 'P1_I5', 'P1_I6', 'P1_I7', 'P1_I8'], k=1000)
+    data['subject'] = random.choices(['P1_I1', 'P1_I2', 'P1_I3', 'P1_I4', 'P1_I5', 'P1_I6', 'P1_I7', 'P1_I8'], k=1000)
     data['labels'] = random.choices(['healthy', 'celiac'], k=1000)
     knn_map = np.array([random.sample(range(1000), 10) for i in range(1000)])
     status_types = data['labels'].unique()

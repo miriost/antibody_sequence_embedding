@@ -30,7 +30,8 @@ def main(argv):
     parser.add_argument('--train_file', help='a *.csv file containing the TRAIN features table, including labels '
                                              'column')
     parser.add_argument('--test_file', help='a *.csv file containing the TEST features table, including labels column')
-    parser.add_argument('--labels_col_name', help='Name of the labels column, default: "labels"', default='labels')
+    parser.add_argument('--labels_col_name', help='Name of the labels column, default: "repertoire.disease_diagnosis"', 
+            default='repertoire.disease_diagnosis')
     parser.add_argument('--output_file', help='name of the output file, default is None (no output file)', type=str)
     parser.add_argument('--col_names', help='comma separated list of columns names to add to output', type=str)
     parser.add_argument('--col_values', help='comma separated list of columns values to add to output', type=str)
