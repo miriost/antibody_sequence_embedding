@@ -1,37 +1,25 @@
 import sys, argparse
 import os
-import pathlib
 import pandas as pd
-sys.path.insert(0, str(pathlib.Path(__file__).parent.absolute()).split('antibody_sequence_embedding')[0])            
-from antibody_sequence_embedding.classifier import classifier
+from classifying import Classifier
 import pickle
 
 
 def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1', "True"):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0', "False"):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
+    return v.lower() in ("yes", "true", "t", "1")
 
-def str2bool(v):
-  return v.lower() in ("yes", "true", "t", "1")
 
-def main(argv):
+def main():
     parser = argparse.ArgumentParser(
         description='''classify_no_splitting.py function performs classification based on a train and test feature 
                        tables where each row is an observation and each column is a feature. It's output is a confusion 
                        matrix and a score.''',
         epilog="""All's well that ends well.""")
-    parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', help='a *.csv file containing the TRAIN features table, including labels '
                                              'column')
     parser.add_argument('--test_file', help='a *.csv file containing the TEST features table, including labels column')
-    parser.add_argument('--labels_col_name', help='Name of the labels column, default: "repertoire.disease_diagnosis"', 
-            default='repertoire.disease_diagnosis')
+    parser.add_argument('--labels_col_name', help='Name of the labels column, default: "repertoire.disease_diagnosis"',
+                        default='repertoire.disease_diagnosis')
     parser.add_argument('--output_file', help='name of the output file, default is None (no output file)', type=str)
     parser.add_argument('--col_names', help='comma separated list of columns names to add to output', type=str)
     parser.add_argument('--col_values', help='comma separated list of columns values to add to output', type=str)
@@ -93,8 +81,7 @@ def main(argv):
     x_test = test_file.drop(labels_col_name, axis=1)
     y_test = test_file[labels_col_name]
 
-    labels_all = pd.concat([y_train, y_test])
-    feature_table = pd.concat([x_train, x_test])
+    classes = train_file[labels_col_name].unqiue()
 
     if len(x_train.columns) == 0:
         print('No features in training file.\nExiting...')
@@ -108,24 +95,27 @@ def main(argv):
     if args.input_model_file:
         loaded_model = pickle.load(open(args.input_model_file, 'rb'))
         file_name = os.path.basename(args.input_model_file)
-        our_classifier = classifier(feature_table=feature_table, labels=labels_all, model_name=file_name, C=.9,
-                                    grid_search=args.grid_search, model=loaded_model)
+        our_classifier = Classifier(name=file_name, model=loaded_model, classes=classes)
         output, model = our_classifier.run_once(x_train, x_test, y_train, y_test)
     else:
         if args.models == 'all':
-            models = ["logistic_regression", "decision_tree", "kNN", "linear_svm", "RBF_SVM", "Gaussian",
+            models = ["logistic_regression", "decision_tree", "KNN", "linear_svm", "RBF_SVM", "Gaussian", "MLP",
                       "Random_Forest", "ADA", "naive_bayes", "QDA"]
         else:
             models = args.models.split(",")
         for model_name in models:
-            our_classifier = classifier(feature_table=feature_table, labels=labels_all, model_name=model_name, C=.9,
-                                        grid_search=args.grid_search)
+            if args.grid_search:
+                parameters = None
+            else:
+                parameters = [{}]
+
+            our_classifier = Classifier(name=model_name, classes=classes, parameters=parameters)
             if output is None:
                 output, model = our_classifier.run_once(x_train, x_test, y_train, y_test)
-                print(model)
             else:
                 tmp, model = our_classifier.run_once(x_train, x_test, y_train, y_test)
                 output = pd.concat([output, tmp], ignore_index=True)
+
             if args.output_model_file is not None:
                 file_name = os.path.basename(args.output_model_file)
                 dir_name = os.path.dirname(args.output_model_file)
@@ -143,4 +133,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

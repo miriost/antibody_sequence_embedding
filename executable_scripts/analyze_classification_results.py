@@ -4,16 +4,22 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import json
 
 def group_by_metric(df: pd.DataFrame, metric_list: list) -> pd.DataFrame:
 
 	if len(metric_list) == 0:
 		desc = df.loc[:, ['accuracy', 'f1_score', 'precision', 'recall']].describe()
-		res = pd.DataFrame(index = [0])
+		res = pd.DataFrame(index=[0], columns=['confusion_matrix'])
 		for idx, row in desc.iterrows():
 			res[row.add_suffix('_' + idx).index.values.tolist()] = pd.DataFrame([row.values.tolist()], index=res.index)
 		res['n_features_mean'] = round(df['n_features'].mean())
 		res['n_folds'] = len(df['fold'].unique())
+		res['labels'] = df.loc[0, 'labels']
+		res['parameters'] = format(df['parameters'].value_counts().to_dict())
+		arr = res.loc['confusion_matrix'].apply(lambda x: np.array(json.loads(x)))
+		res.at[0, 'confusion_matrix'] = sum(arr.to_list()).to_list()
+
 		return res
 
 	metric = metric_list[0]
@@ -100,7 +106,7 @@ def execute(args):
 	plt.figure()
 	plt.table(cellText=top_10.to_numpy(), colLabels=top_10.columns, loc='center')
 	plt.axis('off')
-	plt.savefig(os.path.join(output_dir,  "top_models.png"))
+	plt.savefig(os.path.join(output_dir,  "top_models.png"), dpi=1200)
 
 	plt.clf()
 	sns.set(rc={'figure.figsize': (18, 10)})
@@ -146,6 +152,14 @@ def execute(args):
 	chart.set_title('Min subjects vs f1 score')
 
 	fig.savefig(os.path.join(output_dir, best_model + "_cluster_parameters_vs_f1_score.png"))
+
+	plt.clf()
+	cm = pd.DataFrame(best_model_df.iloc[0, 'confusion_matrix'],
+	                  index= best_model_df.iloc[0, 'labels'],
+	                  columns= best_model_df.iloc[0, 'labels'])
+	plt.figure(figsize=(10, 7))
+	sns.heatmap(cm, annot=True)
+	fig.savefig(os.path.join(output_dir, best_model + "_confusion_matrix.png"))
 
 	plt.clf()
 	indexing = (input_file['cluster_size'] == best_cluster_size) & (input_file['min_subj'] == best_min_subj) & \
