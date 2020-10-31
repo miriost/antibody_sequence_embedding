@@ -71,6 +71,7 @@ for fold in ${folds} ; do
 			for min_subj in ${min_subjects}; do 
 				echo "Min subject ${min_subj}"
 				output_dir=${cs_dir}/sig_level_${sig_level}_min_subj_${min_subj}
+				
 				if [ -f ${output_dir}/${output_file} ] && [[ "${replace}" == "false" ]] ; then
 					echo "file ${output_dir}/${output_file} already exists, skipping classification."
 					continue
@@ -120,4 +121,4 @@ done
 # analyze the results
 echo "Analyzing..."
 output_dir=$(echo ${output_file} | awk -F $'.' '{print $1}')_analysis
-python -u ~/antibody_sequence_embedding/executable_scripts/analyze_classification_results.py --input_file all_${output_file} --output_dir ${output_dir} > analyze_classification_results.log.txt
+python -u ~/antibody_sequence_embedding/executable_scripts/analyze_classification_results.py --input_file all_${output_file} --output_dir ${output_dir} 2>&1 | tee analyze_classification_results.log.txt

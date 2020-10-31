@@ -1,7 +1,7 @@
 import sys, argparse
 import os
 import pandas as pd
-from classifying import Classifier
+from classifying.Classifier import *
 import pickle
 
 
@@ -81,7 +81,7 @@ def main():
     x_test = test_file.drop(labels_col_name, axis=1)
     y_test = test_file[labels_col_name]
 
-    classes = train_file[labels_col_name].unqiue()
+    classes = train_file[labels_col_name].unique()
 
     if len(x_train.columns) == 0:
         print('No features in training file.\nExiting...')
@@ -99,7 +99,7 @@ def main():
         output, model = our_classifier.run_once(x_train, x_test, y_train, y_test)
     else:
         if args.models == 'all':
-            models = ["logistic_regression", "decision_tree", "KNN", "linear_svm", "RBF_SVM", "Gaussian", "MLP",
+            models = ["logistic_regression", "decision_tree", "KNN", "linear_svm", "RBF_SVM", "Gaussian",
                       "Random_Forest", "ADA", "naive_bayes", "QDA"]
         else:
             models = args.models.split(",")

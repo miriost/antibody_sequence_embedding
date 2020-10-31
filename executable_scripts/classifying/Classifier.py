@@ -23,7 +23,7 @@ from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.feature_selection import RFE
 from scipy.stats import randint
-from classifying.RepertoireClassifier import RepertoireClassifier
+from classifying.RepertoireClassifier import *
 
 
 def rfc_features_selector(estimator, X_train, y_train, n_splits=10, repeated=True):
@@ -153,12 +153,12 @@ class Classifier:
 
         elif name.lower() in ['gaussian']:
             if not parameters:
-                parameters = {'kernel': 1.0 * RBF(1.0)}
+                parameters = {'kernel': [1.0 * RBF(1.0)]}
             estimator = GaussianProcessClassifier()
             
         elif name.lower() in ['rf', 'random_forest']:
             if not parameters:
-                parameters = [{'max_depth': randint(3, 14), 'max_features': randint(1, 5)}]
+                parameters = [{'max_depth': list(range(3,15))}]
             estimator = RandomForestClassifier()
 
         elif name.lower() in ['mlp', 'neural_net']:
@@ -247,21 +247,10 @@ class Classifier:
         output['n_features'] = len(self.classifier.features)
         output['model'] = self.classifier.name
         output['parameters'] = format(self.classifier.parameters)
-        output['labels'] = format(self.classes)
+        output['labels'] = format(self.classes.tolist())
 
         # sort columns
         output = output.reindex(sorted(output.columns), axis=1)
 
         return output, self.classifier.trained_model
 
-
-train = pd.read_csv('/Users/boazfrankel/PycharmProjects/antibody_sequence_embedding/data/train_feature_table.csv')
-X_train = train.drop(['SUBJECT', 'repertoire.disease_diagnosis'], axis=1)
-y_train = train['repertoire.disease_diagnosis']
-test = pd.read_csv('/Users/boazfrankel/PycharmProjects/antibody_sequence_embedding/data/test_feature_table.csv')
-X_test = test.drop(['SUBJECT', 'repertoire.disease_diagnosis'], axis=1)
-y_test = test['repertoire.disease_diagnosis']
-classes = train['repertoire.disease_diagnosis'].unique().tolist()
-
-c = Classifier(name='lr', classes=classes)
-output, m = c.run_once(X_train, X_test, y_train, y_test)
