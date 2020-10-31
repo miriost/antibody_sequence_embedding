@@ -12,7 +12,7 @@ def group_by_metric(df: pd.DataFrame, metric_list: list) -> pd.DataFrame:
 		res = pd.DataFrame(index = [0])
 		for idx, row in desc.iterrows():
 			res[row.add_suffix('_' + idx).index.values.tolist()] = pd.DataFrame([row.values.tolist()], index=res.index)
-		res['n_features_mean'] = df['n_features'].mean()
+		res['n_features_mean'] = round(df['n_features'].mean())
 		res['n_folds'] = len(df['fold'].unique())
 		return res
 
@@ -45,6 +45,10 @@ def main():
 
 	args = parser.parse_args()
 
+	execute(args)
+
+
+def execute(args):
 	if args.input_file is None or not (os.path.isfile(args.input_file)):
 		print("bad input_file argument")
 		exit(1)
@@ -88,76 +92,68 @@ def main():
 	df_filtered = df_filtered.sort_values(by='f1_score_mean', ascending=False);
 	df_filtered.to_csv(os.path.join(output_dir, "accumlated_" + args.input_file), index=False)
 
+	top_10 = df_filtered.head(10).loc[:, ['model', 'cluster_size', 'significance', 'min_subj', 'n_features_mean', 'f1_score_mean', 'n_folds']]
+	top_10 = top_10.copy(deep=True)
+	top_10['f1_score_mean'] = top_10['f1_score_mean'].apply(lambda x: round(x, 2))
+
+	plt.clf()
+	plt.figure()
+	plt.table(cellText=top_10.to_numpy(), colLabels=top_10.columns, loc='center')
+	plt.axis('off')
+	plt.savefig(os.path.join(output_dir,  "top_models.png"))
+
+	plt.clf()
+	sns.set(rc={'figure.figsize': (18, 10)})
+	fig, axs = plt.subplots(ncols=2, nrows=2)
+
 	best_model = df_filtered.iloc[0, df_filtered.columns == 'model'][0]
 	print("best model is {} with f1_score_mean {}".format(best_model,
 	                                                   df_filtered.iloc[0, df_filtered.columns == 'f1_score_mean'][0]))
 	best_model_df = df_filtered.loc[df_filtered['model'] == best_model, :]
 	best_model_df = best_model_df.sort_values(by='f1_score_mean', ascending=False);
 
-	ticks = best_model_df['n_features_mean'].unique().astype(int).tolist()
-	threshold = (max(ticks) - min(ticks)) / (len(ticks) * 2)
-	max_score_tick = \
-		int(best_model_df.loc[best_model_df['f1_score_mean'] == max(best_model_df['f1_score_mean']), "n_features_mean"].mean())
-	min_score_tick = \
-		int(best_model_df.loc[best_model_df['f1_score_mean'] == min(best_model_df['f1_score_mean']), "n_features_mean"].mean())
-	ticks += [max_score_tick, min_score_tick]
-	ticks.sort()
-
-	ticks_labels = []
-	for idx, tick in enumerate(ticks):
-		if idx == 0 or tick in [max_score_tick, min_score_tick]:
-			ticks_labels += [str(tick)]
-		elif abs(tick-max_score_tick) > threshold and \
-			abs(tick-min_score_tick) > threshold and \
-			tick - ticks[idx-1] > threshold:
-			ticks_labels += [str(tick)]
-		else:
-			ticks_labels += ['']
-
-	sns.set(rc={'figure.figsize': (18, 10)})
-
-	chart = sns.lineplot(data=best_model_df, x="n_features_mean", y="f1_score_mean")
+	chart = sns.lineplot(data=best_model_df, x="n_features_mean", y="f1_score_mean", ax=axs[0, 0])
+	ticks = np.arange(int(best_model_df['n_features_mean'].min()),
+	                  int((best_model_df[ 'n_features_mean' ].max() - best_model_df['n_features_mean'].min()) / 10),
+	                  int(best_model_df['n_features_mean'].max()))
 	chart.set_xticks(ticks)
-	chart.set_xticklabels(ticks_labels, rotation=90)
-	chart.get_figure().savefig(os.path.join(output_dir, "n_features_vs_f1_score.png"))
+	chart.set_xticklabels(ticks, rotation=90)
+	chart.set_title('Number of features vs f1 score')
 
 	best_cluster_size = best_model_df.iloc[0, df_filtered.columns == 'cluster_size'][0]
-	best_min_subj= best_model_df.iloc[0, df_filtered.columns == 'min_subj'][0]
-	best_significance= best_model_df.iloc[0, df_filtered.columns == 'significance'][0]
+	best_min_subj = best_model_df.iloc[0, df_filtered.columns == 'min_subj'][0]
+	best_significance = best_model_df.iloc[0, df_filtered.columns == 'significance'][0]
 
-	plt.clf()
 	chart = sns.lineplot(data=best_model_df[(best_model_df["min_subj"] == best_min_subj) &
 	                                        (best_model_df["significance"] == best_significance)],
 	                     x="cluster_size",
-	                     y="f1_score_mean")
-	chart.get_figure().savefig(os.path.join(output_dir, best_model + "_cluster_size_vs_f1_score.png"))
-	chart = sns.lineplot(data=df_filtered, x="cluster_size", y="f1_score_mean")
-	chart.get_figure().savefig(os.path.join(output_dir, "cluster_size_vs_f1_score.png"))
+	                     y="f1_score_mean",
+	                     ax=axs[0, 1])
+	chart.set_title('Cluster size vs f1 score')
 
-	plt.clf()
 	chart = sns.lineplot(data=best_model_df[(best_model_df["min_subj"] == best_min_subj) &
 	                                        (best_model_df["cluster_size"] == best_cluster_size)],
 	                     x="significance",
-	                     y="f1_score_mean")
-	chart.get_figure().savefig(os.path.join(output_dir, best_model + "_significance_vs_f1_score.png"))
-	chart = sns.lineplot(data=df_filtered, x="significance", y="f1_score_mean")
-	chart.get_figure().savefig(os.path.join(output_dir, "significance_vs_f1_score.png"))
+	                     y="f1_score_mean",
+	                     ax=axs[1, 0])
+	chart.set_title('Significance vs f1 score')
 
-	plt.clf()
 	chart = sns.lineplot(data=best_model_df[(best_model_df["cluster_size"] == best_cluster_size) &
 	                                        (best_model_df["significance"] == best_significance)],
 	                     x="min_subj",
-	                     y="f1_score_mean")
-	chart.get_figure().savefig(os.path.join(output_dir, best_model + "_min_subj_vs_f1_score.png"))
-	chart = sns.lineplot(data=df_filtered, x="min_subj", y="f1_score_mean")
-	chart.get_figure().savefig(os.path.join(output_dir, "min_subj_vs_f1_score.png"))
+	                     y="f1_score_mean",
+	                     ax=axs[1, 1])
+	chart.set_title('Min subjects vs f1 score')
+
+	fig.savefig(os.path.join(output_dir, best_model + "_cluster_parameters_vs_f1_score.png"))
 
 	plt.clf()
 	indexing = (input_file['cluster_size'] == best_cluster_size) & (input_file['min_subj'] == best_min_subj) & \
 	           (input_file['significance'] == best_significance) & (input_file['model'] == best_model) & \
 	           (input_file['report'] == 'test') & (input_file['key'] == 'macro avg')
 	chart = sns.distplot(a=input_file.loc[indexing, 'f1_score'], hist=True)
-	chart.get_figure().savefig(os.path.join(output_dir, "best_model_f1_score_hist.png"))
+	chart.set_title(best_model + '_f1 score histogram')
+	chart.get_figure().savefig(os.path.join(output_dir, best_model + '_f1_score_hist.png'))
 	print(input_file.loc[indexing, 'parameters'].value_counts())
 
 	plt.clf()
@@ -177,8 +173,9 @@ def main():
 	chart = sns.scatterplot(data=best_models_df, x="fold", y="f1_score", hue="model", x_jitter=0.2, y_jitter=0.2)
 	chart.set_xticks(best_models_df['fold'].unique())
 	chart.set_xticklabels(best_models_df['fold'].unique())
-	chart.get_figure().savefig(os.path.join(output_dir, "{}_best_models.png".format(len(best_models))))
+	chart.get_figure().savefig(os.path.join(output_dir, "f1_score_by_folds.png".format(len(best_models))))
 
 
 if __name__ == "__main__":
     main()
+
