@@ -17,8 +17,9 @@ def group_by_metric(df: pd.DataFrame, metric_list: list) -> pd.DataFrame:
 		res['n_folds'] = len(df['fold'].unique())
 		res['labels'] = df.loc[0, 'labels']
 		res['parameters'] = format(df['parameters'].value_counts().to_dict())
-		arr = res.loc['confusion_matrix'].apply(lambda x: np.array(json.loads(x)))
-		res.at[0, 'confusion_matrix'] = sum(arr.to_list()).to_list()
+		if 'confusion_matrix' in df.columns:
+			arr = res.loc['confusion_matrix'].apply(lambda x: np.array(json.loads(x)))
+			res.at[0, 'confusion_matrix'] = sum(arr.to_list()).to_list()
 
 		return res
 
@@ -153,13 +154,14 @@ def execute(args):
 
 	fig.savefig(os.path.join(output_dir, best_model + "_cluster_parameters_vs_f1_score.png"))
 
-	plt.clf()
-	cm = pd.DataFrame(best_model_df.iloc[0, 'confusion_matrix'],
-	                  index= best_model_df.iloc[0, 'labels'],
-	                  columns= best_model_df.iloc[0, 'labels'])
-	plt.figure(figsize=(10, 7))
-	sns.heatmap(cm, annot=True)
-	fig.savefig(os.path.join(output_dir, best_model + "_confusion_matrix.png"))
+	if 'confusion_matrix' in best_model_df.columns:
+		plt.clf()
+		cm = pd.DataFrame(best_model_df.iloc[0, 'confusion_matrix'],
+		                  index= best_model_df.iloc[0, 'labels'],
+		                  columns= best_model_df.iloc[0, 'labels'])
+		plt.figure(figsize=(10, 7))
+		sns.heatmap(cm, annot=True)
+		fig.savefig(os.path.join(output_dir, best_model + "_confusion_matrix.png"))
 
 	plt.clf()
 	indexing = (input_file['cluster_size'] == best_cluster_size) & (input_file['min_subj'] == best_min_subj) & \
