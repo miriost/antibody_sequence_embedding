@@ -30,6 +30,7 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import KFold
 from scipy.stats import randint
 
 def add(a,b):
@@ -112,7 +113,6 @@ class classifier():
          "Decision Tree (DT)", "Random Forest (RF)", "Neural Net (MLP)", "AdaBoost ('Ada')",
          "Naive Bayes (NB)", "QDA"]
 
-        self.models = None
         self.model = None
         self.clf = None
         self.trained_model = None
@@ -146,10 +146,11 @@ class classifier():
 
         elif self.model_name in [ 'decision_tree', 'DT' ]:
             if not grid_search:
-                self.model = DecisionTreeClassifier(max_depth=3)
+                tuned_parameters = [{'max_depth': [3]}]
             else:
-                self.models = [(DecisionTreeClassifier(max_depth=depth),
-                                {'max_depth': depth}) for depth in range(3, 15)]
+                tuned_parameters = [{'criterion': ['gini', 'entropy' ],
+                                     'max_depth': list(range(3, 15))}]
+            self.clf = GridSearchCV(DecisionTreeClassifier(), tuned_parameters, cv=KFold(n_splits=20, shuffle=True, random_state=0), scoring='f1_weighted')
 
         elif self.model_name in [ 'kNN', 'k-NN', 'knn' ]:
             if not grid_search:
@@ -158,21 +159,21 @@ class classifier():
                 tuned_parameters = [{'n_neighbors': list(range(3, 11)),
                                      'weights': ['uniform', 'distance'],
                                      'algorithm': ['brute']}]
-            self.clf = GridSearchCV(KNeighborsClassifier(), tuned_parameters, scoring='f1_macro')
+            self.clf = GridSearchCV(KNeighborsClassifier(), tuned_parameters, cv=KFold(n_splits=20, shuffle=True, random_state=0), scoring='f1_weighted')
 
         elif self.model_name in [ 'linear_svm', 'LSVM' ]:
             if not grid_search:
                 tuned_parameters = {'C': [100], 'kernel': ['linear']}
             else:
                 tuned_parameters = {'C': [0.1, 1, 10, 100, 1000], 'kernel': ['linear']}
-            self.clf = GridSearchCV(SVC(), tuned_parameters, scoring='f1_macro')
+            self.clf = GridSearchCV(SVC(), tuned_parameters, cv=KFold(n_splits=20, shuffle=True, random_state=0), scoring='f1_weighted')
 
         elif self.model_name in [ 'rbf_svm', 'RBF_SVM' ]:
             if not grid_search:
                 tuned_parameters = {'C': [100], 'gamma': [1], 'kernel': ['rbf']}
             else:
                 tuned_parameters = {'C': [0.1, 1, 10, 100, 1000], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001], 'kernel': ['rbf']}
-            self.clf = GridSearchCV(SVC(), tuned_parameters, scoring='f1_macro')
+            self.clf = GridSearchCV(SVC(), tuned_parameters, cv=KFold(n_splits=20, shuffle=True, random_state=0), scoring='f1_weighted')
 
         elif self.model_name in [ 'Gaussian', 'gaussian' ]:
             self.model = GaussianProcessClassifier(1.0 * RBF(1.0))
@@ -182,7 +183,7 @@ class classifier():
                 self.model = RandomForestClassifier()
             else:
                 tuned_parameters = [{'max_depth': randint(3, 14), 'max_features': randint(1, 5)}]
-                self.clf = RandomizedSearchCV(RandomForestClassifier(), tuned_parameters, scoring='f1_macro')
+                self.clf = RandomizedSearchCV(RandomForestClassifier(), tuned_parameters, cv=KFold(n_splits=20, shuffle=True, random_state=0), scoring='f1_weighted')
 
         elif self.model_name in [ 'MLP', 'Neural_net' ]:
             if not grid_search:
@@ -194,7 +195,7 @@ class classifier():
                     'alpha': [0.0001, 0.05],
                     'learning_rate': ['constant', 'adaptive'],
                 }
-                self.clf = GridSearchCV(MLPClassifier(max_iter=1000), tuned_parameters, scoring='f1_macro')
+                self.clf = GridSearchCV(MLPClassifier(max_iter=1000), tuned_parameters, cv=KFold(n_splits=20, shuffle=True, random_state=0), scoring='f1_weighted')
 
         elif self.model_name in [ 'ADA', 'Ada', 'Adaboost', 'Ada_boost' ]:
             self.model = AdaBoostClassifier()
@@ -204,7 +205,7 @@ class classifier():
                 self.model = GaussianNB()
             else:
                 tuned_parameters = [{'var_smoothing': [n*1e-9 for n in range(1, 5)]}]
-                self.clf = GridSearchCV(GaussianNB(), tuned_parameters, scoring='f1_macro')
+                self.clf = GridSearchCV(GaussianNB(), tuned_parameters, cv=KFold(n_splits=20, shuffle=True, random_state=0), scoring='f1_weighted')
 
         elif self.model_name in [ 'QDA', 'qda' ]:
             self.model = QuadraticDiscriminantAnalysis()
@@ -292,22 +293,6 @@ class classifier():
             train_predictions = model.predict(X_train)
             test_predictions = model.predict(X_test)
         
-        elif self.models is not None:
-            best_accuracy_score = 0
-            train_predictions = []
-            test_predictions = []
-            for model_it in self.models:
-                model_it[0].fit(X_train, y_train)
-                # Make predictions
-                tmp_train_predictions = model_it[0].predict(X_train)
-                tmp_test_predictions = model_it[0].predict(X_test)
-                if accuracy_score(y_test, tmp_test_predictions) >= best_accuracy_score:
-                    model = model_it[0]
-                    best_accuracy_score = accuracy_score(y_test, tmp_test_predictions)
-                    train_predictions = tmp_train_predictions
-                    test_predictions = tmp_test_predictions
-                    parameters = model_it[1]
-        
         elif self.clf is not None:
             self.clf.fit(X_train, y_train)
             model = self.clf.best_estimator_
@@ -360,3 +345,4 @@ class classifier():
         output = output.reindex(sorted(output.columns), axis=1)
 
         return output, model
+
