@@ -46,6 +46,7 @@ def execute(args):
         tmp.loc[tmp_index, 'repertoire.repertoire_name'] = int(subj['repertoire.repertoire_name'])
         samples = pd.concat([samples, tmp])
 
+    samples['junction_aa_trim_2_1'] = samples.index
     samples.to_csv(output_file, sep='\t')
     print('test samples file saved to {}'.format(output_file))
 
