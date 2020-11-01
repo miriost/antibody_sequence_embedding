@@ -22,7 +22,6 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.feature_selection import RFE
-from scipy.stats import randint
 from classifying.RepertoireClassifier import *
 
 
@@ -39,7 +38,7 @@ def rfc_features_selector(estimator, X_train, y_train, n_splits=10, repeated=Tru
         rfc.fit(data_x.iloc[ train, :], data_y[train])
         # sorting
         importances_index_desc = np.argsort(rfc.feature_importances_)[::-1]
-        feature_labels = [feature_names[i] for i in importances_index_desc ]
+        feature_labels = [feature_names[i] for i in importances_index_desc]
         importances1 = pd.DataFrame({'FEATURE': data_x.columns, 'IMPORTANCE': np.round(rfc.feature_importances_, 3)})
         importances = importances1.sort_values('IMPORTANCE', ascending=False).set_index('FEATURE')
         # appending
@@ -50,13 +49,13 @@ def rfc_features_selector(estimator, X_train, y_train, n_splits=10, repeated=Tru
     # saving
     average_importance_features = list(all_importances_sort.index)
     # ~~~~~~~~~~~~~~~~ FS_RFE ~~~~~~~~~~~~~~~~~~~~~~~
-    rf_features = average_importance_features[ 0:N ]
-    X = X_train.loc[ :, rf_features ]
+    rf_features = average_importance_features[0:N]
+    X = X_train.loc[:, rf_features]
     rfe = RFE(estimator, n_features_to_select=round(N * 0.3), step=0.01)
     rfe = rfe.fit(X, y_train)
 
     # saving selected features
-    index_feature = [ i for i, x in enumerate(rfe.support_) if x ]
+    index_feature = [i for i, x in enumerate(rfe.support_) if x]
     return X.columns.values[index_feature]
 
 
