@@ -9,7 +9,7 @@ def main():
     parser.add_argument('--num_of_subj', help='', default=80)
     parser.add_argument('--subj_sample_size', help='', default=100)
     parser.add_argument('--embedding_dim', help='', default=100)
-    parser.add_argument('--output_file', help='test.tsv')
+    parser.add_argument('--output_file', help='', default='test.tsv')
     execute(parser.parse_args())
 
 
