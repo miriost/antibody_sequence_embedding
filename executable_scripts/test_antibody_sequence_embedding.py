@@ -10,7 +10,7 @@ def main():
     parser.add_argument('--subj_sample_size', help='', default=100)
     parser.add_argument('--embedding_dim', help='', default=100)
     parser.add_argument('--output_file', help='test.tsv')
-    execute()
+    execute(args)
 
 
 def execute(args):
@@ -47,6 +47,7 @@ def execute(args):
         samples = pd.concat([samples, tmp])
 
     samples.to_csv(output_file, sep='\t')
+    print('test samples file saved to {}'.format(output_file))
 
 
 if __name__ == "__main__":
