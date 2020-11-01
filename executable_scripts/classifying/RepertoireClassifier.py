@@ -1,6 +1,6 @@
 from sklearn.model_selection import KFold
 from sklearn.model_selection import GridSearchCV
-
+from sklearn.base import clone
 
 class RepertoireClassifier:
 
@@ -15,14 +15,16 @@ class RepertoireClassifier:
     def select_features(self, X_train, y_train, n_splits=20, repeated=True):
 
         if self.feature_selector is not None:
-            self.features = self.feature_selector(self.estimator, X_train, y_train, n_splits, repeated)
+            estimator = clone(self.estimator)
+            self.features = self.feature_selector(estimator, X_train, y_train, n_splits, repeated)
         else:
             self.features = X_train.columns.to_list()
 
     def fit(self, X_train, y_train, n_splits=20, repeated=True):
 
         X_train = X_train.loc[:, self.features]
-        self.trained_model = GridSearchCV(self.estimator,
+        estimator = clone(self.estimator)
+        self.trained_model = GridSearchCV(estimator,
                                           self.parameters,
                                           cv=KFold(n_splits=n_splits, shuffle=repeated, random_state=0),
                                           scoring='f1_weighted')
