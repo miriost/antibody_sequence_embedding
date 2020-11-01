@@ -162,16 +162,15 @@ def execute(args):
     plt.clf()
 
     if 'confusion_matrix' in best_model_df.columns:
-        plt.clf()
         cm_arr = best_model_df.loc[0, 'confusion_matrix']
         labels_str = best_model_df.loc[0, 'labels']
         labels = ast.literal_eval(labels_str)
         cm = pd.DataFrame(cm_arr,
-                          index= labels,
-                          columns= labels)
+                          index=labels,
+                          columns=labels)
         plt.figure(figsize=(10, 7))
         sns.heatmap(cm, annot=True)
-        fig.savefig(os.path.join(output_dir, best_model + "_confusion_matrix.png"))
+        chart.get_figure().savefig(os.path.join(output_dir, best_model + "_confusion_matrix.png"))
         plt.clf()
 
     indexing = (input_file['cluster_size'] == best_cluster_size) & (input_file['min_subj'] == best_min_subj) & \
