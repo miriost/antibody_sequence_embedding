@@ -11,12 +11,16 @@ def group_by_metric(df: pd.DataFrame, metric_list: list) -> pd.DataFrame:
 
     if len(metric_list) == 0:
         desc = df.loc[:, ['accuracy', 'f1_score', 'precision', 'recall']].describe()
-        res = pd.DataFrame(index=[0], columns=['confusion_matrix'])
+        if 'confusion_matrix' in df.columns:
+            res = pd.DataFrame(index=[0], columns=['confusion_matrix'])
+        else:
+            res = pd.DataFrame(index=[0])
         for idx, row in desc.iterrows():
             res[row.add_suffix('_' + idx).index.values.tolist()] = pd.DataFrame([row.values.tolist()], index=res.index)
         res['n_features_mean'] = round(df['n_features'].mean())
         res['n_folds'] = len(df['fold'].unique())
-        res['labels'] = df.iloc[0, np.where(df.columns == 'labels')[0][0]]
+        if 'labels' in df.columns:
+            res['labels'] = df.iloc[0, np.where(df.columns == 'labels')[0][0]]
         res['parameters'] = format(df['parameters'].value_counts().to_dict())
         if 'confusion_matrix' in df.columns:
             arr = df['confusion_matrix'].apply(lambda x: np.array(json.loads(x)))
