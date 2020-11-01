@@ -12,14 +12,14 @@ class RepertoireClassifier:
         self.features = features
         self.parameters = parameters
 
-    def select_features(self, X_train, y_train, n_splits=10, repeated=True):
+    def select_features(self, X_train, y_train, n_splits=20, repeated=True):
 
         if self.feature_selector is not None:
             self.features = self.feature_selector(self.estimator, X_train, y_train, n_splits, repeated)
         else:
             self.features = X_train.columns.to_list()
 
-    def fit(self, X_train, y_train, n_splits=10, repeated=True):
+    def fit(self, X_train, y_train, n_splits=20, repeated=True):
 
         X_train = X_train.loc[:, self.features]
         self.trained_model = GridSearchCV(self.estimator,
