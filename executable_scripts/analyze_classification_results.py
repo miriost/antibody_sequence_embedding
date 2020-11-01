@@ -168,6 +168,7 @@ def execute(args):
         plt.figure(figsize=(10, 7))
         sns.heatmap(cm, annot=True)
         fig.savefig(os.path.join(output_dir, best_model + "_confusion_matrix.png"))
+        plt.clf()
 
     indexing = (input_file['cluster_size'] == best_cluster_size) & (input_file['min_subj'] == best_min_subj) & \
                (input_file['significance'] == best_significance) & (input_file['model'] == best_model) & \
