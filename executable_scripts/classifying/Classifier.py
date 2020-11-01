@@ -31,7 +31,7 @@ def rfc_features_selector(estimator, X_train, y_train, n_splits=10, repeated=Tru
     data_x = X_train
     data_y = y_train
     feature_names = data_x.columns
-    kf = KFold(n_splits=n_splits, shuffle=repeated)
+    kf = KFold(n_splits=n_splits, shuffle=repeated, random_state=0)
     N = round(len(data_x.columns) * 0.3)
     all_importances = pd.DataFrame()
     for train, _ in kf.split(data_x, y_train):
@@ -130,9 +130,9 @@ class Classifier:
             feature_selector = rfc_features_selector
             estimator = LogisticRegression()
 
-        elif name.lower() in [ 'decision_tree', 'dt' ]:
+        elif name.lower() in ['decision_tree', 'dt']:
             if not parameters:
-                parameters = [{'criterion': ['gini', 'entropy' ], 'max_depth': list(range(3, 15))}]
+                parameters = [{'criterion': ['gini', 'entropy'], 'max_depth': list(range(3, 15))}]
             estimator = DecisionTreeClassifier()
 
         elif name.lower() in ['knn', 'k-nn']:
