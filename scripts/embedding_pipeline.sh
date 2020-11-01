@@ -22,7 +22,7 @@ help="Execute all the pre processing steps before clustring a data set.
 -w WORK_DIR - Optional, the work directory. Deafult is \"./\"
 "
 
-while getopts "hq:s:t:d:m:r:f:w:" opt; do
+while getopts "hq:s:t:d:m:r:n:w:" opt; do
 	case ${opt} in
 		h ) echo "${usage}" ; echo "${help}"; exit 1
       			;;
@@ -38,7 +38,7 @@ while getopts "hq:s:t:d:m:r:f:w:" opt; do
 			;;
 		r ) random_seed=${OPTARG}
 			;;
-		f ) n_folds=${OPTARG}
+		n ) n_folds=${OPTARG}
 			;;
 		w ) input_dir=${OPTARG}
 			;;
