@@ -37,8 +37,8 @@ def main():
                              'results analysis file')
     parser.add_argument('--output_description',
                         help='description to use inside output file names')
-    parser.add_argument('--label_freq_col', default='HC',
-                        help='name of the column in the analysis file with the label frequency')
+    parser.add_argument('--labels',
+                        help='semicolon separated list of labels from which derive cluster significance')
     parser.add_argument('--significance', help='minimal significance score for cluster selection',
                         default=0.6, type=float)
     parser.add_argument('--min_subjects', help='minimal number of subjects for cluster selection',
@@ -61,23 +61,33 @@ def main():
         print("Missing vector_column argument\nExisting...")
         sys.exit(1)
 
+    if args.lables is None:
+        print("Missing labels argument\nExisting...")
+        sys.exit(1)
+    labels = args.lables.split(';')
+
     # load files    
     data_file = pd.read_csv(args.data_file_path, sep='\t')
     if args.vector_column not in data_file.columns:
         print("{} is not in data file columns: {}\nExisting...".format(args.vector_column, data_file.columns))
         sys.exit(1)
 
+    analysis_file = pd.read_csv(args.analysis_file_path)
+    for label in labels:
+        if label not in analysis_file.columns:
+            print("{} is not in data file columns: {}\nExisting...".format(label, analysis_file.columns))
+            sys.exit(1)
+
     vectors = np.array(data_file[args.vector_column].apply(lambda x: json.loads(x)).to_list())
     vectors = pd.DataFrame(vectors, columns=list(range(vectors.shape[1])))
     distance_file = pd.read_csv(args.distances_file_path)
-    analysis_file = pd.read_csv(args.analysis_file_path)
 
     #load parameters
     min_number_of_subjects = args.min_subjects
     min_significance = args.significance
 
     #calculate significance score    
-    analysis_file['significance'] = [max(a, 1-a) for a in analysis_file[args.label_freq_col]]
+    analysis_file['significance'] = [analysis_file.loc[idx, labels].max() for idx in analysis_file.index]
     sorted_df = analysis_file.sort_values(by=['significance'], ascending=False)
     
     #processing
