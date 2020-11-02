@@ -61,10 +61,10 @@ def main():
         print("Missing vector_column argument\nExisting...")
         sys.exit(1)
 
-    if args.lables is None:
+    if args.labels is None:
         print("Missing labels argument\nExisting...")
         sys.exit(1)
-    labels = args.lables.split(';')
+    labels = args.labels.split(';')
 
     # load files    
     data_file = pd.read_csv(args.data_file_path, sep='\t')
