@@ -20,7 +20,7 @@ vector_column=""
 work_dir=./
 labels=""
 
-while getopts "hf:c:s:m::v:w:" opt; do
+while getopts "hf:c:s:m::v:w:l:" opt; do
 	case ${opt} in
 		h ) echo "${usage}" ; echo "${help}"; exit 1
       			;;
@@ -84,7 +84,7 @@ for fold in ${folds} ; do
 			echo "Starting KNN analysis..."
 			eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --NN_file_path=${output_dir}/NN_cs_${cs}.csv --perform_NN=False --perform_results_analysis=True --output_folder_path ${cs_dir} --vector_column ${vector_column} --output_description cs_${cs} --cluster_size ${cs} --thread_memory 11474836480 --cpus=12 --step=10000 --id repertoire.repertoire_name 2>&1 | tee -a ${cs_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
 		  mkdir -p ${cs_dir}/clustering_analysis
-		  python ~/antibody_sequence_embedding/executable_scripts/analyze_clustering.py --input_file ${cs_dir}/cs_${cs}_analysis.csv --labels ${labels} --output_dir ${cs_dir}/clustering_analysis
+		  python ~/antibody_sequence_embedding/executable_scripts/analyze_clustering.py --input_file ${cs_dir}/cs_${cs}_analysis.csv --labels "${labels}" --output_dir ${cs_dir}/clustering_analysis
 		fi
 
 		# loop significance level
@@ -102,8 +102,7 @@ for fold in ${folds} ; do
 				else	
 					# create feature list
 					echo "Building feature list..."
-					python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_list.py --labels ${labels} --data_file_path ${fold_dir}/*_TRAIN_*.tsv --analysis_file_path
-					${cs_dir}/cs_${cs}_analysis.csv --distances_file_path ${cs_dir}/Distances_cs_${cs}.csv --vector_column ${vector_column} --output_folder ${output_dir} --output_description feature_list --label_freq_col Healthy --significance ${sig} --min_subjects ${min_subj} 2>&1 | tee ${output_dir}/build_cluster_proximity_feature_list.log.txt
+					python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_list.py --labels "${labels}" --data_file_path ${fold_dir}/*_TRAIN_*.tsv --analysis_file_path ${cs_dir}/cs_${cs}_analysis.csv --distances_file_path ${cs_dir}/Distances_cs_${cs}.csv --vector_column ${vector_column} --output_folder ${output_dir} --output_description feature_list --significance ${sig} --min_subjects ${min_subj} 2>&1 | tee ${output_dir}/build_cluster_proximity_feature_list.log.txt
 				fi
 
 				if [ -f ${output_dir}/train_feature_table.csv ] ; then
@@ -118,7 +117,7 @@ for fold in ${folds} ; do
 				else
 					echo "Building test feature table..."
 					# create test feature table
-					python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_table_with_labels.py --features_list ${output_dir}/feature_list.csv --data_file_path ${fold_dir}/*_TEST_*.tsv --vector_column ${vector_column} --output_folder ${output_dir} --output_description test --subject_col_name repertoire.repertoire_name --labels_col_name repertoire.disease_diagnosis --cpus=12 2>&1 | tee -a ${output_dir}/build_cluster_proximity_feature_table_with_labels.log.txt
+					python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_table_with_labels.py --labels "${labels}" --features_list ${output_dir}/feature_list.csv --data_file_path ${fold_dir}/*_TEST_*.tsv --vector_column ${vector_column} --output_folder ${output_dir} --output_description test --subject_col_name repertoire.repertoire_name --labels_col_name repertoire.disease_diagnosis --cpus=12 2>&1 | tee -a ${output_dir}/build_cluster_proximity_feature_table_with_labels.log.txt
 
 				fi
 			done # min subjects loop
