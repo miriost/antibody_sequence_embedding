@@ -2,9 +2,10 @@
 
 trap "exit" INT
 
-usage="USAGE: clustring_pipline.sh -v <vector_column> -f [folds] -c [cluster_sizes] -s [significance] -m [min_subjects] -w [work_dir]"
+usage="USAGE: clustring_pipline.sh -v <vector_column> -l <labels> -f [folds] -c [cluster_sizes] -s [significance] -m [min_subjects] -w [work_dir]"
 help="Build clusters and feature tables for train/test folds.
 -v VECTOR_COLUMN - Mandatory, name of the column in the tsv file with the embedded vector.
+-l LABELS - Mandatory, semicolon separated list of target labels for the clustering analysis and selection
 -f FOLDS - Optional, space separated list of folds numbers. Deafult is 0..9.
 -c CLUSTER_SIZES - Optional, space separated list of cluster sizes. Deafult is 80 100 120.
 -s SEGNIFICANCE - Optional, space separated list of min segnificance precentages for the feature (cluster) selection. Default is 60 63 66.
@@ -17,23 +18,26 @@ significance_levels=$(seq 60 3 66)
 min_subjects=10
 vector_column=""
 work_dir=./
+labels=""
 
 while getopts "hf:c:s:m::v:w:" opt; do
 	case ${opt} in
 		h ) echo "${usage}" ; echo "${help}"; exit 1
       			;;
-    		f ) folds=${OPTARG}
+    f ) folds=${OPTARG}
       			;;
 		c ) cluster_sizes=${OPTARG}
-			;;
-    		s ) significance_levels=${OPTARG}
-		     	;;
+			      ;;
+    s ) significance_levels=${OPTARG}
+		     	  ;;
 		m ) min_subjects=${OPTARG}
-			;;
+			      ;;
 		v) vector_column=${OPTARG}
-			;;
+			      ;;
+		l) labels=${OPTARG}
+		        ;;
 		w) work_dir=${OPTARG}
-			;;
+			      ;;
 		\? ) echo ${usage}; echo "cluster_pipline.sh -h for additional help"; exit 1
       			;;
 	esac
@@ -48,6 +52,13 @@ if [ -z "${vector_column}" ]; then
 	echo "cluster_pipline.sh -h for additional help"
 	exit -1
 fi
+
+if [ -z "${labels}" ]; then
+	echo "${usage}"
+	echo "cluster_pipline.sh -h for additional help"
+	exit -1
+fi
+
 
 # loop folds
 for fold in ${folds} ; do
@@ -72,6 +83,8 @@ for fold in ${folds} ; do
 			# analyze K nearest neighbors
 			echo "Starting KNN analysis..."
 			eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --NN_file_path=${output_dir}/NN_cs_${cs}.csv --perform_NN=False --perform_results_analysis=True --output_folder_path ${cs_dir} --vector_column ${vector_column} --output_description cs_${cs} --cluster_size ${cs} --thread_memory 11474836480 --cpus=12 --step=10000 --id repertoire.repertoire_name 2>&1 | tee -a ${cs_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
+		  mkdir -p ${cs_dir}/clustering_analysis
+		  python ~/antibody_sequence_embedding/executable_scripts/analyze_clustering.py --input_file ${cs_dir}/cs_${cs}_analysis.csv --labels ${labels} --output_dir ${cs_dir}/clustering_analysis
 		fi
 
 		# loop significance level
@@ -89,7 +102,8 @@ for fold in ${folds} ; do
 				else	
 					# create feature list
 					echo "Building feature list..."
-					python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_list.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --analysis_file_path ${cs_dir}/cs_${cs}_analysis.csv --distances_file_path ${cs_dir}/Distances_cs_${cs}.csv --vector_column ${vector_column} --output_folder ${output_dir} --output_description feature_list --label_freq_col Healthy --significance ${sig} --min_subjects ${min_subj} 2>&1 | tee ${output_dir}/build_cluster_proximity_feature_list.log.txt
+					python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_list.py --labels ${labels} --data_file_path ${fold_dir}/*_TRAIN_*.tsv --analysis_file_path
+					${cs_dir}/cs_${cs}_analysis.csv --distances_file_path ${cs_dir}/Distances_cs_${cs}.csv --vector_column ${vector_column} --output_folder ${output_dir} --output_description feature_list --label_freq_col Healthy --significance ${sig} --min_subjects ${min_subj} 2>&1 | tee ${output_dir}/build_cluster_proximity_feature_list.log.txt
 				fi
 
 				if [ -f ${output_dir}/train_feature_table.csv ] ; then
