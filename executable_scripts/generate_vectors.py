@@ -34,7 +34,7 @@ def main():
         sys.exit(1)
     print('Input file for embedding: ', args.input_file, '\nModel: ', args.model)
  
-    data_file = pd.read_csv(args.input_file, sep ='\t')
+    data_file = pd.read_csv(args.input_file, sep='\t')
 
     # load saved model
     model = sequence_modeling.load_protvec(args.model)
@@ -72,7 +72,7 @@ def main():
         output_file_name = os.path.join(dir_name, file_name + '_and_vectors.tsv')
 
     data_file.to_csv(output_file_name, sep='\t', index=False)
-    print('Vectors file saved: ' + output_file_name)
+    print('File saved: ' + output_file_name)
 
     
 if __name__ == "__main__":
