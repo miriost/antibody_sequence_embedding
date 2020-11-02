@@ -1,6 +1,6 @@
-import sys, argparse
+import sys
+import argparse
 import os
-import pandas as pd
 from classifying.Classifier import *
 import pickle
 
@@ -20,6 +20,8 @@ def main():
     parser.add_argument('--test_file', help='a *.csv file containing the TEST features table, including labels column')
     parser.add_argument('--labels_col_name', help='Name of the labels column, default: "repertoire.disease_diagnosis"',
                         default='repertoire.disease_diagnosis')
+    parser.add_argument('--labels', help='a semicolon speparated list of target labels for the classification - '
+                                         'default all labels')
     parser.add_argument('--output_file', help='name of the output file, default is None (no output file)', type=str)
     parser.add_argument('--col_names', help='comma separated list of columns names to add to output', type=str)
     parser.add_argument('--col_values', help='comma separated list of columns values to add to output', type=str)
@@ -50,14 +52,16 @@ def main():
     test_file = pd.read_csv(args.test_file, index_col=0)
     test_file.fillna(0, inplace=True)
 
-    if args.labels_col_name:
-        if (not args.labels_col_name in train_file.columns) or (not args.labels_col_name in test_file.columns):
-            print('label column name doesnt exist.\nExiting...')
-            sys.exit(1)
-        else:
-            labels_col_name = args.labels_col_name
+    if (not args.labels_col_name in train_file.columns) or (not args.labels_col_name in test_file.columns):
+        print('label column name doesnt exist.\nExiting...')
+        sys.exit(1)
+
+    labels_col_name = args.labels_col_name
+
+    if args.labels is None:
+        labels = train_file[args.labels_col_name].unique().tolist()
     else:
-        labels_col_name = 'labels'
+        labels = args.labels.split(';')
 
     if (args.col_names is None) != (args.col_values is None):
         print('col_names and col_values arguments must be provided together.\nExiting...')
@@ -78,6 +82,8 @@ def main():
 
     x_train = train_file.drop(labels_col_name, axis=1)
     y_train = train_file[labels_col_name]
+
+    test_file.loc[~test_file[labels_col_name].isin(labels), labels_col_name] = 'Neutral'
     x_test = test_file.drop(labels_col_name, axis=1)
     y_test = test_file[labels_col_name]
 
