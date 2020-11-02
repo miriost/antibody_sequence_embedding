@@ -2,7 +2,7 @@
 
 trap "exit" INT
 
-usage="USAGE: run_classification.sh -f [folds] -c [cluster_sizes] -s [significance] -m [min_subjects] -o [output_file] -r [replace] -M [model] -g [grid_serach] -w [work_dir]"
+usage="USAGE: run_classification.sh -f [folds] -c [cluster_sizes] -s [significance] -m [min_subjects] -o [output_file] -r [replace] -M [model] -g [grid_serach] -w [work_dir] -l [labels]"
 help="
 -f FOLDS - Optional, space separated list of folds numbers. Deafult is 0..9.
 -c CLUSTER_SIZES - Optional, space separated list of cluster sizes. Deafult is 80 100 120.
@@ -13,6 +13,7 @@ help="
 -r REPLACE - Optional, override existing results file. Default is false.
 -g GRID_SEARCH - Use grid search over repeated cross validation folds for optimizing the classsifier hyper parameters. Default is false.
 -w WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\".
+-l LABELS - Optional, the labels to classify.
 "
 
 folds=$(seq 0 1 9)
@@ -24,8 +25,9 @@ replace="false"
 models=all
 optimize="false"
 work_dir=./
+labels=""
 
-while getopts "hf:c:s:m:o:r:M:g:w:" opt; do
+while getopts "hf:c:s:m:o:r:M:g:w:l:" opt; do
 	case ${opt} in
 		h ) echo "${usage}" ; echo "${help}"; exit 1
       			;;
@@ -46,6 +48,8 @@ while getopts "hf:c:s:m:o:r:M:g:w:" opt; do
 		g ) optimize=${OPTARG}
 			;;
 		w ) work_dir=${OPTARG}
+			;;
+		l ) labels=${OPTARG}
 			;;
 		\? ) echo ${usage}; echo "classifiying_pipeline.sh -h for additional help."; exit 1
       			;;
@@ -71,7 +75,7 @@ for fold in ${folds} ; do
 			for min_subj in ${min_subjects}; do 
 				echo "Min subject ${min_subj}"
 				output_dir=${cs_dir}/sig_level_${sig_level}_min_subj_${min_subj}
-				
+			
 				if [ -f ${output_dir}/${output_file} ] && [[ "${replace}" == "false" ]] ; then
 					echo "file ${output_dir}/${output_file} already exists, skipping classification."
 					continue
@@ -82,7 +86,11 @@ for fold in ${folds} ; do
 				fi
 				# runt the classification
 				echo "Classifying..."
-				python -u ~/antibody_sequence_embedding/executable_scripts/classify_no_splitting.py --train_file ${output_dir}/train_feature_table.csv  --test_file ${output_dir}/test_feature_table.csv --col_names="min_subj,fold,cluster_size,significance" --col_values="${min_subj},${fold},${cs},${sig}" --output_file ${output_dir}/${output_file} -M ${models} --grid_search=${optimize} 2>&1 | tee ${output_dir}/classifiy_no_splitting.log.txt
+				if [ -z "${labels}" ]; then
+					python -u ~/antibody_sequence_embedding/executable_scripts/classify_no_splitting.py --train_file ${output_dir}/train_feature_table.csv  --test_file ${output_dir}/test_feature_table.csv --col_names="min_subj,fold,cluster_size,significance" --col_values="${min_subj},${fold},${cs},${sig}" --output_file ${output_dir}/${output_file} -M ${models} --grid_search=${optimize} 2>&1 | tee ${output_dir}/classifiy_no_splitting.log.txt
+				else
+					python -u ~/antibody_sequence_embedding/executable_scripts/classify_no_splitting.py --train_file ${output_dir}/train_feature_table.csv  --test_file ${output_dir}/test_feature_table.csv --col_names="min_subj,fold,cluster_size,significance" --col_values="${min_subj},${fold},${cs},${sig}" --output_file ${output_dir}/${output_file} -M ${models} --grid_search=${optimize} --labels "${labels}" 2>&1 | tee ${output_dir}/classifiy_no_splitting.log.txt
+				fi
 			done # min subjects loop
 		done # significance level loop
 	done # cluster size loop
