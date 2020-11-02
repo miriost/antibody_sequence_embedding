@@ -22,27 +22,27 @@ def execute(args):
     np.random.seed(0)
 
     subjects = pd.DataFrame(index=range(num_of_subj),
-                            columns=('repertoire.diseases_diagnosis', 'repertoire.repertoire_name'))
-    subjects['repertoire.diseases_diagnosis'] = 'Healthy'
+                            columns=('repertoire.disease_diagnosis', 'repertoire.repertoire_name'))
+    subjects['repertoire.disease_diagnosis'] = 'Healthy'
     subjects['repertoire.repertoire_name'] = range(num_of_subj)
     subjects.loc[np.random.choice(list(range(num_of_subj)), size=int(num_of_subj/2), replace=False),
-                 'repertoire.diseases_diagnosis'] = 'Sick'
+                 'repertoire.disease_diagnosis'] = 'Sick'
 
     samples = pd.DataFrame()
     for idx, subj in subjects.iterrows():
         num_of_samples = int(subj_sample_size * (1 + np.random.sample()) / 2) * 2
         tmp_index = np.array(range(num_of_samples)) + 10000*idx
         tmp = pd.DataFrame(index=tmp_index, columns=['embedding'])
-        if subj['repertoire.diseases_diagnosis'] == 'Healthy':
-            data1 = gamma(1).rvs((int(num_of_samples/2), embedding_dim), random_state=0)
-            data2 = gamma(2).rvs((int(num_of_samples/2), embedding_dim), random_state=0)
+        if subj['repertoire.disease_diagnosis'] == 'Healthy':
+            data1 = gamma(1).rvs((int(num_of_samples/2), embedding_dim), random_state=idx)
+            data2 = gamma(2).rvs((int(num_of_samples/2), embedding_dim), random_state=idx)
             data = np.concatenate([data1, data2])
         else:
-            data1 = gamma(1).rvs((int(num_of_samples/2), embedding_dim), random_state=0)
-            data2 = gamma(3).rvs((int(num_of_samples/2), embedding_dim), random_state=0)
+            data1 = gamma(1).rvs((int(num_of_samples/2), embedding_dim), random_state=idx)
+            data2 = gamma(3).rvs((int(num_of_samples/2), embedding_dim), random_state=idx)
             data = np.concatenate([data1, data2])
-        tmp.loc[tmp_index, 'embedding'] = [x for x in data]
-        tmp.loc[tmp_index, 'repertoire.diseases_diagnosis'] = subj['repertoire.diseases_diagnosis']
+        tmp.loc[tmp_index, 'embedding'] = [x.tolist() for x in data]
+        tmp.loc[tmp_index, 'repertoire.disease_diagnosis'] = subj['repertoire.disease_diagnosis']
         tmp.loc[tmp_index, 'repertoire.repertoire_name'] = int(subj['repertoire.repertoire_name'])
         samples = pd.concat([samples, tmp])
 
