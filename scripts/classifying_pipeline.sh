@@ -121,4 +121,4 @@ done
 # analyze the results
 echo "Analyzing..."
 output_dir=$(echo ${output_file} | awk -F $'.' '{print $1}')_analysis
-python -u ~/antibody_sequence_embedding/executable_scripts/analyze_classification_results.py --input_file all_${output_file} --output_dir ${output_dir} 2>&1 | tee analyze_classification_results.log.txt
+python -u ~/antibody_sequence_embedding/executable_scripts/analyze_classification.py --input_file all_${output_file} --output_dir ${output_dir} 2>&1 | tee analyze_classification_results.log.txt
