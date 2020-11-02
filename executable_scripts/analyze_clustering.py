@@ -18,7 +18,7 @@ def main():
 
 def execute(args):
 
-	if args.lables is None:
+	if args.labels is None:
 		print('Missing mandatory labels argument. Exiting...')
 		sys.exit(1)
 	labels = args.labels.split(';')
@@ -37,11 +37,11 @@ def execute(args):
 		g = sns.jointplot(x='how_many_subjects', y=label, data=analysis_file, kind="kde", color="m")
 		g.plot_joint(plt.scatter, c="b", s=30, linewidth=1, marker="+")
 		g.ax_joint.collections[0].set_alpha(0)
-		g.set_title(label + ' distribution among clusters')
+		g.fig.suptitle(label + ' distribution among clusters')
 		g.set_axis_labels("Number of subjects in cluster", label)
 		g.savefig(os.path.join(args.output_dir, label + '_distribution_in_cluster.png'))
 		plt.clf()
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
 	main()
