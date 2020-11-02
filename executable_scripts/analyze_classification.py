@@ -7,6 +7,7 @@ import numpy as np
 import json
 import ast
 
+
 def group_by_metric(df: pd.DataFrame, metric_list: list) -> pd.DataFrame:
 
     if len(metric_list) == 0:
@@ -127,7 +128,7 @@ def execute(args):
 
     chart = sns.lineplot(data=best_model_df, x="n_features_mean", y="f1_score_mean", ax=axs[0, 0])
     ticks = np.arange(int(best_model_df['n_features_mean'].min()),
-                      int((best_model_df[ 'n_features_mean' ].max() - best_model_df['n_features_mean'].min()) / 10),
+                      int((best_model_df[ 'n_features_mean'].max() - best_model_df['n_features_mean'].min()) / 10),
                       int(best_model_df['n_features_mean'].max()))
     chart.set_xticks(ticks)
     chart.set_xticklabels(ticks, rotation=90)
@@ -170,7 +171,7 @@ def execute(args):
                           columns=labels)
         plt.figure(figsize=(10, 7))
         sns.heatmap(cm, annot=True)
-        chart.get_figure().savefig(os.path.join(output_dir, best_model + "_confusion_matrix.png"))
+        plt.savefig(os.path.join(output_dir, best_model + "_confusion_matrix.png"))
         plt.clf()
 
     indexing = (input_file['cluster_size'] == best_cluster_size) & (input_file['min_subj'] == best_min_subj) & \
