@@ -70,7 +70,7 @@ if [ -f ${import_file} ]; then
 	echo "File ${import_file} already exists, skipping data import."; echo ""
 else
 	if [ -z "${query}" ]; then
-		echo "Missing mandatory description argument. Exiting..."
+		echo "Missing mandatory query argument. Exiting..."
 		echo "${usage}"
 		echo "pre_clustering_pipeline.sh -h for additional help."
 		exit -1
@@ -125,20 +125,21 @@ else
 fi
 
 # sample file
-sampled_file=${description}_trim_${trim_start}_${trim_end}_sampled_n${sample_size}_seed${random_seed}.tsv
+sampled_file=${description}_trim_${trim_start}_${trim_end}_model_${model_desc}_sampled_n${sample_size}_seed${random_seed}.tsv
 if [ -f ${sampled_file} ]; then
 	echo "File ${sampled_file} already exists, skipping sampling."; echo ""
 else
 	echo "Sample file..."; echo ""
-	python ~/antibody_sequence_embedding/executable_scripts/sample_file.py --input_data_file ${mkdb_file} --exclude_dup_column junction_aa_trim_${trim_start}_${trim_end} --min_samples ${sample_size}
+	python ~/antibody_sequence_embedding/executable_scripts/sample_file.py --input_data_file ${mkdb_file} --exclude_dup_column junction_aa_trim_${trim_start}_${trim_end} --min_samples ${sample_size} --output_data_file ${sampled_file}
 fi
 
 # create repeated cross validation folds
-folds_dir=${description}_trim_${trim_start}_${trim_end}_sampled_n${sample_size}_seed${random_seed}_${n_folds}folds
+folds_dir=${description}_trim_${trim_start}_${trim_end}_model_${model_desc}_sampled_n${sample_size}_seed${random_seed}_${n_folds}folds
 if [ -d ${folds_dir} ]; then
 	echo "Folds dir ${folds_dir} already exists, skipping folds creation."; echo ""
 else
 	echo "Split folds..."; echo ""
+	echo ${sampled_file}
 	python ~/antibody_sequence_embedding/executable_scripts/split_data_train_test_folds.py ${sampled_file} --test_fraction "0.1" --repeated=True --output_dir ${folds_dir} --number_of_folds ${n_folds}
 fi
 
