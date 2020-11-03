@@ -13,6 +13,7 @@ import json
 import random
 import functools
 import operator
+import ast
 
 logger = logging.getLogger(__name__)
 
@@ -35,15 +36,15 @@ def write_vector_file(output_file, proximity, fmt=None):
         np.savetxt(output_file, proximity, delimiter=',', header=header, fmt=fmt)
 
 
-def build_subject_status(data, id_field, label_field):
+def build_subject_status(data, id_column, label_field):
     """Returns a data frame where the for each id there's a single label
 
     e.g.:
     res[id_label][my_id] will be equal to the label assigned to patient my_id
     """
-    subjects_db = data.loc[:, [id_field, label_field]]
+    subjects_db = data.loc[:, [id_column, label_field]]
     subjects_db.drop_duplicates(inplace=True)
-    subjects_db.set_index(id_field, inplace=True)
+    subjects_db.set_index(id_column, inplace=True)
 
     return subjects_db
 
@@ -62,14 +63,14 @@ def init_logger():
     logger.addHandler(file_handler)
 
 
-def build_subject_status(data, id_field, label_field):
+def build_subject_status(data, id_column, label_field):
     """Returns a data frame where the for each id there's a single label
     e.g.:
     res[id_label][my_id] will be equal to the label assigned to patient my_id
     """
-    subjects_db = data.loc[:, [id_field, label_field]]
+    subjects_db = data.loc[:, [id_column, label_field]]
     subjects_db.drop_duplicates(inplace=True)
-    subjects_db.set_index(id_field, inplace=True)
+    subjects_db.set_index(id_column, inplace=True)
 
     return subjects_db
 
@@ -100,6 +101,8 @@ def main():
                         help='the filtered data file path')
     parser.add_argument('--vector_column',
                         help='the name of the column with the vector')
+    parser.add_argument('--label_column', default='repertoire.disease_diagnosis',
+                        help='the name of the label column')
     parser.add_argument('--NN_file_path',
                         help='the NN file path')
     parser.add_argument('--output_folder_path',
@@ -118,7 +121,7 @@ def main():
                         help='type of distance to use, default=euclidean', default='euclidean', type=str)
     parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
     parser.add_argument('--cluster_size', help='size of the cluster, deafult=100', type=int, default=100)
-    parser.add_argument('--id_field', help='name of the subject id column, default=repertoire.repertoire_name',
+    parser.add_argument('--id_column', help='name of the subject id column, default=repertoire.repertoire_name',
                         type=str, default='repertoire.repertoire_name')
 
     args = parser.parse_args()
@@ -153,12 +156,13 @@ def main():
         print('NN file path: ' + args.NN_file_path)
         logger.info(f'NN file path: {args.NN_file_path}')
     print('-----------------------')
-    output_file_name = args.output_description + '.csv'
+    output_file_name = args.output_description
 
     data_file = pd.read_csv(args.data_file_path, sep='\t')
     grouped_by_vector = data_file.groupby(by=args.vector_column)
-    points = grouped_by_vector[args.id_field].apply(np.unique).reset_index(name='vector_subjects')
-    points['vector_duplicate_count'] = grouped_by_vector[args.id_field].apply(len).reset_index(name='len')['len']
+    points = grouped_by_vector[args.id_column].apply(np.unique).reset_index(name='vector_subjects')
+    points['vector_subjects'] = list(map(lambda x: x.tolist(), points['vector_subjects']))
+    points['vector_duplicate_count'] = grouped_by_vector[args.id_column].apply(len).reset_index(name='len')['len']
 
     if args.perform_NN:
         vectors = np.array(points[args.vector_column].apply(lambda x: json.loads(x)).to_list())
@@ -168,44 +172,39 @@ def main():
         knn_info['vector_subjects'] = points['vector_subjects']
         knn_info['vector'] = points[args.vector_column]
         knn_info['vector_duplicate_count'] = points['vector_duplicate_count']
-        knn_info.to_csv(os.path.join(args.output_file_path, 'NN_' + output_file_name), index=False)
-        logger.info(os.path.join(args.output_file_path, 'NN_' + output_file_name))
+        knn_info.to_csv(os.path.join(args.output_folder_path, 'NN_' + output_file_name + '.tsv'), sep='\t', index=False)
+        knn_info['vector_subjects'] = points['vector_subjects']
+        logger.info(os.path.join(args.output_folder_path, 'NN_' + output_file_name + '.tsv'))
 
     if args.perform_results_analysis:
         if not args.perform_NN:
-            knn_info = pd.read_csv(args.NN_file_path, dtype={i: 'int' for i in range(args.cluster_size + 1)})
-            knn_info['vector_subjects'] = knn_info['vector_subjects'].apply(lambda x: json.loads(x)).to_list()
-        knn_map = knn_info[:, range(args.cluster_size + 1)].to_numpy()
-        out = analyze_data(knn_info, knn_map, data_file, id_field=args.id_field, status_field=args.status_filed,
+            knn_info = pd.read_csv(args.NN_file_path, dtype={i: 'int' for i in range(args.cluster_size + 1)}, sep='\t')
+            knn_info['vector_subjects'] = knn_info['vector_subjects'].apply(lambda x: ast.literal_eval(x))
+            knn_map = knn_info[:, [str(x) for x in range(args.cluster_size + 1)]].to_numpy()
+        print(knn_map)
+        out = analyze_data(knn_info, knn_map, data_file, id_column=args.id_column, label_column=args.label_column,
                            cpus=args.cpus)
         output_file = args.output_description + '_analysis.csv'
         out.to_csv(os.path.join(args.output_folder_path, output_file), index=False)
         logger.info(str(datetime.now()) + ' | data written to output file: ' + output_file)
 
 
-def row_unique_count(a):
-
-    args = np.argsort(a)
-    unique = a[np.indices(a.shape)[0], args]
-    changes = np.pad(unique[:, 1:] != unique[:, :-1], ((0, 0), (1, 0)), mode="constant", constant_values=1)
-    return np.sum(changes, axis=1)
-
 
 def analyze_data(knn_info: pd.DataFrame, knn_map: np.ndarray, data_file: pd.DataFrame,
-                 id_field='repertoire.repertoire_name', status_field='repertoire.disease_diagnosis', cpus=2):
+                 id_column='repertoire.repertoire_name', label_column='repertoire.disease_diagnosis', cpus=2):
 
     logger.info(f'{str(datetime.now())} | Begin data analyze of nearest neighbors')
-    status_types = data_file[status_field].unique().tolist()
+    status_types = data_file[label_column].unique().tolist()
 
     step = len(data_file)/cpus
     ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
 
-    subjects = data_file.loc[:, ].groupby(by=[id_field])[status_field].apply(lambda x: x.iloc[0])
+    subjects = data_file.loc[:, ].groupby(by=[id_column])[label_column].apply(lambda x: x.iloc[0])
 
     results_ids = []
     for sub_range in ranges:
         results_ids += [analyze_sub_data.remote(knn_info, knn_map, data_file, sub_range, status_types, subjects,
-                                                id_field=id_field, status_field=status_field)]
+                                                id_column=id_column, label_column=label_column)]
 
     output_df = pd.concat([ray.get(result_id) for result_id in results_ids], ignore_index=True)
 
@@ -214,7 +213,7 @@ def analyze_data(knn_info: pd.DataFrame, knn_map: np.ndarray, data_file: pd.Data
 
 @ray.remote
 def analyze_sub_data(knn_info: pd.DataFrame, knn_map: np.ndarray, data: pd.DataFrame, sub_range: tuple,
-                     status_types: list, subjects: pd.DataFrame, id_field, status_field):
+                     status_types: list, subjects: pd.DataFrame, id_column, label_column):
     print("adding neighbors column: range {}".format(sub_range))
     t0 = time.time()
     sub_output_df = pd.DataFrame(columns=['neighbors', 'how_many_subjects'] + status_types)
@@ -223,6 +222,9 @@ def analyze_sub_data(knn_info: pd.DataFrame, knn_map: np.ndarray, data: pd.DataF
 
     print("adding how_many_subjects column: range {}".format(sub_range))
     t0 = time.time()
+    
+    print(len(knn_map))
+    print(len(knn_info))
     neighbors = np.array(knn_info[['vector_subjects']].transpose())[np.arange(1)[:, None], knn_map[sub_range[0]:sub_range[1], :]]
     neighbors = np.array(list(map(lambda x: np.unique(np.concatenate(x)), neighbors)))
 
@@ -235,11 +237,6 @@ def analyze_sub_data(knn_info: pd.DataFrame, knn_map: np.ndarray, data: pd.DataF
     tmp = tmp.transpose().reset_index(drop=True)
     sub_output_df[status_types] = tmp[status_types]
 
-    for status in status_types:
-        if status in tmp:
-            sub_output_df[status] = tmp[status]
-        else:
-            sub_output_df[status] = 0
     print("status columns added, took {}".format(time.time() - t0))
 
     return sub_output_df
@@ -334,10 +331,10 @@ def cluster(vectors, output_file_path, output_file_name, cluster_size=100, dist_
     distance_map, knn_map = build_maps(vectors, cluster_size, dist_metric=dist_metric, cpus=cpus, step=step)
     print("cluster: building maps completed after {}".format(time.time() - t0))
 
-    write_vector_file(os.path.join(output_file_path, 'Distances_' + output_file_name), distance_map)
+    write_vector_file(os.path.join(output_file_path, 'Distances_' + output_file_name + '.csv'), distance_map)
     print(str(datetime.now()) + ' | finished clustering, files saved to: ')
     logger.info(str(datetime.now()) + ' | finished clustering, files saved to: ')
-    logger.info(os.path.join(output_file_path, 'Distances_' + output_file_name))
+    logger.info(os.path.join(output_file_path, 'Distances_' + output_file_name + '.csv'))
     return knn_map
 
 
