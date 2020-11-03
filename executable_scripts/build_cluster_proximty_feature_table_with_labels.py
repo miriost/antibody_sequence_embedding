@@ -30,8 +30,8 @@ import random
 import ray
 import time
 import json
+import cmath
 from sklearn.metrics.pairwise import pairwise_distances
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -107,9 +107,6 @@ def main():
         result_ids += [get_subject_feature_table.remote(subject, feature_list, subject_vectors, cpus, dist_metric)]
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
-    # normalize the feature table
-    features_table = features_table.div(features_table.sum(axis=1), axis=0)
-
     # add subject labels column
     features_table[args.labels_col_name] = None
     for subject, frame in by_subject:
@@ -134,7 +131,7 @@ def get_subject_feature_table(subject, feature_list, subject_vectors, cpus=2, di
     subject_features_table = pd.DataFrame(0, index=[subject], columns=feature_list['feature_index'].to_list())
     # for each vector belonging to the subject
     distances = pairwise_distances(X=subject_vectors, Y=features, metric=dist_metric, n_jobs=cpus)
-    distance_close_enough_mat = np.less_equal(distances, max_distance)
+    distance_close_enough_mat = np.logical_or(np.isclose(distances, max_distance, rtol=1e-10, atol=1e-10), np.less_equal(distances, max_distance))
     features_count = np.sum(distance_close_enough_mat)
     if features_count >= 1:
         for distance_close_enough_vec in distance_close_enough_mat:
