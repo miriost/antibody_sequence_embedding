@@ -140,6 +140,6 @@ if [ -d ${folds_dir} ]; then
 else
 	echo "Split folds..."; echo ""
 	echo ${sampled_file}
-	python ~/antibody_sequence_embedding/executable_scripts/split_data_train_test_folds.py ${sampled_file} --test_fraction "0.1" --repeated=True --output_dir ${folds_dir} --number_of_folds ${n_folds}
+	python ~/antibody_sequence_embedding/executable_scripts/split_data_train_test_folds.py ${sampled_file} --test_fraction "0.12" --repeated=True --output_dir ${folds_dir} --number_of_folds ${n_folds}
 fi
 
