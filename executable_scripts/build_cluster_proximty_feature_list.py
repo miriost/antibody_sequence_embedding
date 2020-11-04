@@ -103,7 +103,7 @@ def main():
     neighbors_feature_index = [np.nan] * len(analysis_file)
 
     min_significance = 1 / len(labels)
-    min_significance = int(min_significance * 1.3)
+    min_significance = min_significance * 1.3
 
     for label in labels:
         num_of_subjects_in_label = len(data_file.loc[data_file[args.label_column]==label, args.id_column].unique())
