@@ -102,6 +102,9 @@ def main():
     # the original cell which created the cluster
     neighbors_feature_index = [np.nan] * len(analysis_file)
 
+    min_significance = 1 / len(labels)
+    min_significance = int(min_significance * 1.3)
+
     for label in labels:
         num_of_subjects_in_label = len(data_file.loc[data_file[args.label_column]==label, args.id_column].unique())
         if args.min_subjects is None:
@@ -110,17 +113,18 @@ def main():
             min_subjects = min(num_of_subjects_in_label, args.min_subjects)
 
         candidates_pool = analysis_file[analysis_file['how_many_subjects'] >= min_subjects]
+        candidates_pool = candidates_pool[analysis_file[label] >= min_significance]
         candidates_pool = candidates_pool.sort_values(by=[label, 'how_many_subjects'], ascending=False)
 
         number_of_feature_labels = 0
         for idx, val in candidates_pool.iterrows():
             number_of_features_bruto += 1
-            if np.isnan(neighbors_feature_index[ idx ]):
+            if np.isnan(neighbors_feature_index[idx]):
                 number_of_feature_labels += 1
                 number_of_features_neto += 1
-                selected_feature_indexes[ idx ] = 1
-                for neighbor in map(int, val[ 'neighbors' ][ 1:-1 ].split(',')):
-                    neighbors_feature_index[ neighbor ] = idx
+                selected_feature_indexes[idx] = 1
+                for neighbor in map(int, val['neighbors'][1:-1].split(',')):
+                    neighbors_feature_index[neighbor] = idx
                 if number_of_feature_labels == args.max_features:
                     break
 
