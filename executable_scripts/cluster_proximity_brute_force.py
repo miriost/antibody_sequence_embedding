@@ -11,8 +11,6 @@ from sklearn.metrics.pairwise import pairwise_distances
 import ray
 import json
 import random
-import functools
-import operator
 import ast
 
 logger = logging.getLogger(__name__)
@@ -180,14 +178,12 @@ def main():
         if not args.perform_NN:
             knn_info = pd.read_csv(args.NN_file_path, dtype={i: 'int' for i in range(args.cluster_size + 1)}, sep='\t')
             knn_info['vector_subjects'] = knn_info['vector_subjects'].apply(lambda x: ast.literal_eval(x))
-            knn_map = knn_info[:, [str(x) for x in range(args.cluster_size + 1)]].to_numpy()
-        print(knn_map)
+            knn_map = knn_info.loc[:, [str(x) for x in range(args.cluster_size + 1)]].to_numpy()
         out = analyze_data(knn_info, knn_map, data_file, id_column=args.id_column, label_column=args.label_column,
                            cpus=args.cpus)
         output_file = args.output_description + '_analysis.csv'
         out.to_csv(os.path.join(args.output_folder_path, output_file), index=False)
         logger.info(str(datetime.now()) + ' | data written to output file: ' + output_file)
-
 
 
 def analyze_data(knn_info: pd.DataFrame, knn_map: np.ndarray, data_file: pd.DataFrame,
@@ -196,15 +192,14 @@ def analyze_data(knn_info: pd.DataFrame, knn_map: np.ndarray, data_file: pd.Data
     logger.info(f'{str(datetime.now())} | Begin data analyze of nearest neighbors')
     status_types = data_file[label_column].unique().tolist()
 
-    step = len(data_file)/cpus
+    step = len(knn_map)/cpus
     ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
 
     subjects = data_file.loc[:, ].groupby(by=[id_column])[label_column].apply(lambda x: x.iloc[0])
 
     results_ids = []
     for sub_range in ranges:
-        results_ids += [analyze_sub_data.remote(knn_info, knn_map, data_file, sub_range, status_types, subjects,
-                                                id_column=id_column, label_column=label_column)]
+        results_ids += [analyze_sub_data.remote(knn_info, knn_map, sub_range, status_types, subjects)]
 
     output_df = pd.concat([ray.get(result_id) for result_id in results_ids], ignore_index=True)
 
@@ -212,8 +207,8 @@ def analyze_data(knn_info: pd.DataFrame, knn_map: np.ndarray, data_file: pd.Data
 
 
 @ray.remote
-def analyze_sub_data(knn_info: pd.DataFrame, knn_map: np.ndarray, data: pd.DataFrame, sub_range: tuple,
-                     status_types: list, subjects: pd.DataFrame, id_column, label_column):
+def analyze_sub_data(knn_info: pd.DataFrame, knn_map: np.ndarray, sub_range: tuple, status_types: list,
+                     subjects: pd.DataFrame):
     print("adding neighbors column: range {}".format(sub_range))
     t0 = time.time()
     sub_output_df = pd.DataFrame(columns=['neighbors', 'how_many_subjects'] + status_types)
@@ -233,8 +228,9 @@ def analyze_sub_data(knn_info: pd.DataFrame, knn_map: np.ndarray, data: pd.DataF
 
     print("adding status columns: range {}".format(sub_range))
     t0 = time.time()
-    tmp = pd.concat(list(map(lambda x: subjects[x].value_counts(normalize=True), neighbors)), axis=1)
+    tmp = pd.concat(list(map(lambda x: subjects[x].value_counts(normalize=True), neighbors)), sort=True, axis=1)
     tmp = tmp.transpose().reset_index(drop=True)
+    tmp.fillna(0)
     sub_output_df[status_types] = tmp[status_types]
 
     print("status columns added, took {}".format(time.time() - t0))
@@ -340,6 +336,7 @@ def cluster(vectors, output_file_path, output_file_name, cluster_size=100, dist_
 
 if __name__ == '__main__':
     main()
+
 
 
 
