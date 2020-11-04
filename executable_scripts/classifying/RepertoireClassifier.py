@@ -16,6 +16,13 @@ class RepertoireClassifier:
 
     def select_features(self, X_train, y_train, n_splits=20, repeated=True):
 
+        X_train = X_train.loc[:, self.features]
+
+        self.scaler = StandardScaler()
+        self.scaler.fit(X_train)
+
+        X_train = self.scaler.transform(X_train)
+
         if len(X_train.columns) > 100 and self.feature_selector is not None:
             estimator = clone(self.estimator)
             self.features = self.feature_selector(estimator, X_train, y_train, n_splits, repeated)
