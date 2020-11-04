@@ -25,11 +25,11 @@ optimize="false"
 work_dir=./
 labels=""
 
-while getopts "hf:c:s:m:o:r:M:g:w:l:" opt; do
+while getopts "hf:c:m:o:r:M:g:w:l:" opt; do
 	case ${opt} in
 		h ) echo "${usage}" ; echo "${help}"; exit 1
       			;;
-    		f ) folds=${OPTARG}
+    		f ) folds=${OPTARG} 
       			;;
 		c ) cluster_sizes=${OPTARG}
 			;;
