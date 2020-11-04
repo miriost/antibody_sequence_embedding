@@ -2,6 +2,7 @@ from sklearn.model_selection import KFold
 from sklearn.model_selection import GridSearchCV
 from sklearn.base import clone
 from sklearn.preprocessing import StandardScaler
+import pandas as pd
 
 class RepertoireClassifier:
 
@@ -16,18 +17,19 @@ class RepertoireClassifier:
 
     def select_features(self, X_train, y_train, n_splits=20, repeated=True):
 
-        X_train = X_train.loc[:, self.features]
+        if self.feature_selector is None or (len(X_train.columns) < 100):
+            self.features = X_train.columns
+            return
 
         self.scaler = StandardScaler()
         self.scaler.fit(X_train)
+        columns = X_train.columns 
 
-        X_train = self.scaler.transform(X_train)
+        X_train = pd.DataFrame(self.scaler.transform(X_train), columns=columns)
 
-        if len(X_train.columns) > 100 and self.feature_selector is not None:
-            estimator = clone(self.estimator)
-            self.features = self.feature_selector(estimator, X_train, y_train, n_splits, repeated)
-        else:
-            self.features = X_train.columns.to_list()
+        estimator = clone(self.estimator)
+        self.features = self.feature_selector(estimator, X_train, y_train, n_splits, repeated)
+        self.features = X_train.columns.to_list()
 
     def fit(self, X_train, y_train, n_splits=20, repeated=True):
 
