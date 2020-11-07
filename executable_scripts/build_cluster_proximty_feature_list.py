@@ -102,7 +102,7 @@ def main():
     # the original cell which created the cluster
     neighbors_feature_index = [np.nan] * len(analysis_file)
 
-    min_significance = 1 / len(labels)
+    min_significance = 1 / len(data_file['repertoire.disease_diagnosis'].unique())
     min_significance = min_significance * 1.3
 
     for label in labels:
@@ -111,8 +111,10 @@ def main():
             min_subjects = min(num_of_subjects_in_label, 5)
         else:
             min_subjects = min(num_of_subjects_in_label, args.min_subjects)
+        
 
         candidates_pool = analysis_file[analysis_file['how_many_subjects'] >= min_subjects]
+        min_significance = min(min_significance, candidates_pool[label].max())
         candidates_pool = candidates_pool[analysis_file[label] >= min_significance]
         candidates_pool = candidates_pool.sort_values(by=[label, 'how_many_subjects'], ascending=False)
 

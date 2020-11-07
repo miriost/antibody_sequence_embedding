@@ -132,6 +132,7 @@ def get_subject_feature_table(subject, feature_list, subject_vectors, cpus=2, di
     # for each vector belonging to the subject
     distances = pairwise_distances(X=subject_vectors, Y=features, metric=dist_metric, n_jobs=cpus)
     distance_close_enough_mat = np.logical_or(np.isclose(distances, max_distance, rtol=1e-10, atol=1e-10), np.less_equal(distances, max_distance))
+
     features_count = np.sum(distance_close_enough_mat)
     if features_count >= 1:
         for distance_close_enough_vec in distance_close_enough_mat:
