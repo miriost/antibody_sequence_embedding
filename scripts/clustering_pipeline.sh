@@ -67,21 +67,21 @@ for fold in ${folds} ; do
 		echo "Cluster size ${cs}"; echo ""
 		cs_dir=${fold_dir}/cs_${cs}
 		mkdir -p ${cs_dir}
-		if [ -f ${cs_dir}/NN_cs_${cs}.csv ] ; then
-			echo "${cs_dir}/NN_cs_${cs}.csv already exists, skipping KNN search."
+		if [ -f ${cs_dir}/NN_cs_${cs}.tsv ] ; then
+			echo "${cs_dir}/NN_cs_${cs}.tsv already exists, skipping KNN search."
 		else
 			# search K nearest neighbors
 			echo "Starting KNN search and analysis..."
 			eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --perform_NN=True --perform_results_analysis=True --output_folder_path ${cs_dir} --output_description cs_${cs} --vector_column ${vector_column} --cluster_size ${cs} --cpus=12 --step=10000 --id repertoire.repertoire_name 2>&1 | tee -a ${cs_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
 		fi
 		if [ -f ${cs_dir}/cs_${cs}_analysis.csv ] ; then
-			echo "${cs_dir}/cs_${cd}_analysis.csv already exists, skipping KNN analysis."
+			echo "${cs_dir}/cs_${cs}_analysis.csv already exists, skipping KNN analysis."
 		else
 			# analyze K nearest neighbors
 			echo "Starting KNN analysis..."
-			eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --NN_file_path=${output_dir}/NN_cs_${cs}.tsv --perform_NN=False --perform_results_analysis=True --output_folder_path ${cs_dir} --vector_column ${vector_column} --output_description cs_${cs} --cluster_size ${cs} --thread_memory 11474836480 --cpus=12 --step=10000 --id repertoire.repertoire_name 2>&1 | tee -a ${cs_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
+			eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --NN_file_path=${cs_dir}/NN_cs_${cs}.tsv --perform_NN=False --perform_results_analysis=True --output_folder_path ${cs_dir} --vector_column ${vector_column} --output_description cs_${cs} --cluster_size ${cs} --thread_memory 11474836480 --cpus=12 --step=10000 --id repertoire.repertoire_name 2>&1 | tee -a ${cs_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
 		  mkdir -p ${cs_dir}/clustering_analysis
-		  python ~/antibody_sequence_embedding/executable_scripts/analyze_clustering.py --input_file ${cs_dir}/cs_${cs}_analysis.csv --labels "${labels}" --output_dir ${cs_dir}/clustering_analysis
+		  #python ~/antibody_sequence_embedding/executable_scripts/analyze_clustering.py --input_file ${cs_dir}/cs_${cs}_analysis.csv --labels "${labels}" --output_dir ${cs_dir}/clustering_analysis
 		fi
 
 		#loop max features

@@ -96,6 +96,7 @@ for fold in ${folds} ; do
 	fold_dir=FOLD${fold}
 	# loop cluster size
 	for cs in ${cluster_sizes}; do
+		cs_dir=${fold_dir}/cs_${cs}
 		# loop max features
 		for mf in ${max_features}; do 
 			output_dir=${cs_dir}/min_subj_5_max_features_${mf}
