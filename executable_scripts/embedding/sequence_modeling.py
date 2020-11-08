@@ -11,7 +11,7 @@ original @author: https://github.com/kyu999/biovec/blob/master/biovec/models.py
 from gensim.models import word2vec
 from random import randint
 import random
-
+import numpy as np
 
 def split_ngrams_with_repetition(seq, n):
     """
@@ -142,21 +142,25 @@ class ProtVec(word2vec.Word2Vec):
         print('word2vec model, size={}, window={}, min_count={}, workers={})'.format(size, window, min_count, workers))
 
     def to_vecs(self, seq):
-        """
-        convert sequence to three n-length vectors
-        e.g. 'AGAMQSASM' => [ array([  ... * 100 ], array([  ... * 100 ], array([  ... * 100 ] ]
-        """
-        ngram_patterns = split_ngrams_with_repetition(seq, self.n)
+            """
+            convert sequence to three n-length vectors
+            e.g. 'AGAMQSASM' => [ array([  ... * 100 ], array([  ... * 100 ], array([  ... * 100 ] ]
+            !!!FIX 06.11.2020:
+            summarize the three vector to one using weighted average
+            """
+            ngram_patterns = split_ngrams_with_repetition(seq, self.n)
 
-        protvecs = []
-        for ngrams in ngram_patterns:
-            ngram_vecs = []
-            for ngram in ngrams:
-                try:
-                    ngram_vecs.append(self[ngram])
-                except:
-                    raise KeyError("Model has never trained this n-gram: " + ngram)
-            protvecs.append(sum(ngram_vecs))
-
-        return protvecs
+            protvecs = []
+            words_len = 0
+            for ngrams in ngram_patterns:
+                ngram_vecs = []
+                for ngram in ngrams:
+                    try:
+                        ngram_vecs.append(self[ngram])
+                    except:
+                        raise KeyError("Model has never trained this n-gram: " + ngram)
+                protvecs.append(sum(ngram_vecs))
+                words_len += np.shape(ngram_vecs)[0]
+            final_vec = sum(protvecs) / words_len
+            return final_vec
 

@@ -50,7 +50,7 @@ def main():
 
     def embed_data(word):
         try:
-            return list(model.to_vecs(word)[0])
+            return list(model.to_vecs(word))
         except:
             return np.nan
 
