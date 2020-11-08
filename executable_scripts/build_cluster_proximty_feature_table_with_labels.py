@@ -102,9 +102,16 @@ def main():
     by_subject = data_file.groupby(args.subject_col_name)
     # for each subject - add feature frequency columns
     result_ids = []
+
+    features = np.array(feature_list['vector'].apply(lambda x: json.loads(x)).to_list())
+    features = pd.DataFrame(features, columns=list(range(features.shape[1])))
+    max_distance = np.array(feature_list.loc[:, 'max_distance']).reshape(1, len(feature_list))
+    features_idx = feature_list['feature_index'].tolist()
+
     for subject, frame in by_subject:
         subject_vectors = vectors.iloc[frame.index]
-        result_ids += [get_subject_feature_table.remote(subject, feature_list, subject_vectors, cpus, dist_metric)]
+        result_ids += [get_subject_feature_table.remote(subject, features, features_idx, max_distance,
+                                                        subject_vectors, cpus, dist_metric)]
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
     # add subject labels column
@@ -121,17 +128,16 @@ def main():
 
 
 @ray.remote
-def get_subject_feature_table(subject, feature_list, subject_vectors, cpus=2, dist_metric='euclidean'):
-    # create an empty matrix, each raw is a subject, each column is a feature (cluster)
-    features = feature_list.iloc[:, -100:]
-    max_distance = np.array(feature_list.loc[:, 'max_distance']).reshape(1, len(feature_list))
+def get_subject_feature_table(subject, features: pd.DataFrame, max_distance: np.ndarray, features_idx: pd.Series,
+                              subject_vectors: pd.DataFrame, cpus=2, dist_metric='euclidean'):
 
     print('Start creating feature table for subject {}'.format(subject))
     t0 = time.time()
-    subject_features_table = pd.DataFrame(0, index=[subject], columns=feature_list['feature_index'].to_list())
+    subject_features_table = pd.DataFrame(0, index=[subject], columns=features_idx)
     # for each vector belonging to the subject
-    distances = pairwise_distances(X=subject_vectors, Y=features, metric=dist_metric, n_jobs=cpus)
-    distance_close_enough_mat = np.logical_or(np.isclose(distances, max_distance, rtol=1e-10, atol=1e-10), np.less_equal(distances, max_distance))
+    distances = pairwise_distances(X=subject_vectors.to_numpy(), Y=features.to_numpy(), metric=dist_metric, n_jobs=cpus)
+    distance_close_enough_mat = np.logical_or(np.isclose(distances, max_distance, rtol=1e-10, atol=1e-10),
+                                              np.less_equal(distances, max_distance))
 
     features_count = np.sum(distance_close_enough_mat)
     if features_count >= 1:

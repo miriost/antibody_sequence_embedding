@@ -111,12 +111,12 @@ def main():
             min_subjects = min(num_of_subjects_in_label, 5)
         else:
             min_subjects = min(num_of_subjects_in_label, args.min_subjects)
-        
 
         candidates_pool = analysis_file[analysis_file['how_many_subjects'] >= min_subjects]
         min_significance = min(min_significance, candidates_pool[label].max())
         candidates_pool = candidates_pool[analysis_file[label] >= min_significance]
-        candidates_pool = candidates_pool.sort_values(by=[label, 'how_many_subjects'], ascending=False)
+        candidates_pool = candidates_pool.sort_values(by=[label, 'median_distance', 'how_many_subjects'],
+                                                      ascending=[False, True, False])
 
         number_of_feature_labels = 0
         for idx, val in candidates_pool.iterrows():
@@ -138,8 +138,6 @@ def main():
 
     # ====
     # build a feature list file, each raw contains feature center, and maximal radius
-    c = ['feature_index', 'max_distance']
-    c.extend(vectors.columns)
     selected_features = np.nonzero(~np.isnan(selected_feature_indexes))[0]
     print('selected features: ', selected_features)
     if len(selected_features) != number_of_features_neto:
@@ -147,10 +145,7 @@ def main():
     else:
         print(f'Beginning building feature list with {number_of_features_neto} features')
 
-    features_df = pd.DataFrame(0, index=list(range(0, number_of_features_neto)), columns=c)
-    features_df['feature_index'] = selected_features
-    features_df['max_distance'] = distance_file.iloc[ selected_features ].max(axis=1).values
-    features_df.iloc[:, 2:] = vectors.iloc[ selected_features ].values
+    features_df = analysis_file.iloc[selected_features, :]
 
     features_df.to_csv(os.path.join(args.output_folder_path, args.output_description + '.csv'), index=False)
     print('file saved to ', os.path.join(args.output_folder_path, args.output_description + '.csv'))

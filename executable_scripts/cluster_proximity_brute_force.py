@@ -164,9 +164,12 @@ def main():
 
     if args.perform_NN:
         vectors = np.array(points[args.vector_column].apply(lambda x: json.loads(x)).to_list())
-        knn_map = cluster(vectors, args.output_folder_path, output_file_name,
-                          cluster_size=args.cluster_size, dist_metric=args.dist_metric, cpus=args.cpus, step=args.step)
+        knn_map, distance_map = cluster(vectors, args.output_folder_path, output_file_name,
+                                        cluster_size=args.cluster_size, dist_metric=args.dist_metric, cpus=args.cpus,
+                                        step=args.step)
         knn_info = pd.DataFrame(knn_map, columns=range(knn_map.shape[1]))
+        knn_info['median_distance'] = np.median(distance_map, axis=1)
+        knn_info['max_distance'] = np.max(distance_map, axis=1)
         knn_info['vector_subjects'] = points['vector_subjects']
         knn_info['vector'] = points[args.vector_column]
         knn_info['vector_duplicate_count'] = points['vector_duplicate_count']
@@ -181,6 +184,9 @@ def main():
             knn_map = knn_info.loc[:, [str(x) for x in range(args.cluster_size + 1)]].to_numpy()
         out = analyze_data(knn_info, knn_map, data_file, id_column=args.id_column, label_column=args.label_column,
                            cpus=args.cpus)
+        out['median_distance'] = knn_info['median_distance'].astype(float)
+        out['max_distance'] = knn_info['max_distance'].astype(float)
+        out['vector'] = knn_info['vector'].astype(float)
         output_file = args.output_description + '_analysis.csv'
         out.to_csv(os.path.join(args.output_folder_path, output_file), index=False)
         logger.info(str(datetime.now()) + ' | data written to output file: ' + output_file)
@@ -223,6 +229,7 @@ def analyze_sub_data(knn_info: pd.DataFrame, knn_map: np.ndarray, sub_range: tup
     neighbors = np.array(knn_info[['vector_subjects']].transpose())[np.arange(1)[:, None], knn_map[sub_range[0]:sub_range[1], :]]
     neighbors = np.array(list(map(lambda x: np.unique(np.concatenate(x)), neighbors)))
 
+    sub_output_df['subjects'] = list(map(lambda x: x.tolist(), neighbors))
     sub_output_df['how_many_subjects'] = list(map(lambda x: len(x), neighbors))
     print("how_many_subjects column added, took {}".format(time.time() - t0))
 
@@ -331,7 +338,8 @@ def cluster(vectors, output_file_path, output_file_name, cluster_size=100, dist_
     print(str(datetime.now()) + ' | finished clustering, files saved to: ')
     logger.info(str(datetime.now()) + ' | finished clustering, files saved to: ')
     logger.info(os.path.join(output_file_path, 'Distances_' + output_file_name + '.csv'))
-    return knn_map
+
+    return knn_map, distance_map
 
 
 if __name__ == '__main__':
