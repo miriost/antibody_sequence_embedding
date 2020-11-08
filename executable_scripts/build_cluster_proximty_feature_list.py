@@ -28,10 +28,6 @@ def main():
                         help='the tsv file path')
     parser.add_argument('--analysis_file_path',
                         help='the analysis file path')
-    parser.add_argument('--distances_file_path',
-                        help='the distances file path')
-    parser.add_argument('--knn_file_path',
-                        help='the knn_file file path')
     parser.add_argument('--label_column',
                         help='the name of the column with the labels. Default is repertoire.disease_diagnosis',
                         default='repertoire.disease_diagnosis')
@@ -86,12 +82,6 @@ def main():
         if label not in analysis_file.columns:
             print("{} is not in data file columns: {}\nExisting...".format(label, analysis_file.columns))
             sys.exit(1)
-
-    distance_file = pd.read_csv(args.distances_file_path)
-
-    knn_file = pd.read_csv(args.knn_file_path, sep='\t')
-    vectors = np.array(knn_file['vector'].apply(lambda x: json.loads(x)).to_list())
-    vectors = pd.DataFrame(vectors, columns=list(range(vectors.shape[1])))
 
     # processing
     number_of_features_neto = 0

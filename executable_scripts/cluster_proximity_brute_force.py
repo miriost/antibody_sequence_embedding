@@ -186,7 +186,7 @@ def main():
                            cpus=args.cpus)
         out['median_distance'] = knn_info['median_distance'].astype(float)
         out['max_distance'] = knn_info['max_distance'].astype(float)
-        out['vector'] = knn_info['vector'].astype(float)
+        out['vector'] = knn_info['vector']
         output_file = args.output_description + '_analysis.csv'
         out.to_csv(os.path.join(args.output_folder_path, output_file), index=False)
         logger.info(str(datetime.now()) + ' | data written to output file: ' + output_file)
@@ -229,7 +229,9 @@ def analyze_sub_data(knn_info: pd.DataFrame, knn_map: np.ndarray, sub_range: tup
     neighbors = np.array(knn_info[['vector_subjects']].transpose())[np.arange(1)[:, None], knn_map[sub_range[0]:sub_range[1], :]]
     neighbors = np.array(list(map(lambda x: np.unique(np.concatenate(x)), neighbors)))
 
-    sub_output_df['subjects'] = list(map(lambda x: x.tolist(), neighbors))
+    for status in status_types:
+        sub_output_df[status + '_subjects'] = list(map(lambda x: subjects[(subjects.index.isin(x)) & (subjects == status)].index.tolist(), neighbors))
+
     sub_output_df['how_many_subjects'] = list(map(lambda x: len(x), neighbors))
     print("how_many_subjects column added, took {}".format(time.time() - t0))
 
@@ -237,7 +239,7 @@ def analyze_sub_data(knn_info: pd.DataFrame, knn_map: np.ndarray, sub_range: tup
     t0 = time.time()
     tmp = pd.concat(list(map(lambda x: subjects[x].value_counts(normalize=True), neighbors)), sort=True, axis=1)
     tmp = tmp.transpose().reset_index(drop=True)
-    tmp.fillna(0)
+    tmp = tmp.fillna(0)
     sub_output_df[status_types] = tmp[status_types]
 
     print("status columns added, took {}".format(time.time() - t0))
