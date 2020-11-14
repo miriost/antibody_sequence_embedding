@@ -3,6 +3,8 @@ import argparse
 import os, sys
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
+import json
 
 
 def main():
@@ -11,6 +13,7 @@ def main():
 	parser.add_argument('--analysis_file', help='input cluster analysis csv file')
 	parser.add_argument('--labels', help='semicolon separated list of clustering target labels')
 	parser.add_argument('--output_dir', help='semicolon separated list of clustering target labels', default='.')
+	parser.add_argument('--feature_list', help='feature list file to mark selected features in plot')
 
 	args = parser.parse_args()
 	execute(args)
@@ -33,8 +36,14 @@ def execute(args):
 			print("{} is not in data file columns: {}\nExisting...".format(label, analysis_file.columns))
 			sys.exit(1)
 
+	colors = ["m"] * len(analysis_file)
+	if args.feature_file:
+		feature_file = pd.read_csv(args.feature_file)
+		features = analysis_file['vector'].apply(lambda x: x in feature_file['vector'].tolist())
+		colors[features] = "r"
+
 	for label in labels:
-		g = sns.jointplot(x='how_many_subjects', y=label, data=analysis_file, kind="kde", color="m")
+		g = sns.jointplot(x='how_many_subjects', y=label, data=analysis_file, kind="kde", color=colors)
 		g.plot_joint(plt.scatter, c="b", s=30, linewidth=1, marker="+")
 		g.ax_joint.collections[0].set_alpha(0)
 		g.fig.suptitle(label + ' distribution among clusters')
