@@ -106,11 +106,11 @@ def main():
     features = np.array(feature_list['vector'].apply(lambda x: json.loads(x)).to_list())
     features = pd.DataFrame(features, columns=list(range(features.shape[1])))
     max_distance = np.array(feature_list.loc[:, 'max_distance']).reshape(1, len(feature_list))
-    features_idx = feature_list['feature_index'].tolist()
+    features_idx = feature_list['feature_index']
 
     for subject, frame in by_subject:
         subject_vectors = vectors.iloc[frame.index]
-        result_ids += [get_subject_feature_table.remote(subject, features, features_idx, max_distance,
+        result_ids += [get_subject_feature_table.remote(subject, features, max_distance, features_idx,
                                                         subject_vectors, cpus, dist_metric)]
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
@@ -128,12 +128,12 @@ def main():
 
 
 @ray.remote
-def get_subject_feature_table(subject, features: pd.DataFrame, max_distance: np.ndarray, features_idx: pd.Series,
+def get_subject_feature_table(subject, features: pd.DataFrame, max_distance: np.ndarray, features_idx: list,
                               subject_vectors: pd.DataFrame, cpus=2, dist_metric='euclidean'):
 
     print('Start creating feature table for subject {}'.format(subject))
     t0 = time.time()
-    subject_features_table = pd.DataFrame(0, index=[subject], columns=features_idx)
+    subject_features_table = pd.DataFrame(0, index=[subject], columns=features_idx.to_list())
     # for each vector belonging to the subject
     distances = pairwise_distances(X=subject_vectors.to_numpy(), Y=features.to_numpy(), metric=dist_metric, n_jobs=cpus)
     distance_close_enough_mat = np.logical_or(np.isclose(distances, max_distance, rtol=1e-10, atol=1e-10),
@@ -145,7 +145,7 @@ def get_subject_feature_table(subject, features: pd.DataFrame, max_distance: np.
             if np.sum(distance_close_enough_vec) == 0:
                 continue
             add_feature_index = np.where(distance_close_enough_vec)
-            subject_features_table.loc[subject, feature_list.loc[add_feature_index[0], 'feature_index']] += 1
+            subject_features_table.loc[subject, features_idx.iloc[add_feature_index[0]]] += 1
 
     print('Finished creating feature table for subject {}, feature count {}, took {}'.format(subject,
                                                                                              features_count,

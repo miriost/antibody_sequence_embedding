@@ -35,8 +35,7 @@ def main():
                         help='the name of the column with the subject id. Default is repertoire.repertoire_name',
                         default='repertoire.repertoire_name')
     parser.add_argument('--output_folder_path',
-                        help='Output folder for the 3 output files - Nearest neighbors file, distances file, and '
-                             'results analysis file')
+                        help='Output folder for the feature list file')
     parser.add_argument('--output_description',
                         help='description to use inside output file names')
     parser.add_argument('--labels',
@@ -52,14 +51,6 @@ def main():
 
     if not (os.path.isfile(args.analysis_file_path)):
         print('analysis file error, make sure file path exists\nExiting...')
-        sys.exit(1)
-
-    if not (os.path.isfile(args.distances_file_path)):
-        print('distances file error, make sure file path exists\nExiting...')
-        sys.exit(1)
-
-    if not (os.path.isfile(args.knn_file_path)):
-        print('distances file error, make sure file path exists\nExiting...')
         sys.exit(1)
 
     if args.labels is None:
@@ -92,8 +83,7 @@ def main():
     # the original cell which created the cluster
     neighbors_feature_index = [np.nan] * len(analysis_file)
 
-    min_significance = 1 / len(data_file['repertoire.disease_diagnosis'].unique())
-    min_significance = min_significance * 1.3
+    min_significance = 0.6
 
     for label in labels:
         num_of_subjects_in_label = len(data_file.loc[data_file[args.label_column]==label, args.id_column].unique())
@@ -105,8 +95,8 @@ def main():
         candidates_pool = analysis_file[analysis_file['how_many_subjects'] >= min_subjects]
         min_significance = min(min_significance, candidates_pool[label].max())
         candidates_pool = candidates_pool[analysis_file[label] >= min_significance]
-        candidates_pool = candidates_pool.sort_values(by=[label, 'median_distance', 'how_many_subjects'],
-                                                      ascending=[False, True, False])
+        candidates_pool = candidates_pool.sort_values(by=[label, 'how_many_subjects'],
+                                                      ascending=[False, False])
 
         number_of_feature_labels = 0
         for idx, val in candidates_pool.iterrows():
@@ -137,7 +127,7 @@ def main():
 
     features_df = analysis_file.iloc[selected_features, :]
 
-    features_df.to_csv(os.path.join(args.output_folder_path, args.output_description + '.csv'), index=False)
+    features_df.to_csv(os.path.join(args.output_folder_path, args.output_description + '.csv'), index_label='feature_index')
     print('file saved to ', os.path.join(args.output_folder_path, args.output_description + '.csv'))
 
 
