@@ -26,6 +26,7 @@ optimize="false"
 work_dir=./
 labels=""
 min_subjects=5
+max_subjects=100
 
 while getopts "hf:c:m:o:r:M:g:w:l:s:" opt; do
 	case ${opt} in
@@ -103,7 +104,7 @@ for fold in ${folds} ; do
 		cs_dir=${fold_dir}/cs_${cs}
 		# loop max features
 		for mf in ${max_features}; do 
-			output_dir=${cs_dir}/min_subj_${min_subjects}_max_features_${mf}
+			output_dir=${cs_dir}/subjects_${min_subjects}_${max_subjects}_max_features_${mf}
 			echo  ${output_dir}/${output_file} 
 			if ! [ -f ${output_dir}/${output_file} ]; then
 				continue
