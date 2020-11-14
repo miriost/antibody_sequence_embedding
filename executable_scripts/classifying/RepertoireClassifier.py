@@ -1,7 +1,7 @@
 from sklearn.model_selection import KFold
 from sklearn.model_selection import GridSearchCV
 from sklearn.base import clone
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 
 class RepertoireClassifier:
@@ -21,7 +21,7 @@ class RepertoireClassifier:
             self.features = X_train.columns
             return
 
-        self.scaler = StandardScaler()
+        self.scaler = MinMaxScaler()
         self.scaler.fit(X_train)
         columns = X_train.columns 
 
@@ -35,8 +35,9 @@ class RepertoireClassifier:
 
         X_train = X_train.loc[:, self.features]
 
-        self.scaler = StandardScaler()
-        self.scaler.fit(X_train)
+        if self.scaler is None:
+            self.scaler = MinMaxScaler()
+            self.scaler.fit(X_train)
 
         X_train = self.scaler.transform(X_train)
 
