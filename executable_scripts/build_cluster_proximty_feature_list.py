@@ -42,8 +42,8 @@ def main():
                         help='semicolon separated list of labels from which derive cluster significance')
     parser.add_argument('--min_subjects', help='minimal number of subjects for cluster selection, default is 5',
                         type=int, default=5)
-    parser.add_argument('--max_subjects', help='maximal number of subjects for cluster selection, default is 50',
-                        type=int, default=50)
+    parser.add_argument('--max_subjects', help='maximal number of subjects for cluster selection, default is 100',
+                        type=int, default=100)
     parser.add_argument('--max_features', help='max selected features per label', default=100, type=int)
 
     args = parser.parse_args()
