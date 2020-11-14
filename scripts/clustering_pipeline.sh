@@ -101,8 +101,7 @@ for fold in ${folds} ; do
 			else	
 			# create feature list
 			echo "Building feature list..."
-			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_list.py --labels "${labels}" --data_file_path ${fold_dir}/*_TRAIN_*.tsv --analysis_file_path
-			${cs_dir}/cs_${cs}_analysis.csv --output_folder ${output_dir} --output_description feature_list --max_features ${mf} --min_subjects ${min_subjects} --max_subjects ${max_subjects} 2>&1 | tee
+			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_list.py --labels "${labels}" --data_file_path ${fold_dir}/*_TRAIN_*.tsv --analysis_file_path ${cs_dir}/cs_${cs}_analysis.csv --output_folder ${output_dir} --output_description feature_list --max_features ${mf} --min_subjects ${min_subjects} --max_subjects ${max_subjects} 2>&1 | tee
 			${output_dir}/build_cluster_proximity_feature_list.log.txt
 			fi
 
