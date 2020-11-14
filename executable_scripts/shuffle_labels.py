@@ -9,8 +9,8 @@ def main():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--input_file', help='')
     parser.add_argument('--output_file', help='')
-    parser.add_argument('--label_col', help='')
-    parser.add_argument('--id_col', help='')
+    parser.add_argument('--label_col', help='', default='repertoire.disease_diagnosis')
+    parser.add_argument('--id_col', help='', default='repertoire.repertoire_name')
 
     args = parser.parse_args()
     execute(args)
@@ -27,7 +27,7 @@ def execute(args):
     for idx, row in subjects.iterrows():
         df.loc[df[args.id_col] == row['id'], args.label_col] = row['label']
 
-    df.to_csv(args.output_file, '\t')
+    df.to_csv(args.output_file, sep='\t', index=False)
 
 
 if __name__ == '__main__':
