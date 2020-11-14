@@ -2,7 +2,7 @@
 
 trap "exit" INT
 
-usage="USAGE: clustring_pipline.sh -v <vector_column> -l <labels> -f [folds] -c [cluster_sizes] -m [max_features] -w [work_dir] -s [min_subjects]"
+usage="USAGE: clustring_pipline.sh -v <vector_column> -l <labels> -f [folds] -c [cluster_sizes] -m [max_features] -w [work_dir] -s [min_subjects:max_subjects]"
 help="Build clusters and feature tables for train/test folds.
 -v VECTOR_COLUMN - Mandatory, name of the column in the tsv file with the embedded vector.
 -l LABELS - Mandatory, semicolon separated list of target labels for the clustering analysis and selection
@@ -10,7 +10,7 @@ help="Build clusters and feature tables for train/test folds.
 -c CLUSTER_SIZES - Optional, space separated list of cluster sizes. Deafult is 100.
 -m MAX_FEATURES - Optional, space separated list of max features to select per label. Default is 100.
 -w WORK_DIR - Optional, the folds root directory where the folds are. Default is 50\"./\".
--s MIN_SUBJECTS - Optional, min number of subjects for the cluster selection. Default is 5.
+-s MIN_SUBJECTS:MAX_SUBJECTS - Optional, the minimal and maximal number of subjects for the cluster selection. Default is 5:100.
 "
 folds=$(seq 0 1 9)
 cluster_sizes=100
@@ -20,12 +20,13 @@ vector_column=""
 work_dir=./
 labels=""
 min_subjects=5
+max_subjects=100
 
 while getopts "hf:c:m:v:w:l:s:" opt; do
 	case ${opt} in
 		h ) echo "${usage}" ; echo "${help}"; exit 1
       			;;
-    		f ) folds=${OPTARG}
+    f ) folds=${OPTARG}
       			;;
 		c ) cluster_sizes=${OPTARG}
 			      ;;
@@ -37,7 +38,7 @@ while getopts "hf:c:m:v:w:l:s:" opt; do
 		        ;;
 		w ) work_dir=${OPTARG}
 			;;
-		s ) min_subjects=${OPTARG}
+		s ) min_subjects=$(echo ${OPTARG} | awk -F $':' '{print $1}'); max_subjects=$(echo ${OPTARG} | awk -F $':' '{print $2}')
 			;;
 		\? ) echo ${usage}; echo "cluster_pipline.sh -h for additional help"; exit 1
       			;;
@@ -93,14 +94,16 @@ for fold in ${folds} ; do
 		#loop max features
 		for mf in ${max_features}; do 
 			echo "Max features ${mf}"; echo ""
-			output_dir=${cs_dir}/min_subj_${min_subjects}_max_features_${mf}
+			output_dir=${cs_dir}/subjects_${min_subjects}_${max_subjects}_max_features_${mf}
 			mkdir -p ${output_dir}
 			if [ -f ${output_dir}/feature_list.csv ] ; then
 			echo "${output_dir}/feature_list.csv already exists, skipping building feature list." 
 			else	
 			# create feature list
 			echo "Building feature list..."
-			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_list.py --labels "${labels}" --data_file_path ${fold_dir}/*_TRAIN_*.tsv --analysis_file_path ${cs_dir}/cs_${cs}_analysis.csv --output_folder ${output_dir} --output_description feature_list --max_features ${mf} --min_subjects ${min_subjects} 2>&1 | tee ${output_dir}/build_cluster_proximity_feature_list.log.txt
+			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_list.py --labels "${labels}" --data_file_path ${fold_dir}/*_TRAIN_*.tsv --analysis_file_path
+			${cs_dir}/cs_${cs}_analysis.csv --output_folder ${output_dir} --output_description feature_list --max_features ${mf} --min_subjects ${min_subjects} --max_subjects ${max_subjects} 2>&1 | tee
+			${output_dir}/build_cluster_proximity_feature_list.log.txt
 			fi
 
 			if [ -f ${output_dir}/train_feature_table.csv ] ; then

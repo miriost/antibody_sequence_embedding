@@ -2,7 +2,7 @@
 
 trap "exit" INT
 
-usage="USAGE: run_classification.sh -f [folds] -c [cluster_sizes] -m [max_features] -o [output_file] -r [replace] -M [model] -g [grid_serach] -w [work_dir] -l [labels] -s [min_subjects]"
+usage="USAGE: run_classification.sh -f [folds] -c [cluster_sizes] -m [max_features] -o [output_file] -r [replace] -M [model] -g [grid_serach] -w [work_dir] -l [labels] -s [min_subjects:max_subjects]"
 help="
 -f FOLDS - Optional, space separated list of folds numbers. Deafult is 0..9.
 -c CLUSTER_SIZES - Optional, space separated list of cluster sizes. Deafult is 100.
@@ -13,7 +13,7 @@ help="
 -g GRID_SEARCH - Use grid search over repeated cross validation folds for optimizing the classsifier hyper parameters. Default is false.
 -w WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\".
 -l LABELS - Optional, the labels to classify.
--s MIN_SUBJECTS - Optional, the minimal number of subjects for the cluster selection. Default is 5.
+-s MIN_SUBJECTS:MAX_SUBJECTS - Optional, the minimal and maximal number of subjects for the cluster selection. Default is 5:100.
 "
 
 folds=$(seq 0 1 9)
@@ -30,9 +30,9 @@ min_subjects=5
 while getopts "hf:c:m:o:r:M:g:w:l:s:" opt; do
 	case ${opt} in
 		h ) echo "${usage}" ; echo "${help}"; exit 1
-      			;;
-    		f ) folds=${OPTARG} 
-      			;;
+      ;;
+    f ) folds=${OPTARG}
+      ;;
 		c ) cluster_sizes=${OPTARG}
 			;;
 		m ) max_features=${OPTARG}
@@ -49,7 +49,7 @@ while getopts "hf:c:m:o:r:M:g:w:l:s:" opt; do
 			;;
 		l ) labels=${OPTARG}
 			;;
-		s ) min_subjects=${OPTARG}
+		s ) min_subjects=$(echo ${OPTARG} | awk -F $':' '{print $1}'); max_subjects=$(echo ${OPTARG} | awk -F $':' '{print $2}')
 			;;
 		\? ) echo ${usage}; echo "classifiying_pipeline.sh -h for additional help."; exit 1
       			;;
@@ -70,7 +70,7 @@ for fold in ${folds} ; do
 		# loop max features
 		for mf in ${max_features}; do 
 			echo "Max features ${mf}"
-			output_dir=${cs_dir}/min_subj_${min_subjects}_max_features_${mf}
+			output_dir=${cs_dir}/subjects_${min_subjects}_${max_subjects}_max_features_${mf}
 		
 			if [ -f ${output_dir}/${output_file} ] && [[ "${replace}" == "false" ]] ; then
 				echo "file ${output_dir}/${output_file} already exists, skipping classification."
