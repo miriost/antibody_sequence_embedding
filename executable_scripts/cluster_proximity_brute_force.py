@@ -160,7 +160,7 @@ def main():
     output_file_name = args.output_description
 
     data_file = pd.read_csv(args.data_file_path, sep='\t')
-    data_file['vector_subjects'] = list(map(lambda x: x.tolist(), data_file['vector_subjects']))
+    data_file['vector_subjects'] = list(map(lambda x: [x], data_file[id_column]))
 
     if args.perform_NN:
         vectors = np.array(data_file[vector_column].apply(lambda x: json.loads(x)).to_list())
