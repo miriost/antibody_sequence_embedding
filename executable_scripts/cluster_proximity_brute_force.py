@@ -144,6 +144,9 @@ def main():
     else:
         ray.init()
    
+    id_column = args.id_column
+    vector_column = args.vector_column
+    label_column = args.label_column
 
     date_time_obj = datetime.now()
     time_obj = date_time_obj.time()
@@ -157,24 +160,19 @@ def main():
     output_file_name = args.output_description
 
     data_file = pd.read_csv(args.data_file_path, sep='\t')
-    grouped_by_vector = data_file.groupby(by=args.vector_column)
-    points = grouped_by_vector[args.id_column].apply(np.unique).reset_index(name='vector_subjects')
-    points['vector_subjects'] = list(map(lambda x: x.tolist(), points['vector_subjects']))
-    points['vector_duplicate_count'] = grouped_by_vector[args.id_column].apply(len).reset_index(name='len')['len']
+    data_file['vector_subjects'] = list(map(lambda x: x.tolist(), data_file['vector_subjects']))
 
     if args.perform_NN:
-        vectors = np.array(points[args.vector_column].apply(lambda x: json.loads(x)).to_list())
+        vectors = np.array(data_file[vector_column].apply(lambda x: json.loads(x)).to_list())
         knn_map, distance_map = cluster(vectors, args.output_folder_path, output_file_name,
                                         cluster_size=args.cluster_size, dist_metric=args.dist_metric, cpus=args.cpus,
                                         step=args.step)
         knn_info = pd.DataFrame(knn_map, columns=range(knn_map.shape[1]))
         knn_info['median_distance'] = np.median(distance_map, axis=1)
         knn_info['max_distance'] = np.max(distance_map, axis=1)
-        knn_info['vector_subjects'] = points['vector_subjects']
-        knn_info['vector'] = points[args.vector_column]
-        knn_info['vector_duplicate_count'] = points['vector_duplicate_count']
+        knn_info['vector_subjects'] = data_file['vector_subjects']
+        knn_info['vector'] = data_file[vector_column]
         knn_info.to_csv(os.path.join(args.output_folder_path, 'NN_' + output_file_name + '.tsv'), sep='\t', index=False)
-        knn_info['vector_subjects'] = points['vector_subjects']
         logger.info(os.path.join(args.output_folder_path, 'NN_' + output_file_name + '.tsv'))
 
     if args.perform_results_analysis:
@@ -182,7 +180,7 @@ def main():
             knn_info = pd.read_csv(args.NN_file_path, dtype={i: 'int' for i in range(args.cluster_size + 1)}, sep='\t')
             knn_info['vector_subjects'] = knn_info['vector_subjects'].apply(lambda x: ast.literal_eval(x))
             knn_map = knn_info.loc[:, [str(x) for x in range(args.cluster_size + 1)]].to_numpy()
-        out = analyze_data(knn_info, knn_map, data_file, id_column=args.id_column, label_column=args.label_column,
+        out = analyze_data(knn_info, knn_map, data_file, id_column=id_column, label_column=label_column,
                            cpus=args.cpus)
         out['median_distance'] = knn_info['median_distance'].astype(float)
         out['max_distance'] = knn_info['max_distance'].astype(float)
