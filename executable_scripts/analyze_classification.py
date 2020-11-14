@@ -106,7 +106,7 @@ def execute(args):
         numeric_hyper_params = []
 
     # filter only test reports
-    df_filtered = df.loc[(df['report'] == 'test') & (df['n_folds'] >= min_folds) & (df['key'] == 'macro avg'), : ]
+    df_filtered = df.loc[(df['report'] == 'test') & (df['n_folds'] >= min_folds) & (df['key'] == 'weighted avg'), : ]
 
     df_filtered = df_filtered.sort_values(by='f1_score_mean', ascending=False);
     df_filtered.to_csv(os.path.join(output_dir, "accumulated_" + args.input_file), index=False)
