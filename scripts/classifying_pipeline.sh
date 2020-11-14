@@ -2,7 +2,7 @@
 
 trap "exit" INT
 
-usage="USAGE: run_classification.sh -f [folds] -c [cluster_sizes] -m [max_features] -o [output_file] -r [replace] -M [model] -g [grid_serach] -w [work_dir] -l [labels]"
+usage="USAGE: run_classification.sh -f [folds] -c [cluster_sizes] -m [max_features] -o [output_file] -r [replace] -M [model] -g [grid_serach] -w [work_dir] -l [labels] -s [min_subjects]"
 help="
 -f FOLDS - Optional, space separated list of folds numbers. Deafult is 0..9.
 -c CLUSTER_SIZES - Optional, space separated list of cluster sizes. Deafult is 100.
@@ -13,6 +13,7 @@ help="
 -g GRID_SEARCH - Use grid search over repeated cross validation folds for optimizing the classsifier hyper parameters. Default is false.
 -w WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\".
 -l LABELS - Optional, the labels to classify.
+-s MIN_SUBJECTS - Optional, the minimal number of subjects for the cluster selection. Default is 5.
 "
 
 folds=$(seq 0 1 9)
@@ -24,8 +25,9 @@ models=all
 optimize="false"
 work_dir=./
 labels=""
+min_subjects=5
 
-while getopts "hf:c:m:o:r:M:g:w:l:" opt; do
+while getopts "hf:c:m:o:r:M:g:w:l:s:" opt; do
 	case ${opt} in
 		h ) echo "${usage}" ; echo "${help}"; exit 1
       			;;
@@ -47,6 +49,8 @@ while getopts "hf:c:m:o:r:M:g:w:l:" opt; do
 			;;
 		l ) labels=${OPTARG}
 			;;
+		s ) min_subjects=${OPTARG}
+			;;
 		\? ) echo ${usage}; echo "classifiying_pipeline.sh -h for additional help."; exit 1
       			;;
 	esac
@@ -66,7 +70,7 @@ for fold in ${folds} ; do
 		# loop max features
 		for mf in ${max_features}; do 
 			echo "Max features ${mf}"
-			output_dir=${cs_dir}/min_subj_5_max_features_${mf}
+			output_dir=${cs_dir}/min_subj_${min_subjects}_max_features_${mf}
 		
 			if [ -f ${output_dir}/${output_file} ] && [[ "${replace}" == "false" ]] ; then
 				echo "file ${output_dir}/${output_file} already exists, skipping classification."
@@ -99,7 +103,7 @@ for fold in ${folds} ; do
 		cs_dir=${fold_dir}/cs_${cs}
 		# loop max features
 		for mf in ${max_features}; do 
-			output_dir=${cs_dir}/min_subj_5_max_features_${mf}
+			output_dir=${cs_dir}/min_subj_${min_subjects}_max_features_${mf}
 			echo  ${output_dir}/${output_file} 
 			if ! [ -f ${output_dir}/${output_file} ]; then
 				continue

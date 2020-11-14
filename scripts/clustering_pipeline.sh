@@ -2,7 +2,7 @@
 
 trap "exit" INT
 
-usage="USAGE: clustring_pipline.sh -v <vector_column> -l <labels> -f [folds] -c [cluster_sizes] -m [max_features] -w [work_dir]"
+usage="USAGE: clustring_pipline.sh -v <vector_column> -l <labels> -f [folds] -c [cluster_sizes] -m [max_features] -w [work_dir] -s [min_subjects]"
 help="Build clusters and feature tables for train/test folds.
 -v VECTOR_COLUMN - Mandatory, name of the column in the tsv file with the embedded vector.
 -l LABELS - Mandatory, semicolon separated list of target labels for the clustering analysis and selection
@@ -10,6 +10,7 @@ help="Build clusters and feature tables for train/test folds.
 -c CLUSTER_SIZES - Optional, space separated list of cluster sizes. Deafult is 100.
 -m MAX_FEATURES - Optional, space separated list of max features to select per label. Default is 100.
 -w WORK_DIR - Optional, the folds root directory where the folds are. Default is 50\"./\".
+-s MIN_SUBJECTS - Optional, min number of subjects for the cluster selection. Default is 5.
 "
 folds=$(seq 0 1 9)
 cluster_sizes=100
@@ -18,8 +19,9 @@ max_features=50
 vector_column=""
 work_dir=./
 labels=""
+min_subjects=5
 
-while getopts "hf:c:m:v:w:l:" opt; do
+while getopts "hf:c:m:v:w:l:s:" opt; do
 	case ${opt} in
 		h ) echo "${usage}" ; echo "${help}"; exit 1
       			;;
@@ -34,7 +36,9 @@ while getopts "hf:c:m:v:w:l:" opt; do
 		l ) labels=${OPTARG}
 		        ;;
 		w ) work_dir=${OPTARG}
-			      ;;
+			;;
+		s ) min_subjects=${OPTARG}
+			;;
 		\? ) echo ${usage}; echo "cluster_pipline.sh -h for additional help"; exit 1
       			;;
 	esac
@@ -79,22 +83,24 @@ for fold in ${folds} ; do
 		else
 			# analyze K nearest neighbors
 			echo "Starting KNN analysis..."
-			eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --NN_file_path=${cs_dir}/NN_cs_${cs}.tsv --perform_NN=False --perform_results_analysis=True --output_folder_path ${cs_dir} --vector_column ${vector_column} --output_description cs_${cs} --cluster_size ${cs} --thread_memory 11474836480 --cpus=12 --step=10000 --id repertoire.repertoire_name 2>&1 | tee -a ${cs_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
-		  mkdir -p ${cs_dir}/clustering_analysis
-		  #python ~/antibody_sequence_embedding/executable_scripts/analyze_clustering.py --input_file ${cs_dir}/cs_${cs}_analysis.csv --labels "${labels}" --output_dir ${cs_dir}/clustering_analysis
+			eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --NN_file_path=${cs_dir}/NN_cs_${cs}.tsv --perform_NN=False --perform_results_analysis=True --output_folder_path ${cs_dir} --vector_column ${vector_column} --output_description cs_${cs} --cluster_size ${cs} --cpus=12 --step=10000 --id repertoire.repertoire_name 2>&1 | tee -a ${cs_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
 		fi
-
+		#if ! [ -d  ${cs_dir}/clustering_analysis ]; then
+ 		#	echo "Plotting cluster analysis..."
+		#	mkdir -p ${cs_dir}/clustering_analysis
+		#	python ~/antibody_sequence_embedding/executable_scripts/analyze_clustering.py --analysis_file ${cs_dir}/cs_${cs}_analysis.csv --labels "${labels}" --output_dir ${cs_dir}/clustering_analysis
+		#fi
 		#loop max features
 		for mf in ${max_features}; do 
 			echo "Max features ${mf}"; echo ""
-			output_dir=${cs_dir}/min_subj_5_max_features_${mf}
+			output_dir=${cs_dir}/min_subj_${min_subjects}_max_features_${mf}
 			mkdir -p ${output_dir}
 			if [ -f ${output_dir}/feature_list.csv ] ; then
 			echo "${output_dir}/feature_list.csv already exists, skipping building feature list." 
 			else	
 			# create feature list
 			echo "Building feature list..."
-			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_list.py --labels "${labels}" --data_file_path ${fold_dir}/*_TRAIN_*.tsv --analysis_file_path ${cs_dir}/cs_${cs}_analysis.csv --knn_file_path ${cs_dir}/NN_cs_${cs}.tsv --distances_file_path ${cs_dir}/Distances_cs_${cs}.csv --output_folder ${output_dir} --output_description feature_list --max_features ${mf} 2>&1 | tee ${output_dir}/build_cluster_proximity_feature_list.log.txt
+			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_list.py --labels "${labels}" --data_file_path ${fold_dir}/*_TRAIN_*.tsv --analysis_file_path ${cs_dir}/cs_${cs}_analysis.csv --output_folder ${output_dir} --output_description feature_list --max_features ${mf} --min_subjects ${min_subjects} 2>&1 | tee ${output_dir}/build_cluster_proximity_feature_list.log.txt
 			fi
 
 			if [ -f ${output_dir}/train_feature_table.csv ] ; then
