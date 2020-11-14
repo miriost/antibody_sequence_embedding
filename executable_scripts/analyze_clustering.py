@@ -37,18 +37,16 @@ def execute(args):
             sys.exit(1)
 
     colors = np.array(["b"] * len(analysis_file))
-    markers = np.array(["+"] * len(analysis_file))
     if args.features_file:
         feature_file = pd.read_csv(args.features_file)
         features = analysis_file['vector'].apply(lambda x: x in feature_file['vector'].tolist())
         colors[features] = "r"
-        markers[features] = "x"
 
     for label in labels:
-        g = sns.jointplot(x='how_many_subjects', y=label, data=analysis_file, kind="kde", color="m")
+        g = sns.jointplot(x='how_many_subjects', y='% of ' + label + ' in cluster', data=analysis_file, kind="kde",
+                          color="m")
         g.plot_joint(plt.scatter, s=30, linewidth=1, marker='+', color=colors.tolist())
         g.ax_joint.collections[0].set_alpha(0)
-        g.fig.suptitle(label + ' distribution among clusters')
         g.set_axis_labels("Number of subjects in cluster", label)
         g.savefig(os.path.join(args.output_dir, label + '_distribution_in_cluster.png'))
         plt.clf()
