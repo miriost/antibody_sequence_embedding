@@ -136,7 +136,12 @@ def main():
     if args.output_file is not None:
         output.to_csv(args.output_file, index=False)
     # print output
-    print(output.to_csv(index=False))
+    output = output[output['report'] == 'test']
+    output = output[output['key'] == 'weighted avg']
+    output.sort_values(by=['f1_score'], ascending=False)
+    output = output[['model', 'f1_score', 'accuracy']] 
+
+    print(output)
 
 
 if __name__ == "__main__":
