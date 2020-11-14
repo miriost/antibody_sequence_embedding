@@ -40,7 +40,10 @@ def main():
                         help='description to use inside output file names')
     parser.add_argument('--labels',
                         help='semicolon separated list of labels from which derive cluster significance')
-    parser.add_argument('--min_subjects', help='minimal number of subjects for cluster selection', type=int)
+    parser.add_argument('--min_subjects', help='minimal number of subjects for cluster selection, default is 5',
+                        type=int, default=5)
+    parser.add_argument('--max_subjects', help='maximal number of subjects for cluster selection, default is 50',
+                        type=int, default=50)
     parser.add_argument('--max_features', help='max selected features per label', default=100, type=int)
 
     args = parser.parse_args()
@@ -84,15 +87,13 @@ def main():
     neighbors_feature_index = [np.nan] * len(analysis_file)
 
     min_significance = 0.6
+    min_subjects = args.min_subjects
+    max_subjects = args.max_subjects
 
     for label in labels:
-        num_of_subjects_in_label = len(data_file.loc[data_file[args.label_column]==label, args.id_column].unique())
-        if args.min_subjects is None:
-            min_subjects = min(num_of_subjects_in_label, 5)
-        else:
-            min_subjects = min(num_of_subjects_in_label, args.min_subjects)
 
         candidates_pool = analysis_file[analysis_file['how_many_subjects'] >= min_subjects]
+        candidates_pool = candidates_pool[analysis_file['how_many_subjects'] <= max_subjects]
         min_significance = min(min_significance, candidates_pool[label].max())
         candidates_pool = candidates_pool[analysis_file[label] >= min_significance]
         candidates_pool = candidates_pool.sort_values(by=[label, 'how_many_subjects'],
