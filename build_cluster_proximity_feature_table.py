@@ -30,37 +30,34 @@ import random
 import ray
 import time
 import json
-import cmath
 from sklearn.metrics.pairwise import pairwise_distances
+
 
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--features_list',
+    parser.add_argument('data_file',  help='the filtered data file path')
+    parser.add_argument('features_file',
                         help='feature list file, contains the list of relevent features, including feature '
                              'center and maximal distance from it')
-    parser.add_argument('--data_file_path',  help='the filtered data file path')
-    parser.add_argument('--vector_column', help='the name of the column with the vector', type=str)
-    parser.add_argument('--output_folder_path', default="./",  help='Output folder for the feature table')
-    parser.add_argument('--output_description',  help='description to use inside output file names')
-    parser.add_argument('--subject_col_name',
-                        help='subject column name in data file, default "repertoire.repertoire_name"',
-                        default='repertoire.repertoire_name', type=str)
+    parser.add_argument('vector_column', help='the name of the column with the vector', type=str)
+    parser.add_argument('output_description',  help='description to use inside output file names', type=str)
+    parser.add_argument('--output_folder', default="./",  help='Output folder for the feature table')
     parser.add_argument('--labels_col_name',
-                        help='labels column name in data file, default "repertoire.disease_diagnosis"',
-                        default='repertoire.disease_diagnosis', type=str)
-    parser.add_argument('--cpus',
-                        help='number of cpus to run parallel computing', default=2, type=int)
+                        help='labels column name in data file, default "subject.disease_diagnosis"',
+                        default='subject.disease_diagnosis', type=str)
     parser.add_argument('--dist_metric',
                         help='type of distance to use, default=euclidean', default='euclidean', type=str)
+    parser.add_argument('--cpus',
+                        help='number of cpus to run parallel computing', default=2, type=int)
     parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
     args = parser.parse_args()
     
-    if not(os.path.isfile(args.features_list)):
+    if not(os.path.isfile(args.features_file)):
         print('feature list file error, make sure file path exists\nExiting...')
         sys.exit(1)
                 
-    if not(os.path.isfile(args.data_file_path)):
+    if not(os.path.isfile(args.data_file)):
         print('feature file error, make sure file path exists\nExiting...')
         sys.exit(1)
 
@@ -68,11 +65,12 @@ def main():
         print("Missing vector_column argument\nExisting...")
         sys.exit(1)
 
-    # load files
     cpus = args.cpus
     dist_metric = args.dist_metric
-    feature_list = pd.read_csv(args.features_list)
-    data_file = pd.read_csv(args.data_file_path, sep='\t')
+
+    feature_list = pd.read_csv(args.features_file)
+
+    data_file = pd.read_csv(args.data_file, sep='\t')
     if args.vector_column not in data_file.columns:
         print("{} is not in data file columns: {}\nExisting...".format(args.vector_column, data_file.columns))
         sys.exit(1)
@@ -80,12 +78,14 @@ def main():
     vectors = np.array(data_file[args.vector_column].apply(lambda x: json.loads(x)).to_list())
     vectors = pd.DataFrame(vectors, columns=list(range(vectors.shape[1])))
 
-    if args.labels_col_name not in data_file.columns:
-        print(f'label "{args.labels_col_name}" column name doesnt exist in data file.\nExiting...')
+    label_column = 'subject.disease_diagnosis'
+    if label_column not in data_file.columns:
+        print(f'label "{label_column}" column name doesnt exist in data file.\nExiting...')
         sys.exit(1)
-        
-    if args.subject_col_name not in data_file.columns:
-        print(f'"{args.subject_col_name}" column name doesnt exist in data file.\nExiting...')
+
+    id_column = 'subject.subject_id'
+    if id_column not in data_file.columns:
+        print(f'"{id_column}" column name doesnt exist in data file.\nExiting...')
         sys.exit(1)
     
     if 'feature_index' not in feature_list.columns:
@@ -99,11 +99,11 @@ def main():
     else:
         ray.init()
 
-    by_subject = data_file.groupby(args.subject_col_name)
+    by_subject = data_file.groupby(id_column)
     # for each subject - add feature frequency columns
     result_ids = []
 
-    features = np.array(feature_list['vector'].apply(lambda x: json.loads(x)).to_list())
+    features = np.array(feature_list[args.vector_column].apply(lambda x: json.loads(x)).to_list())
     features = pd.DataFrame(features, columns=list(range(features.shape[1])))
     max_distance = np.array(feature_list.loc[:, 'max_distance']).reshape(1, len(feature_list))
     features_idx = feature_list['feature_index']
@@ -115,16 +115,16 @@ def main():
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
     # add subject labels column
-    features_table[args.labels_col_name] = None
+    features_table[label_column] = None
     for subject, frame in by_subject:
         label = frame[args.labels_col_name].unique()[0]
         features_table.loc[subject, args.labels_col_name] = label
 
     # save to file
-    features_table.to_csv(os.path.join(args.output_folder_path, args.output_description + '_feature_table.csv'),
+    features_table.to_csv(os.path.join(args.output_folder, args.output_description + '_feature_table.csv'),
                           index_label='SUBJECT')
       
-    print('file saved to ', os.path.join(args.output_folder_path, args.output_description + '_feature_table.csv'))
+    print('file saved to ', os.path.join(args.output_folder, args.output_description + '_feature_table.csv'))
 
 
 @ray.remote

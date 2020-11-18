@@ -1,1 +1,0 @@
-1. Boaz: check doc2vec as an alternative for the summing of the word2vec patterns sequences in AAVec in file sequence_modelling.py

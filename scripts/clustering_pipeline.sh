@@ -110,14 +110,14 @@ for fold in ${folds} ; do
 			else
 			echo "Building train feature table..."
 			# create train feature table
-			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_table_with_labels.py --features_list ${output_dir}/feature_list.csv --data_file_path ${fold_dir}/*_TRAIN_*.tsv --vector_column ${vector_column} --output_folder ${output_dir} --output_description train --subject_col_name repertoire.repertoire_name --labels_col_name repertoire.disease_diagnosis --cpus=12 2>&1 | tee ${output_dir}/build_cluster_proximity_feature_table_with_labels.log.txt
+			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity_feature_table.py --features_list ${output_dir}/feature_list.csv --data_file_path ${fold_dir}/*_TRAIN_*.tsv --vector_column ${vector_column} --output_folder ${output_dir} --output_description train --subject_col_name repertoire.repertoire_name --labels_col_name repertoire.disease_diagnosis --cpus=12 2>&1 | tee ${output_dir}/build_cluster_proximity_feature_table_with_labels.log.txt
 			fi
 			if [ -f ${output_dir}/test_feature_table.csv ] ; then
 			echo "${output_dir}/test_feature_table.csv already exists, skipping building test feature table."	
 			else
 			echo "Building test feature table..."
 			# create test feature table
-			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_table_with_labels.py --labels "${labels}" --features_list ${output_dir}/feature_list.csv --data_file_path ${fold_dir}/*_TEST_*.tsv --vector_column ${vector_column} --output_folder ${output_dir} --output_description test --subject_col_name repertoire.repertoire_name --labels_col_name repertoire.disease_diagnosis --cpus=12 2>&1 | tee -a ${output_dir}/build_cluster_proximity_feature_table_with_labels.log.txt
+			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity_feature_table.py --labels "${labels}" --features_list ${output_dir}/feature_list.csv --data_file_path ${fold_dir}/*_TEST_*.tsv --vector_column ${vector_column} --output_folder ${output_dir} --output_description test --subject_col_name repertoire.repertoire_name --labels_col_name repertoire.disease_diagnosis --cpus=12 2>&1 | tee -a ${output_dir}/build_cluster_proximity_feature_table_with_labels.log.txt
 
 			fi
 		done # max features loop

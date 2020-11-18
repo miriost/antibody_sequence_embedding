@@ -4,6 +4,7 @@ from sklearn.base import clone
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 
+
 class RepertoireClassifier:
 
     def __init__(self, name, estimator=None, trained_model=None, feature_selector=None, features=None, parameters=None):

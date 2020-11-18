@@ -7,6 +7,7 @@ import numpy as np
 import json
 import ast
 
+
 def group_by_metric(df: pd.DataFrame, metric_list: list) -> pd.DataFrame:
 
     if len(metric_list) == 0:
