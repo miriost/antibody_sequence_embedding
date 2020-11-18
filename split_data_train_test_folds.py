@@ -111,7 +111,7 @@ def test_create_folds():
             self.n_repeats = 2
             self.test_size = 0.2
             self.output_dir = './'
-            self.shuffle_labels = True
+            self.shuffle_labels = False
 
     args = DummyArgs()
 
