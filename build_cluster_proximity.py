@@ -78,11 +78,9 @@ def main():
     elif 'cluster_neighbors' not in data_file.columns:
         print("Missing cluster_neighbors column\nExisting...")
         exit(1)
-    else:
-        data_file['cluster_neighbors'] = data_file['cluster_neighbors'].apply(lambda x: ast.literal_eval(x))
 
     if args.analyze_cluster is True:
-        data_file = analyze_data(data_file, id_column, cpus)
+        data_file = analyze_data(data_file, id_column, args.search_knn, cpus)
         data_file.to_csv(args.data_file_path, sep='\t', index=False)
 
 
@@ -210,7 +208,7 @@ def build_distance_and_knn_maps(vectors, sub_row_range, k, dist_metric='euclidea
     return distances_map[np.arange(distances_map.shape[0])[:, None], knn_map], knn_map
 
 
-def analyze_data(data_file: pd.DataFrame, id_column, cpus):
+def analyze_data(data_file: pd.DataFrame, id_column, search_knn: bool, cpus):
 
     knn_map = np.array(data_file['cluster_neighbors'].tolist())
 
@@ -221,28 +219,38 @@ def analyze_data(data_file: pd.DataFrame, id_column, cpus):
 
     results_ids = []
     for sub_range in ranges:
-        results_ids += [analyze_sub_data.remote(vector_subjects, knn_map, sub_range)]
+        results_ids += [analyze_sub_data.remote(data_file.iloc[sub_range[0]:sub_range[1], :],
+                                                vector_subjects,
+                                                search_knn,
+                                                sub_range)]
 
     analysis_df = pd.concat([ray.get(result_id) for result_id in results_ids], ignore_index=True)
     analysis_df.set_index(data_file.index, inplace=True)
-    data_file.loc['cluster_subjects'] = analysis_df['cluster_subjects']
+    data_file['cluster_subjects'] = analysis_df['cluster_subjects']
 
     return data_file
 
 
 @ray.remote
-def analyze_sub_data(vector_subjects: pd.Series, knn_map: np.ndarray, sub_range: tuple):
+def analyze_sub_data(data: pd.DataFrame, vector_subjects: pd.Series, search_knn: bool, sub_range: tuple):
 
     print("analyze_sub_data: range {}".format(sub_range))
 
-    sub_output_df = pd.DataFrame(columns=['cluster_subjects'], index=range(sub_range[0], sub_range[1]))
+    if search_knn:
+        # knn column was created now and it is not a string
+        knn_map = np.array(data['cluster_neighbors'].tolist())
+    else:
+        # knn column was loaded from file and need to be parsed to an array
+        knn_map = np.array(data['cluster_neighbors'].apply(lambda x: ast.literal_eval(x)).tolist())
+
+    sub_output_df = pd.DataFrame()
 
     t0 = time.time()
 
-    cluster_subjects = np.array(vector_subjects.transpose())[np.arange(1)[:, None], knn_map[sub_range[0]:sub_range[1]]]
-    cluster_subjects = pd.Series(cluster_subjects[:, :].tolist(), index=range(sub_range[0], sub_range[1]))
+    cluster_subjects = np.array(vector_subjects.transpose())[np.arange(1)[:, None], knn_map]
+    cluster_subjects = pd.Series(cluster_subjects[:, :].tolist())
 
-    sub_output_df.loc[sub_output_df.index, 'cluster_subjects'] = cluster_subjects
+    sub_output_df['cluster_subjects'] = cluster_subjects
 
     print("cluster_subjects column added, took {}".format(time.time() - t0))
 

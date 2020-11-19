@@ -18,9 +18,9 @@ def main():
                              'default is all labels.')
     parser.add_argument('--max_distance', help='max allowed distance in cluster, default is 999', type=float,
                         default=1.0)
-    parser.add_argument('--min_subjects', help='minimal number of subjects for cluster selection, default is 5',
+    parser.add_argument('--min_subjects', help='minimal number of subjects for cluster selection, default is 7',
                         type=int, default=7)
-    parser.add_argument('--min_significance', help='minimal significance of label for cluster selection, default is',
+    parser.add_argument('--min_significance', help='minimal significance of label for cluster selection, default is 0.7',
                         type=int, default=0.7)
     parser.add_argument('--cpus', help='How many cores to run in parallel -  default is 1.', type=int, default=1)
 
