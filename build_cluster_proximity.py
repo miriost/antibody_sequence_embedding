@@ -74,6 +74,7 @@ def main():
     if args.search_knn is True:
         data_file = search_knn(data_file, vector_column, cluster_size, same_junction_len, same_genes,
                                dist_metric, cpus, step)
+        data_file.to_csv(args.data_file_path, sep='\t', index=False)
     elif 'cluster_neighbors' not in data_file.columns:
         print("Missing cluster_neighbors column\nExisting...")
         exit(1)
@@ -82,8 +83,7 @@ def main():
 
     if args.analyze_cluster is True:
         data_file = analyze_data(data_file, id_column, cpus)
-
-    data_file.to_csv(args.data_file_path, sep='\t', index=False)
+        data_file.to_csv(args.data_file_path, sep='\t', index=False)
 
 
 def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_genes, dist_metric, cpus, step):
@@ -114,6 +114,7 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
 
         return data_file
 
+    sequences_completed = 0
     for agg_idx, frame in data_file.groupby(by):
 
         if len(frame) == 1:
@@ -147,6 +148,9 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
         cluster_distances.index = frame.index
         data_file.loc[frame.index, 'cluster_distances'] = cluster_distances
 
+        sequences_completed += len(frame)
+        print('{}% of sequences completed so far'.fromat(round(sequences_completed*100/len(data_file))))
+
     return data_file
 
 
@@ -161,15 +165,15 @@ def build_maps(data, vector_column, cluster_size, unassigned, dist_metric, cpus,
     ranges = [[round(step*i), min(round(step*(i+1)), vectors.shape[0])] for i in range(partitions)]
 
     for major_row_range in ranges:
-        t0 = time.time()
-        print("calling build_sub_map for range {}".format(major_row_range))
+        #t0 = time.time()
+        #print("calling build_sub_map for range {}".format(major_row_range))
         sub_distances_map, sub_knn_map = build_sub_map(vectors,
                                                        major_row_range,
                                                        cluster_size=min(cluster_size+1, len(data)),
                                                        unassigned=unassigned,
                                                        dist_metric=dist_metric,
                                                        cpus=cpus)
-        print("build_sub_map: creating sub map (range {}) took {}".format(major_row_range, time.time()-t0))
+        #print("build_sub_map: creating sub map (range {}) took {}".format(major_row_range, time.time()-t0))
         distances_map[major_row_range[0]:major_row_range[1], 0:sub_distances_map.shape[1]] = sub_distances_map
         knn_map[major_row_range[0]:major_row_range[1], 0:sub_knn_map.shape[1]] = sub_knn_map
 
@@ -200,21 +204,21 @@ def build_sub_map(vectors, major_row_range, cluster_size, unassigned, dist_metri
 
 @ray.remote
 def build_distance_and_knn_maps(vectors, sub_row_range, k, dist_metric='euclidean', cpus=2):
-    t0 = time.time()
-    print("building distance map for range {}".format(sub_row_range))
+    #t0 = time.time()
+    #print("building distance map for range {}".format(sub_row_range))
 
     distances_map = pairwise_distances(X=vectors[sub_row_range[0]:sub_row_range[1], :], Y=vectors, metric=dist_metric,
                                        n_jobs=cpus)
-    print("building distance map for range {} took {}".format(sub_row_range, time.time() - t0))
+    #print("building distance map for range {} took {}".format(sub_row_range, time.time() - t0))
 
-    t0 = time.time()
-    print("building knn map for range {}".format(sub_row_range))
+    #t0 = time.time()
+    #print("building knn map for range {}".format(sub_row_range))
 
     knn_map = np.argpartition(distances_map, k-1, axis=1)[:, 0:k]
     knn_map = knn_map[np.arange(knn_map.shape[0])[:, None],
                       np.argsort(distances_map[np.arange(distances_map.shape[0])[:, None], knn_map])]
 
-    print("building knn map for range {} took {}".format(sub_row_range, time.time() - t0))
+    #print("building knn map for range {} took {}".format(sub_row_range, time.time() - t0))
 
     return distances_map[np.arange(distances_map.shape[0])[:, None], knn_map], knn_map
 
