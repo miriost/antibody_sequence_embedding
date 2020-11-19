@@ -68,8 +68,7 @@ def main():
     if args.output_data_file is None:
         file_name = os.path.basename(args.input_data_file).split(".tsv")[0]
         dir_name = os.path.dirname(args.input_data_file)
-        output_file_name = os.path.join(dir_name, 
-                file_name + '_sampled_n' + str(args.min_samples) + '_seed' + str(args.seed) + '.tsv')
+        output_file_name = os.path.join(dir_name, file_name + '_sampled_n' + str(args.min_samples) + '_seed' + str(args.seed) + '.tsv')
     else:
         output_file_name = args.output_data_file
 

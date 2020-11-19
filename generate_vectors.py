@@ -63,6 +63,10 @@ def main():
     # drop the un translated rows from the file
     data_file = data_file.drop(data_file.index[data_file[output_column].isnull()])
 
+    # add length columns
+    data_file['cdr3_len'] = data_file['cdr3'].str.len()
+    data_file['cdr3_aa_len'] = data_file['cdr3_aa'].str.len()
+
     # save to files:
     if args.inline is True:
         output_file_name = args.input_file

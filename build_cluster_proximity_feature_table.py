@@ -68,7 +68,7 @@ def main():
     cpus = args.cpus
     dist_metric = args.dist_metric
 
-    feature_list = pd.read_csv(args.features_file)
+    feature_list = pd.read_csv(args.features_file, sep='\t')
 
     data_file = pd.read_csv(args.data_file, sep='\t')
     if args.vector_column not in data_file.columns:
