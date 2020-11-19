@@ -142,9 +142,6 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
         cluster_neighbors.index = frame.index
         data_file.loc[frame.index, 'cluster_neighbors'] = cluster_neighbors
 
-        data_file.loc[frame.index, 'median_distance'] = np.median(distance_map, axis=1)
-        data_file.loc[frame.index, 'max_distance'] = np.max(distance_map, axis=1)
-
         cluster_distances = pd.Series(distance_map[:, :].tolist())
         cluster_distances.index = frame.index
         data_file.loc[frame.index, 'cluster_distances'] = cluster_distances
