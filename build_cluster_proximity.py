@@ -228,8 +228,7 @@ def analyze_data(data_file: pd.DataFrame, id_column, cpus):
 
     analysis_df = pd.concat([ray.get(result_id) for result_id in results_ids], ignore_index=True)
     analysis_df.set_index(data_file.index, inplace=True)
-
-    data_file.loc[:, analysis_df.columns] = analysis_df
+    data_file.loc['cluster_subjects'] = analysis_df['cluster_subjects']
 
     return data_file
 
