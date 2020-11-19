@@ -40,8 +40,8 @@ def main():
     parser.add_argument('--dist_metric',
                         help='type of distance to use, default=euclidean', type=str, default='euclidean')
     parser.add_argument('--cpus', help='How many cores to run in parallel -  default is 1.', type=int, default=1)
-    parser.add_argument('--step', help='How many rows to calculate in parallel, default is 10k.',
-                        type=int, default=10000)
+    parser.add_argument('--step', help='How many rows to calculate in parallel, default is 15k.',
+                        type=int, default=15000)
     parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
 
     args = parser.parse_args()
@@ -61,7 +61,6 @@ def main():
    
     vector_column = args.vector_column
     id_column = 'subject.subject_id'
-    label_column = 'subject.disease_diagnosis'
     cluster_size = args.cluster_size
     dist_metric = args.dist_metric
     cpus = args.cpus
@@ -92,7 +91,16 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
     data_file['cluster_neighbors'] = None
     data_file['cluster_distances'] = None
 
-    if not same_junction_len:
+    by = []
+    if same_genes:
+        data_file['v_gene'] = data_file['v_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(lambda x: x[0])
+        data_file['j_gene'] = data_file['j_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(lambda x: x[0])
+        by += ['v_gene', 'j_gene']
+
+    if same_junction_len:
+        by += ['cdr3_aa_length']
+
+    if len(by) == 0:
         # look for k closest neighbors regardless of the junction length
         distance_map, knn_map = build_maps(data=data_file,
                                            vector_column=vector_column,
@@ -106,7 +114,7 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
 
         return data_file
 
-    for cdr3_len, frame in data_file.groupby('cdr3_aa_length'):
+    for agg_idx, frame in data_file.groupby(by):
 
         if len(frame) == 1:
             # handle the edge case of a frame of size one
@@ -120,7 +128,6 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
         # look for k closest neighbors among sequences with the same junction length)
         distance_map, knn_map = build_maps(data=frame,
                                            vector_column=vector_column,
-                                           same_genes=same_genes,
                                            cluster_size=cluster_size,
                                            unassigned=len(frame),
                                            dist_metric=dist_metric,
@@ -143,17 +150,9 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
     return data_file
 
 
-def build_maps(data, vector_column, same_genes, cluster_size, unassigned, dist_metric='euclidean', cpus=2, step=15000):
+def build_maps(data, vector_column, cluster_size, unassigned, dist_metric, cpus, step):
 
     vectors = np.array(data[vector_column].apply(lambda x: json.loads(x)).tolist(), ndmin=2)
-
-    if same_genes:
-        # add 2 fictitious dimensions, to make sure that junctions with different genes will not be selected to the
-        # same cluster as their distance will be too far
-        v_gene = data['v_call'].str.split('-').apply(lambda x: x[0])
-        j_gene = data['j_call'].str.split('-').apply(lambda x: x[0])
-        vectors = np.c_[vectors, np.array(pd.factorize(v_gene)[0] * 10000, ndmin=2).transpose()]
-        vectors = np.c_[vectors, np.array(pd.factorize(j_gene)[0] * 1000, ndmin=2).transpose()]
 
     distances_map = np.zeros(shape=[vectors.shape[0], cluster_size+1])
     knn_map = np.ones(shape=[vectors.shape[0], cluster_size+1], dtype=int) * unassigned
@@ -178,8 +177,11 @@ def build_maps(data, vector_column, same_genes, cluster_size, unassigned, dist_m
 
 
 def build_sub_map(vectors, major_row_range, cluster_size, unassigned, dist_metric='euclidean', cpus=2):
-    step = (major_row_range[1]-major_row_range[0]) / cpus
-    ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
+    if major_row_range[1]-major_row_range[0] < cpus * 3:
+        ranges = [[0, major_row_range[1]-major_row_range[0]]]
+    else:
+        step = (major_row_range[1]-major_row_range[0]) / cpus
+        ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
     results_ids = []
 
     knn_map = np.ones(shape=[major_row_range[1]-major_row_range[0], cluster_size], dtype=int) * unassigned
