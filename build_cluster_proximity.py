@@ -8,9 +8,9 @@ import math
 from sklearn.metrics.pairwise import pairwise_distances
 import ray
 import json
-import random
 import ast
-
+import random
+import string
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -29,8 +29,6 @@ def main():
     parser.add_argument('data_file_path', help='the filtered data file path')
     parser.add_argument('vector_column', help='the name of the column with the vector')
     parser.add_argument('--cluster_size', help='size of the cluster, default is 100', type=int, default=100)
-    parser.add_argument('--max_distance', help='max allowed distance in cluster, default is unlimited', type=float,
-                        default=sys.float_info.max)
     parser.add_argument('--same_junction_len', help='Limit cluster to same junction length. Default is False',
                         type=str2bool, default=False)
     parser.add_argument('--same_genes', help='Limit cluster to same v/j_call. Default is True.', type=str2bool,
@@ -78,13 +76,13 @@ def main():
         data_file = search_knn(data_file, vector_column, cluster_size, same_junction_len, same_genes,
                                dist_metric, cpus, step)
     elif 'cluster_neighbors' not in data_file.columns:
-        print("Missing vector_column argument\nExisting...")
+        print("Missing cluster_neighbors column\nExisting...")
         exit(1)
     else:
         data_file['cluster_neighbors'] = data_file['cluster_neighbors'].apply(lambda x: ast.literal_eval(x))
 
     if args.analyze_cluster is True:
-        data_file = analyze_data(data_file, id_column, label_column, cpus)
+        data_file = analyze_data(data_file, id_column, cpus)
 
     data_file.to_csv(args.data_file_path, sep='\t', index=False)
 
@@ -104,22 +102,33 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
                                            cpus=cpus,
                                            step=step)
         data_file.loc[:, 'cluster_neighbors'] = knn_map
-        data_file.loc[:, 'median_distance'] = np.median(distance_map, axis=1)
-        data_file.loc[:, 'max_distance'] = np.max(distance_map, axis=1)
         data_file.loc[:, 'cluster_distances'] = distance_map
 
         return data_file
 
     for cdr3_len, frame in data_file.groupby('cdr3_aa_length'):
+
+        if len(frame) == 1:
+            # handle the edge case of a frame of size one
+            tmp = pd.Series([np.zeros(cluster_size + 1).tolist()], index=frame.index)
+            data_file.loc[frame.index, 'cluster_distances'] = tmp
+            tmp = pd.Series([np.zeros(cluster_size + 1, dtype=int).tolist()], index=frame.index)
+            tmp.iloc[0][0] = frame.iloc[0]['index']
+            data_file.loc[frame.index, 'cluster_neighbors'] = tmp
+            continue
+
         # look for k closest neighbors among sequences with the same junction length)
         distance_map, knn_map = build_maps(data=frame,
                                            vector_column=vector_column,
                                            same_genes=same_genes,
                                            cluster_size=cluster_size,
+                                           unassigned=len(frame),
                                            dist_metric=dist_metric,
                                            cpus=cpus,
                                            step=step)
-        cluster_neighbors = np.array(frame[['index']].transpose())[np.arange(1)[:, None], knn_map[:, :]]
+        # len(data_file) is the marker for the unassigned neighbors (not enough candidates)
+        index_df = pd.DataFrame(frame['index'].to_list() + [len(data_file)])
+        cluster_neighbors = np.array(index_df.transpose())[np.arange(1)[:, None], knn_map[:, :]]
         cluster_neighbors = pd.Series(cluster_neighbors[:, :].tolist())
         cluster_neighbors.index = frame.index
         data_file.loc[frame.index, 'cluster_neighbors'] = cluster_neighbors
@@ -134,7 +143,7 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
     return data_file
 
 
-def build_maps(data, vector_column, same_genes, cluster_size, dist_metric='euclidean', cpus=2, step=15000):
+def build_maps(data, vector_column, same_genes, cluster_size, unassigned, dist_metric='euclidean', cpus=2, step=15000):
 
     vectors = np.array(data[vector_column].apply(lambda x: json.loads(x)).tolist(), ndmin=2)
 
@@ -147,38 +156,42 @@ def build_maps(data, vector_column, same_genes, cluster_size, dist_metric='eucli
         vectors = np.c_[vectors, np.array(pd.factorize(j_gene)[0] * 1000, ndmin=2).transpose()]
 
     distances_map = np.zeros(shape=[vectors.shape[0], cluster_size+1])
-    knn_map = np.zeros(shape=[vectors.shape[0], cluster_size+1], dtype=int)
-    step = max(vectors.shape[0], step)
+    knn_map = np.ones(shape=[vectors.shape[0], cluster_size+1], dtype=int) * unassigned
+    step = min(vectors.shape[0], step)
     partitions = math.ceil(vectors.shape[0] / step)
     ranges = [[round(step*i), min(round(step*(i+1)), vectors.shape[0])] for i in range(partitions)]
 
     for major_row_range in ranges:
         t0 = time.time()
         print("calling build_sub_map for range {}".format(major_row_range))
-        sub_distances_map, sub_knn_map = build_sub_map(vectors, major_row_range, cluster_size=cluster_size,
-                                                       dist_metric=dist_metric, cpus=cpus)
+        sub_distances_map, sub_knn_map = build_sub_map(vectors,
+                                                       major_row_range,
+                                                       cluster_size=min(cluster_size+1, len(data)),
+                                                       unassigned=unassigned,
+                                                       dist_metric=dist_metric,
+                                                       cpus=cpus)
         print("build_sub_map: creating sub map (range {}) took {}".format(major_row_range, time.time()-t0))
-        distances_map[major_row_range[0]:major_row_range[1], :] = sub_distances_map
-        knn_map[major_row_range[0]:major_row_range[1], :] = sub_knn_map
+        distances_map[major_row_range[0]:major_row_range[1], 0:sub_distances_map.shape[1]] = sub_distances_map
+        knn_map[major_row_range[0]:major_row_range[1], 0:sub_knn_map.shape[1]] = sub_knn_map
 
     return distances_map, knn_map
 
 
-def build_sub_map(vectors, major_row_range, cluster_size, dist_metric='euclidean', cpus=2):
+def build_sub_map(vectors, major_row_range, cluster_size, unassigned, dist_metric='euclidean', cpus=2):
     step = (major_row_range[1]-major_row_range[0]) / cpus
     ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
     results_ids = []
 
-    knn_map = np.zeros(shape=[major_row_range[1]-major_row_range[0], cluster_size+1], dtype=int)
-    distances_map = np.zeros(shape=[major_row_range[1]-major_row_range[0], cluster_size+1])
+    knn_map = np.ones(shape=[major_row_range[1]-major_row_range[0], cluster_size], dtype=int) * unassigned
+    distances_map = np.zeros(shape=[major_row_range[1]-major_row_range[0], cluster_size])
     for minor_row_range in ranges:
         sub_row_range = [major_row_range[0] + minor_row_range[0], major_row_range[0] + minor_row_range[1]]
-        results_ids += [build_distance_and_knn_maps.remote(vectors, sub_row_range, k=cluster_size + 1,
+        results_ids += [build_distance_and_knn_maps.remote(vectors, sub_row_range, k=cluster_size,
                                                            dist_metric=dist_metric, cpus=cpus)]
     for i, minor_row_range in enumerate(ranges):
         sub_distances_map, sub_knn_map = ray.get(results_ids[i])
-        distances_map[minor_row_range[0]:minor_row_range[1], :] = sub_distances_map
-        knn_map[minor_row_range[0]:minor_row_range[1], :] = sub_knn_map
+        distances_map[minor_row_range[0]:minor_row_range[1], 0:sub_distances_map.shape[1]] = sub_distances_map
+        knn_map[minor_row_range[0]:minor_row_range[1], 0:sub_knn_map.shape[1]] = sub_knn_map
 
     return distances_map, knn_map
 
@@ -188,99 +201,60 @@ def build_distance_and_knn_maps(vectors, sub_row_range, k, dist_metric='euclidea
     t0 = time.time()
     print("building distance map for range {}".format(sub_row_range))
 
-    print(vectors.shape)
-
-    distances_map = pairwise_distances(X=vectors[sub_row_range[0]:sub_row_range[1]], Y=vectors, metric=dist_metric,
+    distances_map = pairwise_distances(X=vectors[sub_row_range[0]:sub_row_range[1], :], Y=vectors, metric=dist_metric,
                                        n_jobs=cpus)
     print("building distance map for range {} took {}".format(sub_row_range, time.time() - t0))
 
     t0 = time.time()
     print("building knn map for range {}".format(sub_row_range))
-    knn_map = np.argpartition(distances_map, k, axis=1)[:, 0:k]
+
+    knn_map = np.argpartition(distances_map, k-1, axis=1)[:, 0:k]
     knn_map = knn_map[np.arange(knn_map.shape[0])[:, None],
                       np.argsort(distances_map[np.arange(distances_map.shape[0])[:, None], knn_map])]
+
     print("building knn map for range {} took {}".format(sub_row_range, time.time() - t0))
 
     return distances_map[np.arange(distances_map.shape[0])[:, None], knn_map], knn_map
 
 
-def analyze_data(data_file: pd.DataFrame, id_column, label_column, cpus):
+def analyze_data(data_file: pd.DataFrame, id_column, cpus):
 
-    data_file['vector_subjects'] = list(map(lambda x: [x], data_file[id_column]))
     knn_map = np.array(data_file['cluster_neighbors'].tolist())
-    labels = data_file[label_column].unique().tolist()
-    subjects = data_file.loc[:, ].groupby(by=[id_column])[label_column].apply(lambda x: x.iloc[0])
 
-    step = len(knn_map) / cpus
+    vector_subjects = pd.DataFrame(list(map(lambda x: [x], data_file[id_column])) + [[None]])
+
+    step = knn_map.shape[0] / cpus
     ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
 
     results_ids = []
     for sub_range in ranges:
-        results_ids += [analyze_sub_data.remote(data_file, knn_map, sub_range, labels, subjects)]
+        results_ids += [analyze_sub_data.remote(vector_subjects, knn_map, sub_range)]
 
     analysis_df = pd.concat([ray.get(result_id) for result_id in results_ids], ignore_index=True)
+    analysis_df.set_index(data_file.index, inplace=True)
 
     data_file.loc[:, analysis_df.columns] = analysis_df
-
-    data_file.drop(['vector_subjects'], axis=1, inplace=True)
 
     return data_file
 
 
 @ray.remote
-def analyze_sub_data(data_file: pd.DataFrame, knn_map: np.ndarray, sub_range: tuple, labels: list,
-                     subjects: pd.DataFrame):
+def analyze_sub_data(vector_subjects: pd.Series, knn_map: np.ndarray, sub_range: tuple):
 
     print("analyze_sub_data: range {}".format(sub_range))
 
-    sub_output_df = pd.DataFrame()
+    sub_output_df = pd.DataFrame(columns=['cluster_subjects'], index=range(sub_range[0], sub_range[1]))
 
     t0 = time.time()
-    neighbors = np.array(data_file[['vector_subjects']].transpose())[np.arange(1)[:, None],
-                                                                     knn_map[sub_range[0]:sub_range[1]]]
-    neighbors = np.array(list(map(lambda x: np.unique(np.concatenate(x)), neighbors)))
-    for status in labels:
-        sub_output_df[status + '_subjects'] = list(
-            map(lambda x: subjects[(subjects.index.isin(x)) & (subjects == status)].index.tolist(), neighbors))
 
-    sub_output_df['how_many_subjects'] = list(map(lambda x: len(x), neighbors))
-    print("subjects columns added, took {}".format(time.time() - t0))
+    cluster_subjects = np.array(vector_subjects.transpose())[np.arange(1)[:, None], knn_map[sub_range[0]:sub_range[1]]]
+    cluster_subjects = pd.Series(cluster_subjects[:, :].tolist(), index=range(sub_range[0], sub_range[1]))
 
-    t0 = time.time()
-    tmp = pd.concat(list(map(lambda x: subjects[x].value_counts(normalize=True), neighbors)), sort=True, axis=1)
-    tmp = tmp.transpose().reset_index(drop=True)
-    tmp = tmp.fillna(0)
-    sub_output_df[labels] = tmp[labels]
-    print("labels columns added, took {}".format(time.time() - t0))
+    sub_output_df.loc[sub_output_df.index, 'cluster_subjects'] = cluster_subjects
+
+    print("cluster_subjects column added, took {}".format(time.time() - t0))
 
     return sub_output_df
-
-
-def test_build_dist_and_knn_maps(dim_one=1000, dim_two=10, cluster_size=5, cpus=2):
-    data = np.random.rand(dim_one, dim_two)
-    t0 = time.time()
-    distance_map, knn_map = build_maps(data, cluster_size, dist_metric='euclidean', cpus=cpus, step=10)
-    print("building maps completed after {}".format(time.time() - t0))
-
-
-def test_analyze_sub_data():
-    data = pd.DataFrame()
-    data['subject'] = random.choices(['P1_I1', 'P1_I2', 'P1_I3', 'P1_I4', 'P1_I5', 'P1_I6', 'P1_I7', 'P1_I8'], k=1000)
-    data['labels'] = random.choices(['healthy', 'celiac'], k=1000)
-    knn_map = np.array([random.sample(range(1000), 10) for i in range(1000)])
-    status_types = data['labels'].unique()
-
-    cpus = 3
-    step = len(data) / cpus
-    ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
-
-    results_ids = []
-    for sub_range in ranges:
-        results_ids += [analyze_sub_data.remote(knn_map, data, sub_range, status_types)]
-
-    output_df = pd.concat([ray.get(result_id) for result_id in results_ids], ignore_index=True)
-
-    return output_df
 
 
 if __name__ == '__main__':
