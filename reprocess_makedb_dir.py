@@ -67,11 +67,15 @@ def main():
         local_df = local_df[local_df.cdr3_length % 3 == 0]
         print(' - After cdr3_length % 3 == 0 : {}'.format(len(local_df)))
 
-        # 3. LEAVE ONLY ROWS WHERE CONSCOUNT > 1
+        # 3. REMOVE CDR3 shorter than 3
+        local_df = local_df[local_df.cdr3_aa_length >= 3]
+        print(' - After cdr3_aa_length >=3'.format(len(local_df)))
+
+        # 4. LEAVE ONLY ROWS WHERE CONSCOUNT > 1
         local_df = local_df[local_df['consensus_count'] > 1]
         print(' - After consensus_count > 1: {} '.format(len(local_df)))
 
-        # 4. REMOVE SEQUENCES WITH EDIT DISTANCE > 3 FROM GERMLINE
+        # 5. REMOVE SEQUENCES WITH EDIT DISTANCE > 3 FROM GERMLINE
         if args.naive:
             dist_from_germline = local_df.apply(lambda x: distance(x['v_germline_alignment'],
                                                                    x['v_sequence_alignment']), axis=1)
