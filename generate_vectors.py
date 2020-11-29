@@ -17,12 +17,12 @@ def str2bool(v):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='embed a column from input file')
 
-    parser.add_argument('--input_file', help='a tsv with the column to vectorize')
-    parser.add_argument('--output_column', help='column name for the output (default model file name)')
-    parser.add_argument('--column', help='column name to convert to vectors', default="junction")
+    parser = argparse.ArgumentParser(description='embed a column from input file')
+    parser.add_argument('input_file', help='a tsv with the column to vectorize')
     parser.add_argument('model', help='a saved word embedding model file')
+    parser.add_argument('--column', help='column name to convert to vectors (default cdr3_aa)', default="cdr3_aa")
+    parser.add_argument('--output_column', help='column name for the output (default model file name)')
     parser.add_argument('--size', help='vector size (default 100)', default=100)
     parser.add_argument('--inline', help='Save output on the input file', default=True, type=str2bool)
 

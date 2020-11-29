@@ -102,7 +102,6 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
         # look for k closest neighbors regardless of the junction length
         distance_map, knn_map = build_maps(data=data_file,
                                            vector_column=vector_column,
-                                           same_genes=same_genes,
                                            cluster_size=cluster_size,
                                            dist_metric=dist_metric,
                                            cpus=cpus,
@@ -160,6 +159,7 @@ def build_maps(data, vector_column, cluster_size, unassigned, dist_metric, cpus,
     partitions = math.ceil(vectors.shape[0] / step)
     ranges = [[round(step*i), min(round(step*(i+1)), vectors.shape[0])] for i in range(partitions)]
 
+    sequences_completed = 0
     for major_row_range in ranges:
         sub_distances_map, sub_knn_map = build_sub_map(vectors,
                                                        major_row_range,
@@ -169,6 +169,9 @@ def build_maps(data, vector_column, cluster_size, unassigned, dist_metric, cpus,
                                                        cpus=cpus)
         distances_map[major_row_range[0]:major_row_range[1], 0:sub_distances_map.shape[1]] = sub_distances_map
         knn_map[major_row_range[0]:major_row_range[1], 0:sub_knn_map.shape[1]] = sub_knn_map
+
+        sequences_completed += sub_knn_map.shape[0]
+        print('{:.2f}% of sequences completed so far'.format(sequences_completed * 100 / len(data)))
 
     return distances_map, knn_map
 

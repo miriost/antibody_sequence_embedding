@@ -16,16 +16,16 @@ from embedding.sequence_modeling import ProtVec
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_file', help='an input tsv file with', type=str)
-    parser.add_argument('--data_column', help='name of the column with the data for the model generation', type=str)
+    parser.add_argument('data_file', help='an input tsv file with', type=str)
+    parser.add_argument('desc', help='desc for the output files names', type=str)
+    parser.add_argument('data_column', help='name of the column with the data for the model generation', type=str)
+    parser.add_argument('--n_gram', help='n-gram parameter from the prot to vec (default 3)', type=int, default=3)
     parser.add_argument('--corpus_file', help='an input corpus file - if data-file was not provided', type=str)
-    parser.add_argument('--desc', help='desc for the output files names', type=str)
     parser.add_argument('--reading_frame', help='reading frame parameter for the prot to vec', type=int)
-    parser.add_argument('--trimming', help='start end trimming to the junction', type=int, nargs=2)
-    parser.add_argument('--n_gram', help='n-gram parameter from the prot to vec', type=int)
     parser.add_argument('--sample_fraction', help='part of data used for creating the model (default 1.0)', type=float,
                         default=1.0)
-    parser.add_argument('--seed', help='seed used for sampling the data used for the model', type=int, default=0)
+    parser.add_argument('--seed', help='seed used for sampling the data used for the model, (default 0)', type=int,
+                        default=0)
 
     args = parser.parse_args()
 
@@ -48,7 +48,7 @@ def main():
         sys.exit(2)
 
     pv = ProtVec(data=data, corpus=args.corpus_file, n=args.n_gram, reading_frame=args.reading_frame,
-                 trim=args.trimming, size=100, out=args.desc, sg=1, window=5, min_count=2, workers=3,
+                 size=100, out=args.desc, sg=1, window=5, min_count=2, workers=3,
                  sample_fraction=args.sample_fraction, random_seed=args.seed)
 
     print('Model is ready, saving...')
