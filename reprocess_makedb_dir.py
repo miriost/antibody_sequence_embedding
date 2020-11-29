@@ -30,8 +30,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('input_file', help='input tsv file')
     parser.add_argument('output_file', help='output file', type=str)
-    parser.add_argument('--naive', nargs=2, type=str2bool, help='sequences are of naive cells, default is False.',
-                        default=False)
+    parser.add_argument('--naive', type=str2bool, help='sequences are of naive cells, default is False.', default=False)
     parser.add_argument('--min_seq_per_subject', type=int, help='min number of sequence per subject, default is 2000',
                         default=2000)
 
