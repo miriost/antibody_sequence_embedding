@@ -30,15 +30,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('input_file', help='input tsv file')
     parser.add_argument('output_file', help='output file', type=str)
-    parser.add_argument('--subject_field', help='output file', type=str, default='subject.subject_id')
-    parser.add_argument('--trim', nargs=2, type=int, help='two integers to trim, first from beginning, 2nd from end')
-    parser.add_argument('--naive', nargs=2, type=str2bool, help='sequences are of naive cells. default is False.',
+    parser.add_argument('--naive', nargs=2, type=str2bool, help='sequences are of naive cells, default is False.',
                         default=False)
-    parser.add_argument('--min_seq_per_subject', type=int, help='min number of sequence per subject', default=2000)
+    parser.add_argument('--min_seq_per_subject', type=int, help='min number of sequence per subject, default is 2000',
+                        default=2000)
 
     args = parser.parse_args()
     total_rows = 0
     input_file = args.input_file
+    id_column = 'subject.subject_id'
 
     df_list = []
 
@@ -50,7 +50,7 @@ def main():
     file_df['cdr3_length'] = file_df['cdr3'].str.len()
     file_df['cdr3_aa_length'] = file_df['cdr3_aa'].str.len()
 
-    by_subject = file_df.groupby([args.subject_field])
+    by_subject = file_df.groupby([id_column])
 
     for subject, frame in by_subject:
 
@@ -58,7 +58,7 @@ def main():
 
         local_df = frame
 
-        print('file {} sujbect {} total rows: {}'.format(file, subject, len(local_df)))
+        print('sujbect {} total rows: {}'.format(subject, len(local_df)))
 
         # 1. REMOVE NON-FUNCTIONAL SEQUENCES
         local_df = local_df.loc[local_df.productive == True, :]
