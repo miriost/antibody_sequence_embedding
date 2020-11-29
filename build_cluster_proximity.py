@@ -103,6 +103,7 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
         distance_map, knn_map = build_maps(data=data_file,
                                            vector_column=vector_column,
                                            cluster_size=cluster_size,
+                                           unassigned=len(data_file),
                                            dist_metric=dist_metric,
                                            cpus=cpus,
                                            step=step)
