@@ -91,7 +91,7 @@ def main():
 
     big_df.to_csv(args.output_file, index=False, sep='\t')
     print('*********\nfile generated {} out of {} repertoires\nOriginal rows count: {} After filtering: {}'.format(
-        args.output_file, len(big_df['repertoire.repertoire_name'].unique()), total_rows, len(big_df)))
+        args.output_file, len(big_df[id_column].unique()), total_rows, len(big_df)))
 
 
 if __name__ == "__main__":
