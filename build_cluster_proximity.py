@@ -100,6 +100,7 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
 
     if len(by) == 0:
         # look for k closest neighbors regardless of the junction length
+        print('before calling build_maps')
         distance_map, knn_map = build_maps(data=data_file,
                                            vector_column=vector_column,
                                            cluster_size=cluster_size,
@@ -107,8 +108,13 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
                                            dist_metric=dist_metric,
                                            cpus=cpus,
                                            step=step)
-        data_file.loc[:, 'cluster_neighbors'] = knn_map
-        data_file.loc[:, 'cluster_distances'] = distance_map
+        cluster_neighbors = pd.Series(knn_map[:, :].tolist())
+        cluster_neighbors.index = data_file.index
+        data_file.loc[data_file.index, 'cluster_neighbors'] = cluster_neighbors
+        
+        cluster_distances = pd.Series(distance_map[:, :].tolist())
+        cluster_distances.index = data_file.index
+        data_file.loc[data_file.index, 'cluster_distances'] = cluster_distances
 
         return data_file
 
@@ -154,11 +160,15 @@ def build_maps(data, vector_column, cluster_size, unassigned, dist_metric, cpus,
 
     vectors = np.array(data[vector_column].apply(lambda x: json.loads(x)).tolist(), ndmin=2)
 
+    print('after initliazing vectors')
+
     distances_map = np.zeros(shape=[vectors.shape[0], cluster_size+1])
     knn_map = np.ones(shape=[vectors.shape[0], cluster_size+1], dtype=int) * unassigned
     step = min(vectors.shape[0], step)
     partitions = math.ceil(vectors.shape[0] / step)
     ranges = [[round(step*i), min(round(step*(i+1)), vectors.shape[0])] for i in range(partitions)]
+
+    print('after initliazing data sets')
 
     sequences_completed = 0
     for major_row_range in ranges:
