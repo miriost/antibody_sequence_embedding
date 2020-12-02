@@ -9,8 +9,8 @@ from sklearn.metrics.pairwise import pairwise_distances
 import ray
 import json
 import ast
-import random
-import string
+import psutil
+import gc
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -39,7 +39,6 @@ def main():
                         type=str2bool, default=True)
     parser.add_argument('--dist_metric',
                         help='type of distance to use, default=euclidean', type=str, default='euclidean')
-    parser.add_argument('--cpus', help='How many cores to run in parallel -  default is 1.', type=int, default=1)
     parser.add_argument('--step', help='How many rows to calculate in parallel, default is 15k.',
                         type=int, default=15000)
     parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
@@ -63,28 +62,28 @@ def main():
     id_column = 'subject.subject_id'
     cluster_size = args.cluster_size
     dist_metric = args.dist_metric
-    cpus = args.cpus
     step = args.step
     same_genes = args.same_genes
     same_junction_len = args.same_junction_len
+    search_knn = args.search_knn
 
     data_file = pd.read_csv(args.data_file_path, sep='\t')
     data_file['index'] = data_file.index
 
-    if args.search_knn is True:
+    if search_knn is True:
         data_file = search_knn(data_file, vector_column, cluster_size, same_junction_len, same_genes,
-                               dist_metric, cpus, step)
+                               dist_metric, step)
         data_file.to_csv(args.data_file_path, sep='\t', index=False)
     elif 'cluster_neighbors' not in data_file.columns:
         print("Missing cluster_neighbors column\nExisting...")
         exit(1)
 
     if args.analyze_cluster is True:
-        data_file = analyze_data(data_file, id_column, args.search_knn, cpus)
+        data_file = analyze_data(data_file, id_column, search_knn)
         data_file.to_csv(args.data_file_path, sep='\t', index=False)
 
 
-def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_genes, dist_metric, cpus, step):
+def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_genes, dist_metric, step):
 
     data_file['cluster_neighbors'] = None
     data_file['cluster_distances'] = None
@@ -100,13 +99,11 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
 
     if len(by) == 0:
         # look for k closest neighbors regardless of the junction length
-        print('before calling build_maps')
         distance_map, knn_map = build_maps(data=data_file,
                                            vector_column=vector_column,
                                            cluster_size=cluster_size,
                                            unassigned=len(data_file),
                                            dist_metric=dist_metric,
-                                           cpus=cpus,
                                            step=step)
         cluster_neighbors = pd.Series(knn_map[:, :].tolist())
         cluster_neighbors.index = data_file.index
@@ -137,7 +134,6 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
                                            cluster_size=cluster_size,
                                            unassigned=len(frame),
                                            dist_metric=dist_metric,
-                                           cpus=cpus,
                                            step=step)
         # len(data_file) is the marker for the unassigned neighbors (not enough candidates)
         index_df = pd.DataFrame(frame['index'].to_list() + [len(data_file)])
@@ -156,11 +152,26 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
     return data_file
 
 
-def build_maps(data, vector_column, cluster_size, unassigned, dist_metric, cpus, step):
+def auto_garbage_collect(pct=80.0):
+    if psutil.virtual_memory().percent >= pct:
+        gc.collect()
+
+
+def build_maps(data: pd.DataFrame, vector_column, cluster_size, unassigned, dist_metric, step):
 
     vectors = np.array(data[vector_column].apply(lambda x: json.loads(x)).tolist(), ndmin=2)
+    vectors_id = ray.put(vectors)
 
-    print('after initliazing vectors')
+    if dist_metric == 'seuclidean':
+        vectors_std  = np.std(vectors, axis=0)
+        vectors_std_id = ray.put(vectors_std)
+    else:
+        vectors_std_id = None
+
+    if dist_metric == 'euclidean':
+        n_jobs = 1
+    else:
+        n_jobs = psutil.cpu_count()
 
     distances_map = np.zeros(shape=[vectors.shape[0], cluster_size+1])
     knn_map = np.ones(shape=[vectors.shape[0], cluster_size+1], dtype=int) * unassigned
@@ -168,52 +179,32 @@ def build_maps(data, vector_column, cluster_size, unassigned, dist_metric, cpus,
     partitions = math.ceil(vectors.shape[0] / step)
     ranges = [[round(step*i), min(round(step*(i+1)), vectors.shape[0])] for i in range(partitions)]
 
-    print('after initliazing data sets')
-
     sequences_completed = 0
-    for major_row_range in ranges:
-        sub_distances_map, sub_knn_map = build_sub_map(vectors,
-                                                       major_row_range,
-                                                       cluster_size=min(cluster_size+1, len(data)),
-                                                       unassigned=unassigned,
-                                                       dist_metric=dist_metric,
-                                                       cpus=cpus)
-        distances_map[major_row_range[0]:major_row_range[1], 0:sub_distances_map.shape[1]] = sub_distances_map
-        knn_map[major_row_range[0]:major_row_range[1], 0:sub_knn_map.shape[1]] = sub_knn_map
+    results_ids = [build_distance_and_knn_maps.remote(vectors_id, sub_row_range, k=cluster_size,
+                                                      dist_metric=dist_metric, vectors_std=vectors_std_id,
+                                                      n_jobs=n_jobs) for sub_row_range in ranges]
 
+    for i, sub_row_range in enumerate(ranges):
+        auto_garbage_collect()
+        sub_distances_map, sub_knn_map = ray.get(results_ids[i])
+        distances_map[sub_row_range[0]:sub_row_range[1], 0:sub_distances_map.shape[1]] = sub_distances_map
+        knn_map[sub_row_range[0]:sub_row_range[1], 0:sub_knn_map.shape[1]] = sub_knn_map
         sequences_completed += sub_knn_map.shape[0]
         print('{:.2f}% of sequences completed so far'.format(sequences_completed * 100 / len(data)))
 
     return distances_map, knn_map
 
 
-def build_sub_map(vectors, major_row_range, cluster_size, unassigned, dist_metric='euclidean', cpus=2):
-    if major_row_range[1]-major_row_range[0] < cpus * 3:
-        ranges = [[0, major_row_range[1]-major_row_range[0]]]
-    else:
-        step = (major_row_range[1]-major_row_range[0]) / cpus
-        ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
-    results_ids = []
-
-    knn_map = np.ones(shape=[major_row_range[1]-major_row_range[0], cluster_size], dtype=int) * unassigned
-    distances_map = np.zeros(shape=[major_row_range[1]-major_row_range[0], cluster_size])
-    for minor_row_range in ranges:
-        sub_row_range = [major_row_range[0] + minor_row_range[0], major_row_range[0] + minor_row_range[1]]
-        results_ids += [build_distance_and_knn_maps.remote(vectors, sub_row_range, k=cluster_size,
-                                                           dist_metric=dist_metric, cpus=cpus)]
-    for i, minor_row_range in enumerate(ranges):
-        sub_distances_map, sub_knn_map = ray.get(results_ids[i])
-        distances_map[minor_row_range[0]:minor_row_range[1], 0:sub_distances_map.shape[1]] = sub_distances_map
-        knn_map[minor_row_range[0]:minor_row_range[1], 0:sub_knn_map.shape[1]] = sub_knn_map
-
-    return distances_map, knn_map
-
-
 @ray.remote
-def build_distance_and_knn_maps(vectors, sub_row_range, k, dist_metric='euclidean', cpus=2):
+def build_distance_and_knn_maps(vectors: np.array, sub_row_range, k, dist_metric='euclidean', vectors_std=None, n_jobs=1):
 
-    distances_map = pairwise_distances(X=vectors[sub_row_range[0]:sub_row_range[1], :], Y=vectors, metric=dist_metric,
-                                       n_jobs=cpus)
+    if dist_metric == 'seuclidean':
+        distances_map = pairwise_distances(X=vectors[sub_row_range[0]:sub_row_range[1], :],
+                                           V=vectors_std, Y=vectors,
+                                           metric=dist_metric, n_jobs=n_jobs)
+    else:
+        distances_map = pairwise_distances(X=vectors[sub_row_range[0]:sub_row_range[1], :], Y=vectors,
+                                           metric=dist_metric, n_jobs=n_jobs)
 
     knn_map = np.argpartition(distances_map, k-1, axis=1)[:, 0:k]
     knn_map = knn_map[np.arange(knn_map.shape[0])[:, None],
@@ -222,19 +213,21 @@ def build_distance_and_knn_maps(vectors, sub_row_range, k, dist_metric='euclidea
     return distances_map[np.arange(distances_map.shape[0])[:, None], knn_map], knn_map
 
 
-def analyze_data(data_file: pd.DataFrame, id_column, search_knn: bool, cpus):
+def analyze_data(data_file: pd.DataFrame, id_column, search_knn: bool):
 
+    n_cpus = psutil.cpu_count()
     knn_map = np.array(data_file['cluster_neighbors'].tolist())
 
     vector_subjects = pd.DataFrame(list(map(lambda x: [x], data_file[id_column])) + [[None]])
+    vector_subjects_id = ray.put(vector_subjects)
 
-    step = knn_map.shape[0] / cpus
-    ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
+    step = knn_map.shape[0] / n_cpus
+    ranges = [[round(step * i), round(step * (i + 1))] for i in range(n_cpus)]
 
     results_ids = []
     for sub_range in ranges:
         results_ids += [analyze_sub_data.remote(data_file.iloc[sub_range[0]:sub_range[1], :],
-                                                vector_subjects,
+                                                vector_subjects_id,
                                                 search_knn,
                                                 sub_range)]
 
@@ -246,7 +239,7 @@ def analyze_data(data_file: pd.DataFrame, id_column, search_knn: bool, cpus):
 
 
 @ray.remote
-def analyze_sub_data(data: pd.DataFrame, vector_subjects: pd.Series, search_knn: bool, sub_range: tuple):
+def analyze_sub_data(data: pd.DataFrame, vector_subjects:pd.Series, search_knn: bool, sub_range: tuple):
 
     print("analyze_sub_data: range {}".format(sub_range))
 
