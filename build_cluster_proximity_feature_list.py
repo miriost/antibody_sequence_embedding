@@ -47,7 +47,7 @@ def main():
     id_column = 'subject.subject_id'
     min_significance = args.min_significance
     min_subjects = args.min_subjects
-    num_cpus = args.cpus
+    num_cpus = args.num_cpus
     max_distance = args.max_distance
     shuffle_seed = args.shuffle_seed
     max_distance_diameter = args.max_distance_diameter
