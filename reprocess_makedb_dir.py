@@ -90,7 +90,7 @@ def main():
             print(' - After dist_from_germline <= 3: {} '.format(len(local_df)))
 
         if len(local_df) >= args.min_seq_per_subject:
-            local_df = local_df['document._id', 'v_call', 'j_call', 'cdr3_aa', 'cdr3_aa_length']
+            local_df = local_df[['document._id', 'subject.subject_id', 'subject.disease_diagnosis', 'v_call', 'j_call', 'cdr3_aa', 'cdr3_aa_length']]
             df_list += [local_df]
         else:
             print('subject not added due to low number of sequences')
