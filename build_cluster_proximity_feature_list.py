@@ -37,7 +37,8 @@ def main():
     parser.add_argument('--num_cpus', help='How many cores to run in parallel -  default is psutil.cpu_count()',
                         type=int)
     parser.add_argument('--shuffle_labels', help='shuffle the subjects labels before creating the feature list, default'
-                                                 ' is false.',
+                                                 ' is false.', type=str2bool, default=False)
+    parser.add_argument('--max_distance_diameter', help='use max distance as the cluster diameter, default is False',
                         type=str2bool, default=False)
 
     args = parser.parse_args()
@@ -49,6 +50,7 @@ def main():
     num_cpus = args.cpus
     max_distance = args.max_distance
     shuffle_labels = args.shuffle_labels
+    max_distance_diameter = args.max_distance_diameter
 
     if num_cpus is None:
         num_cpus = psutil.cpu_count()
@@ -93,7 +95,8 @@ def main():
 
         candidates_pool = data_file[data_file['how_many_subjects'] >= min_subjects]
         candidates_pool = candidates_pool[data_file[label] >= min_significance]
-        candidates_pool = candidates_pool.sort_values(by=[label, 'how_many_subjects'], ascending=[False, False])
+        candidates_pool = candidates_pool.sort_values(by=[label, 'how_many_subjects', 'mean_distance', 'max_distance'],
+                                                      ascending=[False, False, True])
 
         number_of_feature_labels = 0
         for idx, val in candidates_pool.iterrows():
@@ -124,6 +127,9 @@ def main():
     features_df.loc[selected_features, 'cluster_sequences'] = data_file.loc[selected_features,
                                                                             'cluster_neighbors'].apply(lambda x: data_file.loc[x, 'document._id'].to_list())
 
+    if max_distance_diameter:
+        features_df['max_distance'] = max_distance
+
     features_df.to_csv(os.path.join(args.output_folder_path, args.output_description + '.tsv'), sep='\t',
                        index_label='feature_index')
     print('file saved to ', os.path.join(args.output_folder_path, args.output_description + '.tsv'))
@@ -141,36 +147,43 @@ def build_maps(data, subjects, labels, max_distance, unassinged):
 
     # need to filter neighbors by max_distance
     filtering = np.logical_and(distance_map <= max_distance, neighbors_map != unassinged)
+
     del neighbors_map
+    del distance_map
 
-    cluster_subjects = list(map(lambda i: np.array(data.iloc[i, :]['cluster_subjects'])[filtering[i, :]], range(len(data))))
-
-    # drop None values because of unassigned neighbors due to lack of candidates, reduce to unique subjects
-    cluster_subjects = np.array(list(map(lambda x: np.unique(pd.Series(x).dropna().to_list()), cluster_subjects)))
+    cluster_subjects = list(map(lambda i: np.unique(np.array(data.iloc[i, :]['cluster_subjects'])[filtering[i, :]]).tolist(),
+                                range(len(data))))
+    data['cluster_subjects'] = pd.Series(cluster_subjects, index=data.index)
+    del cluster_subjects
 
     cluster_neighbors = list(map(lambda i: np.array(data.iloc[i, :]['cluster_neighbors'])[filtering[i, :]].tolist(),
                                  range(len(data))))
     data['cluster_neighbors'] = pd.Series(cluster_neighbors, index=data.index)
     del cluster_neighbors
 
-    # cluster diameter
-    data['max_distance'] = list(map(lambda i: np.max(distance_map[i, filtering[i, :]]), range(distance_map.shape[0])))
+    cluster_distances = list(map(lambda i: np.array(data.iloc[i, :]['cluster_distances'])[filtering[i, :]].tolist(),
+                                 range(len(data))))
+    data['cluster_distances'] = pd.Series(cluster_distances, index=data.index)
+    del cluster_distances
+
     del filtering
-    del distance_map
+
+    # cluster diameter
+    data['max_distance'] = data['cluster_distances'].apply(lambda x: np.max(x))
+    data['mean_distance'] = data['cluster_distances'].apply(lambda x: np.mean(x))
 
     # for analysis - subjects from each label in the clusters
     for label in labels:
-        data[label + ' subjects'] = list(map(lambda x: subjects[(subjects.index.isin(x)) & (subjects == label)].index.tolist(),
-                                             cluster_subjects))
+        data[label + ' subjects'] = data['cluster_subjects'].apply(lambda x: subjects[(subjects.index.isin(x)) & (subjects == label)].index.tolist())
 
     # for the cluster selection - what is the proportion of each label in the clusters
-    cluster_diagnosis = pd.concat(list(map(lambda x: subjects[x].value_counts(normalize=True, dropna=True), cluster_subjects)),
-                                  sort=True, axis=1, ignore_index=True).transpose().fillna(0)
+    cluster_diagnosis = data['cluster_subjects'].apply(lambda x: subjects[x].value_counts(normalize=True,
+                                                                                          dropna=True)).fillna(0)
     data[labels] = cluster_diagnosis[labels]
     del cluster_diagnosis
 
     # for the cluster selection - how many subjects are in the clusters
-    data['how_many_subjects'] = list(map(lambda x: len(x), cluster_subjects))
+    data['how_many_subjects'] = data['cluster_subjects'].apply(lambda x: len(x))
 
     return data
 
