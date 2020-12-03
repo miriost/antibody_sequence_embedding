@@ -24,8 +24,9 @@ def main():
     parser.add_argument('--column', help='column name to convert to vectors (default cdr3_aa)', default="cdr3_aa")
     parser.add_argument('--output_column', help='column name for the output (default model file name)')
     parser.add_argument('--size', help='vector size (default 100)', default=100)
-    parser.add_argument('--inline', help='Save output on the input file', default=True, type=str2bool)
-    parser.add_argument('--drop_duplicates', help='Drop duplicated sequences in the same repertoire', default=True,
+    parser.add_argument('--inline', help='Save output on the input file (default True)', default=True, type=str2bool)
+    parser.add_argument('--drop_duplicates', help='Drop duplicated sequences in the same repertoire, (default True)',
+                        default=True,
                         type=str2bool)
 
     args = parser.parse_args()
@@ -52,6 +53,7 @@ def main():
 
     if args.drop_duplicates is True:
         data_file.drop_duplicates(subset=['subject.subject_id', args.column], inplace=True)
+        print('Data length after dropping duplicates: ' + str(data_len))
 
     def embed_data(word):
         try:
