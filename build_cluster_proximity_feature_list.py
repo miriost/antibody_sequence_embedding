@@ -5,6 +5,18 @@ import os
 import ast
 import json
 import ray
+import psutil
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1', "True"):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0', "False"):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def main():
@@ -21,13 +33,25 @@ def main():
     parser.add_argument('--min_subjects', help='minimal number of subjects for cluster selection, default is 7',
                         type=int, default=7)
     parser.add_argument('--min_significance', help='minimal significance of label for cluster selection, default is 0.7',
-                        type=int, default=0.7)
-    parser.add_argument('--cpus', help='How many cores to run in parallel -  default is 1.', type=int, default=1)
+                        type=float, default=0.7)
+    parser.add_argument('--num_cpus', help='How many cores to run in parallel -  default is psutil.cpu_count()',
+                        type=int)
+    parser.add_argument('--shuffle_labels', help='shuffle the subjects labels before creating the feature list, default'
+                                                 ' is false.',
+                        type=str2bool, default=False)
 
     args = parser.parse_args()
 
     label_column = 'subject.disease_diagnosis'
     id_column = 'subject.subject_id'
+    min_significance = args.min_significance
+    min_subjects = args.min_subjects
+    num_cpus = args.cpus
+    max_distance = args.max_distance
+    shuffle_labels = args.shuffle_labels
+
+    if num_cpus is None:
+        num_cpus = psutil.cpu_count()
 
     if not (os.path.isfile(args.data_file_path)):
         print('data file error, make sure file path exists\nExiting...')
@@ -39,7 +63,7 @@ def main():
         print("{} is not in data file columns: {}\nExisting...".format(label_column, data_file.columns))
         sys.exit(1)
 
-    ray.init()
+    ray.init(num_cpus=num_cpus)
 
     if args.labels is None:
         labels = data_file[label_column].unique().tolist()
@@ -47,27 +71,15 @@ def main():
         labels = args.labels.split(';')
 
     subjects = data_file.loc[:, ].groupby(by=[id_column])[label_column].apply(lambda x: x.iloc[0])
-    max_distance = args.max_distance
+    if shuffle_labels is True:
+        print("shuffling labels before building feature list")
+        subjects[:] = np.random.permutation(subjects)
 
-    cpus = args.cpus
-    step = data_file.shape[0] / cpus
-    ranges = [[round(step * i), round(step * (i + 1))] for i in range(cpus)]
+    step = data_file.shape[0] / num_cpus
+    ranges = [[round(step * i), round(step * (i + 1))] for i in range(num_cpus)]
 
-    result_ids = []
-    for sub_range in ranges:
-        data = data_file.iloc[sub_range[0]:sub_range[1], :]
-        result_ids += [build_maps.remote(data, subjects, labels, max_distance)]
-
-    cluster_neighbors_list = []
-    data_list = []
-    for result_id in result_ids:
-        data, cluster_neighbors = ray.get(result_id)
-        data_list += [data]
-        cluster_neighbors_list += [cluster_neighbors]
-
-    data_file = pd.concat(data_list)
-    cluster_neighbors = np.concatenate(cluster_neighbors_list)
-
+    data_file = pd.concat(ray.get([build_maps.remote(data_file[sub_range[0]:sub_range[1]], subjects, labels,
+                                                     max_distance, len(data_file)) for sub_range in ranges]))
     # processing
     number_of_features_neto = 0
     number_of_features_bruto = 0
@@ -76,9 +88,6 @@ def main():
     # A list with the same length as the data, nan on all cells except the chosen points, which will have the index of
     # the original cell which created the cluster
     neighbors_feature_index = [np.nan] * len(data_file)
-
-    min_significance = args.min_significance
-    min_subjects = args.min_subjects
 
     for label in labels:
 
@@ -93,7 +102,7 @@ def main():
                 number_of_feature_labels += 1
                 number_of_features_neto += 1
                 selected_feature_indexes[idx] = 1
-                for neighbor in cluster_neighbors[idx]:
+                for neighbor in candidates_pool.loc[idx, 'cluster_neighbors']:
                     if neighbor < len(data_file):
                         neighbors_feature_index[neighbor] = idx
 
@@ -111,7 +120,9 @@ def main():
         print('Error! selected features number mismatch!!')
         exit(1)
 
-    features_df = data_file.iloc[selected_features, :]
+    features_df = data_file.iloc[selected_features, :].copy(deep=True)
+    features_df.loc[selected_features, 'cluster_sequences'] = data_file.loc[selected_features,
+                                                                            'cluster_neighbors'].apply(lambda x: data_file.loc[x, 'document._id'].to_list())
 
     features_df.to_csv(os.path.join(args.output_folder_path, args.output_description + '.tsv'), sep='\t',
                        index_label='feature_index')
@@ -119,24 +130,33 @@ def main():
 
 
 @ray.remote
-def build_maps(data, subjects, labels, max_distance):
-    distance_map = np.array(data['cluster_distances'].apply(lambda x: json.loads(x)).tolist())
+def build_maps(data, subjects, labels, max_distance, unassinged):
 
+    data['cluster_distances'] = data['cluster_distances'].apply(lambda x: json.loads(x)).tolist()
     data['cluster_subjects'] = data['cluster_subjects'].apply(lambda x: ast.literal_eval(x))
     data['cluster_neighbors'] = data['cluster_neighbors'].apply(lambda x: ast.literal_eval(x))
 
+    distance_map = np.array(data['cluster_distances'].to_list())
+    neighbors_map = np.array(data['cluster_neighbors'].to_list())
+
     # need to filter neighbors by max_distance
-    filtering = distance_map <= max_distance
+    filtering = np.logical_and(distance_map <= max_distance, neighbors_map != unassinged)
+    del neighbors_map
+
     cluster_subjects = list(map(lambda i: np.array(data.iloc[i, :]['cluster_subjects'])[filtering[i, :]], range(len(data))))
 
     # drop None values because of unassigned neighbors due to lack of candidates, reduce to unique subjects
     cluster_subjects = np.array(list(map(lambda x: np.unique(pd.Series(x).dropna().to_list()), cluster_subjects)))
 
-    cluster_neighbors = np.array(list(map(lambda i: np.array(data.iloc[i, :]['cluster_neighbors'])[filtering[i, :]], range(len(data)))),
-                                 dtype=object)
+    cluster_neighbors = list(map(lambda i: np.array(data.iloc[i, :]['cluster_neighbors'])[filtering[i, :]].tolist(),
+                                 range(len(data))))
+    data['cluster_neighbors'] = pd.Series(cluster_neighbors, index=data.index)
+    del cluster_neighbors
 
     # cluster diameter
     data['max_distance'] = list(map(lambda i: np.max(distance_map[i, filtering[i, :]]), range(distance_map.shape[0])))
+    del filtering
+    del distance_map
 
     # for analysis - subjects from each label in the clusters
     for label in labels:
@@ -147,11 +167,12 @@ def build_maps(data, subjects, labels, max_distance):
     cluster_diagnosis = pd.concat(list(map(lambda x: subjects[x].value_counts(normalize=True, dropna=True), cluster_subjects)),
                                   sort=True, axis=1, ignore_index=True).transpose().fillna(0)
     data[labels] = cluster_diagnosis[labels]
+    del cluster_diagnosis
 
     # for the cluster selection - how many subjects are in the clusters
     data['how_many_subjects'] = list(map(lambda x: len(x), cluster_subjects))
 
-    return data, cluster_neighbors
+    return data
 
 
 if __name__ == '__main__':
