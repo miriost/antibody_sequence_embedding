@@ -57,7 +57,7 @@ def main():
 
         local_df = frame
 
-        print('sujbect {} total rows: {}'.format(subject, len(local_df)))
+        print('subject {} total rows: {}'.format(subject, len(local_df)))
 
         # 1. REMOVE NON-FUNCTIONAL SEQUENCES
         local_df = local_df.loc[local_df.productive == True, :]
@@ -77,12 +77,20 @@ def main():
 
         # 5. REMOVE SEQUENCES WITH EDIT DISTANCE > 3 FROM GERMLINE
         if args.naive:
+            if 'v_germline_alignment' not in local_df.columns:
+                local_df.loc[:, 'v_germline_alignment'] = local_df.apply(lambda x:
+                                                                         x['germline_alignment'][x['v_germline_start']:x['v_germline_end']].replace('.', ''), axis=1)
+            if 'v_sequence_alignment' not in local_df.columns:
+                local_df.loc[:, 'v_sequence_alignment'] = local_df.apply(lambda x:
+                                                                         x['sequence'][x['v_sequence_start']:x['v_sequence_end']], axis=1)
+
             dist_from_germline = local_df.apply(lambda x: distance(x['v_germline_alignment'],
                                                                    x['v_sequence_alignment']), axis=1)
             local_df = local_df[dist_from_germline <= 3]
             print(' - After dist_from_germline <= 3: {} '.format(len(local_df)))
 
         if len(local_df) >= args.min_seq_per_subject:
+            local_df = local_df['document._id', 'v_call', 'j_call', 'cdr3_aa', 'cdr3_aa_length']
             df_list += [local_df]
         else:
             print('subject not added due to low number of sequences')
@@ -92,6 +100,7 @@ def main():
         return
 
     big_df = pd.concat(df_list)
+    big_df.sort_values(by=['document._id'], inplace=True)
 
     big_df.to_csv(args.output_file, index=False, sep='\t')
     print('*********\nfile generated {} out of {} repertoires\nOriginal rows count: {} After filtering: {}'.format(
