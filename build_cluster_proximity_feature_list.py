@@ -36,8 +36,8 @@ def main():
                         type=float, default=0.7)
     parser.add_argument('--num_cpus', help='How many cores to run in parallel -  default is psutil.cpu_count()',
                         type=int)
-    parser.add_argument('--shuffle_labels', help='shuffle the subjects labels before creating the feature list, default'
-                                                 ' is false.', type=str2bool, default=False)
+    parser.add_argument('--shuffle_seed', help='shuffle the subjects labels before creating the feature list, default '
+                                               'is no shuffling.', type=int)
     parser.add_argument('--max_distance_diameter', help='use max distance as the cluster diameter, default is False',
                         type=str2bool, default=False)
 
@@ -49,7 +49,7 @@ def main():
     min_subjects = args.min_subjects
     num_cpus = args.cpus
     max_distance = args.max_distance
-    shuffle_labels = args.shuffle_labels
+    shuffle_seed = args.shuffle_seed
     max_distance_diameter = args.max_distance_diameter
 
     if num_cpus is None:
@@ -73,9 +73,9 @@ def main():
         labels = args.labels.split(';')
 
     subjects = data_file.loc[:, ].groupby(by=[id_column])[label_column].apply(lambda x: x.iloc[0])
-    if shuffle_labels is True:
+    if shuffle_seed is not None:
         print("shuffling labels before building feature list")
-        subjects[:] = np.random.permutation(subjects)
+        subjects[:] = np.random.RandomState(seed=shuffle_seed).permutation(subjects)
 
     step = data_file.shape[0] / num_cpus
     ranges = [[round(step * i), round(step * (i + 1))] for i in range(num_cpus)]
