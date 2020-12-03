@@ -25,7 +25,7 @@ def main():
     parser.add_argument('--output_column', help='column name for the output (default model file name)')
     parser.add_argument('--size', help='vector size (default 100)', default=100)
     parser.add_argument('--inline', help='Save output on the input file', default=True, type=str2bool)
-    parser.add_argument('--drop_duplicates', help='Drop duplicated embeddings in the same repertoire', default=True,
+    parser.add_argument('--drop_duplicates', help='Drop duplicated sequences in the same repertoire', default=True,
                         type=str2bool)
 
     args = parser.parse_args()
@@ -50,23 +50,21 @@ def main():
     else:
         output_column = args.output_column
 
+    if args.drop_duplicates is True:
+        data_file.drop_duplicates(subset=['subject.subject_id', args.column], inplace=True)
+
     def embed_data(word):
         try:
             return list(model.to_vecs(word))
         except:
             return np.nan
 
-    print(len(data_file[args.column]))
-
     data_file[output_column] = data_file[args.column].apply(embed_data)
 
-    print('{:.3}% of data not transformed'.format((100*sum(data_file[output_column] == np.nan)/data_len)))
+    print('{:.3}% of data not transformed'.format((100*sum(data_file[output_column].isna())/data_len)))
     
     # drop the un translated rows from the file
     data_file = data_file.drop(data_file.index[data_file[output_column].isnull()])
-
-    if args.drop_duplicates is True:
-        data_file.drop_duplicates(subset=['subject.subject_id', output_column], inplace=True)
 
     # save to files:
     if args.inline is True:
