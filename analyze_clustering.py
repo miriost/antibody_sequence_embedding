@@ -30,7 +30,7 @@ def execute(args):
         print('Bad or missing analysis_file argument. Existing...')
         sys.exit(1)
 
-    analysis_file = pd.read_csv(args.analysis_file)
+    analysis_file = pd.read_csv(args.analysis_file, sep='\t')
     for label in labels:
         if label not in analysis_file.columns:
             print("{} is not in data file columns: {}\nExisting...".format(label, analysis_file.columns))
@@ -43,11 +43,11 @@ def execute(args):
         colors[features] = "r"
 
     for label in labels:
-        g = sns.jointplot(x='how_many_subjects', y='% of ' + label + ' in cluster', data=analysis_file, kind="kde",
+        g = sns.jointplot(x='how_many_subjects', y=label, data=analysis_file, kind="kde",
                           color="m")
         g.plot_joint(plt.scatter, s=30, linewidth=1, marker='+', color=colors.tolist())
         g.ax_joint.collections[0].set_alpha(0)
-        g.set_axis_labels("Number of subjects in cluster", label)
+        g.set_axis_labels("Number of subjects in cluster", "% of " + label + " in cluster")
         g.savefig(os.path.join(args.output_dir, label + '_distribution_in_cluster.png'))
         plt.clf()
 
