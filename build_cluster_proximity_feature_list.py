@@ -94,8 +94,8 @@ def main():
     for label in labels:
 
         candidates_pool = data_file[data_file['how_many_subjects'] >= min_subjects]
-        candidates_pool = candidates_pool[data_file[label] >= min_significance]
-        candidates_pool = candidates_pool.sort_values(by=[label, 'how_many_subjects', 'mean_distance', 'max_distance'],
+        candidates_pool = candidates_pool[candidates_pool[label] >= min_significance]
+        candidates_pool = candidates_pool.sort_values(by=[label, 'how_many_subjects', 'max_distance'],
                                                       ascending=[False, False, True])
 
         number_of_feature_labels = 0
