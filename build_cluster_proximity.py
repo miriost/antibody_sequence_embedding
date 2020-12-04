@@ -25,8 +25,8 @@ def main():
     parser.add_argument('--cluster_size', help='size of the cluster, default is 100', type=int, default=100)
     parser.add_argument('--same_junction_len', help='Limit cluster to same junction length. Default is False',
                         type=str2bool, default=False)
-    parser.add_argument('--same_genes', help='Limit cluster to same v/j_call. Default is True.', type=str2bool,
-                        default=True)
+    parser.add_argument('--same_genes', help='Limit cluster to same v/j_call. Default is False.', type=str2bool,
+                        default=False)
     parser.add_argument('--search_knn', help='Do KNN search - can skip this step if cluster_neighbors column is '
                                              'already available. Default is True.', type=str2bool, default=True)
     parser.add_argument('--analyze_cluster', help='Do cluster label analysis - can skip this step. Default is True.',
