@@ -77,15 +77,6 @@ def execute(args):
     data_file[vector_column] = data_file[vector_column].apply(lambda x: json.loads(x)).tolist()
 
     # sample the sequences
-    np.random.seed(random_seed)
-    samples = np.sort(np.random.choice(data_file.index, replace=False, size=num_sequences)).tolist()
-
-    X_vectors = np.array(data_file.loc[samples, vector_column].tolist())
-    Y_vectors = np.array(data_file[vector_column].tolist())
-
-    X_sequences = data_file.loc[samples, 'cdr3_aa']
-    Y_sequences = data_file['cdr3_aa']
-
     if same_cdr3_length:
         prefix = 'same_cdr3_length_'
     else:
@@ -106,7 +97,16 @@ def execute(args):
             return row
 
         knn_map = np.apply_along_axis(create_row, 1, tagged_knn_map)
+
+        samples = knn_map[: , 0]
+
     else:
+        np.random.seed(random_seed)
+        samples = np.sort(np.random.choice(data_file.index, replace=False, size=num_sequences)).tolist()
+
+        X_sequences = data_file.loc[samples, 'cdr3_aa']
+        Y_sequences = data_file['cdr3_aa']
+
         distances_map, knn_map = create_knn_map(X_sequences, Y_sequences, knn, step, same_cdr3_length)
         np.save(lev_dist_map_file, distances_map)
         data_file.loc[len(Y_sequences), 'document._id'] = None
@@ -114,6 +114,9 @@ def execute(args):
                                                       0, knn_map).tolist())
         np.savetxt(prefix + 'knn_map.npy', tagged_knn_map, fmt='%s')
         data_file.drop([len(Y_sequences)], axis=0, inplace=True)
+
+    X_vectors = np.array(data_file.loc[samples, vector_column].tolist())
+    Y_vectors = np.array(data_file[vector_column].tolist())
 
     for dist_metric in distance_metrics:
         distances_map = create_dist_map(X_vectors, Y_vectors, knn_map, dist_metric, step)
