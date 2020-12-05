@@ -86,22 +86,37 @@ def execute(args):
     X_sequences = data_file.loc[samples, 'cdr3_aa']
     Y_sequences = data_file['cdr3_aa']
 
-    distances_map, knn_map = create_knn_map(X_sequences, Y_sequences, knn, step, same_cdr3_length)
-
     if same_cdr3_length:
         prefix = 'same_cdr3_length_'
     else:
         prefix = ''
 
-    np.save(prefix + 'levenshtein_distances_map.npy', distances_map)
+    lev_dist_map_file = prefix + 'levenshtein_distances_map.npy'
+    lev_knn_map_file = prefix + 'knn_map.npy'
+
+    if os.path.isfile(lev_dist_map_file) and os.path.isfile(lev_knn_map_file):
+        tagged_knn_map = np.loadtxt(lev_knn_map_file)
+
+        def create_row(x):
+            row = np.zeros(knn + 1, dtype=int)
+            row[:] = len(data_file)
+            indexing = data_file.index[data_file['document._id'].isin(x)]
+            row[:len(indexing)] = indexing
+            return row
+
+        knn_map = np.apply_along_axis(create_row, 1, tagged_knn_map)
+    else:
+        distances_map, knn_map = create_knn_map(X_sequences, Y_sequences, knn, step, same_cdr3_length)
+        np.save(lev_dist_map_file, distances_map)
+        data_file.loc[len(Y_sequences), 'document._id'] = None
+        tagged_knn_map = np.array(np.apply_along_axis(lambda x: data_file.loc[x, 'document._id'].to_list(),
+                                                      0, knn_map).tolist())
+        np.savetxt(prefix + 'knn_map.npy', tagged_knn_map, fmt='%s')
+        data_file.drop([len(Y_sequences)-1], axis=0, inplace=True)
 
     for dist_metric in distance_metrics:
         distances_map = create_dist_map(X_vectors, Y_vectors, knn_map, dist_metric, step)
         np.save(prefix + dist_metric + '_distances_map.npy', distances_map)
-
-    data_file.loc[len(Y_sequences), 'document._id'] = None
-    tagged_knn_map = np.array(np.apply_along_axis(lambda x: data_file.loc[x, 'document._id'].to_list(), 0, knn_map).tolist())
-    np.savetxt(prefix + 'knn_map.npy', tagged_knn_map, fmt='%s')
 
 
 def create_knn_map(X_sequences, Y_sequences, knn, step, same_cdr3_length):
