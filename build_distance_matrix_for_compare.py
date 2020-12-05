@@ -95,6 +95,7 @@ def execute(args):
     lev_knn_map_file = prefix + 'knn_map.npy'
 
     if os.path.isfile(lev_dist_map_file) and os.path.isfile(lev_knn_map_file):
+        print('loading knn map from file {}'.format(lev_dist_map_file))
         tagged_knn_map = np.loadtxt(lev_knn_map_file)
 
         def create_row(x):
