@@ -113,7 +113,7 @@ def execute(args):
         tagged_knn_map = np.array(np.apply_along_axis(lambda x: data_file.loc[x, 'document._id'].to_list(),
                                                       0, knn_map).tolist())
         np.savetxt(prefix + 'knn_map.npy', tagged_knn_map, fmt='%s')
-        data_file.drop([len(Y_sequences)-1], axis=0, inplace=True)
+        data_file.drop([len(Y_sequences)], axis=0, inplace=True)
 
     for dist_metric in distance_metrics:
         distances_map = create_dist_map(X_vectors, Y_vectors, knn_map, dist_metric, step)
