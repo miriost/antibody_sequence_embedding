@@ -11,6 +11,9 @@ import json
 import psutil
 import gc
 import Levenshtein
+from sklearn.decomposition import PCA
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 def str2bool(v):
@@ -35,6 +38,8 @@ def main():
                         type=str, default='euclidean')
     parser.add_argument('--same_cdr3_length', help='search knn among sequences with the same cdr3 length, default is '
                                                    'False', default=False, type=str2bool)
+    parser.add_argument('--plot_dim_reduction', help='plot selected clusters after dimension reduction, default is '
+                                                     'False', default=False, type=str2bool)
     parser.add_argument('--random_seed', help='Random seed for sampling the sequences, default is 0.', type=int,
                         default=0)
     parser.add_argument('--step', help='How many rows to calculate in parallel, default is 200.', type=int, default=200)
@@ -72,6 +77,7 @@ def execute(args):
     distance_metrics = args.distance_metrics.split(';')
     step = args.step
     same_cdr3_length = args.same_cdr3_length
+    plot_dim_reduction = args.plot_dim_reduction
 
     data_file = pd.read_csv(args.data_file_path, sep='\t')
     data_file[vector_column] = data_file[vector_column].apply(lambda x: json.loads(x)).tolist()
@@ -84,6 +90,9 @@ def execute(args):
 
     lev_dist_map_file = prefix + 'levenshtein_distances_map.npy'
     lev_knn_map_file = prefix + 'knn_map.npy'
+
+    np.random.seed(random_seed)
+    samples = np.sort(np.random.choice(data_file.index, replace=False, size=num_sequences)).tolist()
 
     if os.path.isfile(lev_dist_map_file) and os.path.isfile(lev_knn_map_file):
         print('loading knn map from file {}'.format(lev_dist_map_file))
@@ -98,11 +107,7 @@ def execute(args):
 
         knn_map = np.apply_along_axis(create_row, 1, tagged_knn_map)
 
-        samples = knn_map[: , 0]
-
     else:
-        np.random.seed(random_seed)
-        samples = np.sort(np.random.choice(data_file.index, replace=False, size=num_sequences)).tolist()
 
         X_sequences = data_file.loc[samples, 'cdr3_aa']
         Y_sequences = data_file['cdr3_aa']
@@ -121,6 +126,28 @@ def execute(args):
     for dist_metric in distance_metrics:
         distances_map = create_dist_map(X_vectors, Y_vectors, knn_map, dist_metric, step)
         np.save(prefix + dist_metric + '_distances_map.npy', distances_map)
+
+    if plot_dim_reduction is False:
+        return
+
+    indexing = data_file.index[data_file['document._id'].isin(np.unique(tagged_knn_map))]
+    vectors = np.array(data_file.loc[indexing, vector_column].to_list())
+    pca = PCA(n_components=2)
+    reduced_vectors = pca.fit_transform(vectors)
+
+    plt.clf()
+    fig, axes = plt.subplots(ncols=2, nrows=2, constrained_layout=True)
+    np.random.seed(random_seed)
+    for i in range(4):
+        plot_samples = np.sort(np.random.choice(tagged_knn_map.shape[0], replace=False, size=10))
+        ax = axes[int(i / axes.shape[1]), i % axes.shape[0]]
+        for sample_index in plot_samples:
+            samples_indexing = data_file.index[data_file['document._id'].isin(np.unique(tagged_knn_map[sample_index, :]))]
+            reduced_vectors_to_plot = reduced_vectors[indexing.isin(samples_indexing), :]
+            sns.scatterplot(x=reduced_vectors_to_plot[:, 0], y=reduced_vectors_to_plot[:, 1], ax=ax)
+
+    print('saving file dim_reduction.png')
+    fig.savefig('dim_reduction.png')
 
 
 def create_knn_map(X_sequences, Y_sequences, knn, step, same_cdr3_length):
