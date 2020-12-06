@@ -45,7 +45,6 @@ def execute(args):
     else:
         fig.suptitle('Immune2vec vector space vs Levenshtein distance (same CDR3 length)')
 
-    np.random.seed(1)
     colors = sns.color_palette()
     for idx, dist_metric in enumerate(dist_metrics):
         if idx == axes.size:
@@ -63,6 +62,9 @@ def execute(args):
         ax.set_xlabel(None)
         ax.set_ylabel(None)
         ax.set_title(dist_metric)
+
+    print('saving file ' + prefix + 'distance_comparing.png')
+    fig.savefig(prefix + 'distance_comparing.png')
 
 
 if __name__ == 'main':
