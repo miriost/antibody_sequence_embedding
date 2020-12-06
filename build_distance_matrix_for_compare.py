@@ -29,13 +29,12 @@ def main():
     parser.add_argument('--knn', help='add k nearest neighbors neighbors to matrix (columns dim), default is 400',
                         type=int, default=400)
     parser.add_argument('--distance_metrics', help="semicolon separated list of distance metrics for comparision, "
-                                                   " default is 'euclidean',"
-                                                   " options are: ‘braycurtis’, ‘canberra’, ‘chebyshev’, ‘cityblock’, "
-                                                   "‘correlation’, ‘cosine’, ‘dice’, ‘euclidean’, ‘hamming’, ‘jaccard’,"
-                                                   " ‘jensenshannon’, ‘kulsinski’, ‘mahalanobis’, ‘matching’, "
-                                                   "‘minkowski<p-norm>’, ‘rogerstanimoto’, ‘russellrao’, ‘seuclidean’, "
-                                                   "‘sokalmichener’, ‘sokalsneath’, ‘sqeuclidean’, ‘yule’",
-                        type=str, default='euclidean')
+                                                   "options are: 'braycurtis', 'canberra', 'chebyshev', 'cityblock', "
+                                                   "'correlation', 'cosine', 'dice', 'euclidean', 'hamming', 'jaccard',"
+                                                   " 'jensenshannon', 'kulsinski', 'mahalanobis', 'matching', "
+                                                   "'minkowski<p-norm>', 'rogerstanimoto', 'russellrao', 'seuclidean', "
+                                                   "'sokalmichener', 'sokalsneath', 'sqeuclidean', 'yule'",
+                        type=str)
     parser.add_argument('--same_cdr3_length', help='search knn among sequences with the same cdr3 length, default is '
                                                    'False', default=False, type=str2bool)
     parser.add_argument('--plot_dim_reduction', help='plot selected clusters after dimension reduction, default is '
@@ -74,7 +73,10 @@ def execute(args):
     knn = args.knn
     random_seed = args.random_seed
     num_sequences = args.num_sequences
-    distance_metrics = args.distance_metrics.split(';')
+    if args.distance_metrics is None:
+        distance_metrics = []
+    else:
+        distance_metrics = args.distance_metrics.split(';')
     step = args.step
     same_cdr3_length = args.same_cdr3_length
     plot_dim_reduction = args.plot_dim_reduction
