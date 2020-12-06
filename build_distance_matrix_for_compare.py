@@ -143,6 +143,8 @@ def execute(args):
     for i in range(4):
         plot_samples = np.sort(np.random.choice(tagged_knn_map.shape[0], replace=False, size=10))
         ax = axes[int(i / axes.shape[1]), i % axes.shape[0]]
+        ax.set_xticks([])
+        ax.set_yticks([])
         for sample_index in plot_samples:
             samples_indexing = data_file.index[data_file['document._id'].isin(np.unique(tagged_knn_map[sample_index, :]))]
             reduced_vectors_to_plot = reduced_vectors[indexing.isin(samples_indexing), :]
