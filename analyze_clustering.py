@@ -44,10 +44,10 @@ def execute(args):
 
     for label in labels:
         g = sns.jointplot(x='how_many_subjects', y=label, data=analysis_file, kind="kde",
-                          color="m")
+                          color="m", ylim=(-0.2, 1.2), xlim=(0,35))
         g.plot_joint(plt.scatter, s=30, linewidth=1, marker='+', color=colors.tolist())
         g.ax_joint.collections[0].set_alpha(0)
-        g.set_axis_labels("Number of subjects in cluster", "% of " + label + " in cluster")
+        g = g.set_axis_labels("Number of subjects in cluster", "% of " + label + " in cluster")
         g.savefig(os.path.join(args.output_dir, label + '_distribution_in_cluster.png'))
         plt.clf()
 
