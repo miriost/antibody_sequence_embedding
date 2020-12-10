@@ -69,7 +69,7 @@ def main():
     file_name = os.path.basename(args.input_file).split(".tsv")[0]
     dir_name = os.path.dirname(args.input_file)
 
-    vectors_file_output = os.path.join(dir_name, file_name + str(n_dim) + 'DIM_VECTORS.npy')
+    vectors_file_output = os.path.join(dir_name, file_name + str(n_dim) + '_DIM_VECTORS.npy')
 
     if args.inline is True:
         data_file_output = args.input_file
@@ -77,6 +77,7 @@ def main():
         dir_name = os.path.dirname(args.input_file)
         data_file_output = os.path.join(dir_name, file_name + '_FILTERED.tsv')
 
+    vectors = np.array(vectors['vector'].tolist())
     np.save(vectors_file_output, vectors)
 
     data_file.to_csv(data_file_output, sep='\t', index=False)
