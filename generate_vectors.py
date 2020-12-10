@@ -22,14 +22,15 @@ def main():
     parser.add_argument('input_file', help='a tsv with the column to vectorize')
     parser.add_argument('model', help='a saved word embedding model file')
     parser.add_argument('--column', help='column name to convert to vectors (default cdr3_aa)', default="cdr3_aa")
-    parser.add_argument('--output_column', help='column name for the output (default model file name)')
-    parser.add_argument('--size', help='vector size (default 100)', default=100)
+    parser.add_argument('--n_dim', help='vector size (default 100)', default=100)
     parser.add_argument('--inline', help='Save output on the input file (default True)', default=True, type=str2bool)
     parser.add_argument('--drop_duplicates', help='Drop duplicated sequences in the same repertoire, (default True)',
                         default=True,
                         type=str2bool)
 
     args = parser.parse_args()
+    n_dim = args.n_dim
+    drop_duplicates = args.drop_duplicates
 
     if not os.path.isfile(args.input_file) or args.input_file[:-4] == '.tsv':
         print('Feature file ({}) error! Make sure the file exists and it is *.tsv file.\n'
@@ -46,12 +47,7 @@ def main():
     data_len = len(data_file)
     print('Data length: ' + str(data_len))
 
-    if args.output_column is None:
-        output_column = os.path.basename(args.model).split('.model')[0]
-    else:
-        output_column = args.output_column
-
-    if args.drop_duplicates is True:
+    if drop_duplicates is True:
         data_file.drop_duplicates(subset=['subject.subject_id', args.column], inplace=True)
         print('Data length after dropping duplicates: ' + str(data_len))
 
@@ -61,23 +57,32 @@ def main():
         except:
             return np.nan
 
-    data_file[output_column] = data_file[args.column].apply(embed_data)
+    vectors = pd.DataFrame(data_file[args.column].apply(embed_data), index=data_file.index, columns=['vector'])
 
-    print('{:.3}% of data not transformed'.format((100*sum(data_file[output_column].isna())/data_len)))
-    
+    print('{:.3}% of data not transformed'.format((100*sum(vectors['vector'].isna())/data_len)))
+
     # drop the un translated rows from the file
-    data_file = data_file.drop(data_file.index[data_file[output_column].isnull()])
+    vectors = vectors[vectors['vector'].notna()]
+    data_file = data_file.drop(vectors.index)
 
     # save to files:
-    if args.inline is True:
-        output_file_name = args.input_file
-    else:
-        file_name = os.path.basename(args.input_file).split(".tsv")[0]
-        dir_name = os.path.dirname(args.input_file)
-        output_file_name = os.path.join(dir_name, file_name + '_and_vectors.tsv')
+    file_name = os.path.basename(args.input_file).split(".tsv")[0]
+    dir_name = os.path.dirname(args.input_file)
 
-    data_file.to_csv(output_file_name, sep='\t', index=False)
-    print('File saved: ' + output_file_name)
+    vectors_file_output = os.path.join(dir_name, file_name + str(n_dim) + 'DIM_VECTORS.npy')
+
+    if args.inline is True:
+        data_file_output = args.input_file
+    else:
+        dir_name = os.path.dirname(args.input_file)
+        data_file_output = os.path.join(dir_name, file_name + '_FILTERED.tsv')
+
+    np.save(vectors_file_output, vectors)
+
+    data_file.to_csv(data_file_output, sep='\t', index=False)
+
+    print('Data file saved: ' + data_file_output)
+    print('Vectors file saved: ' + vectors_file_output)
 
     
 if __name__ == "__main__":
