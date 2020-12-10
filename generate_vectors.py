@@ -19,8 +19,8 @@ def str2bool(v):
 def main():
 
     parser = argparse.ArgumentParser(description='embed a column from input file')
-    parser.add_argument('input_file', help='a tsv with the column to vectorize')
-    parser.add_argument('model', help='a saved word embedding model file')
+    parser.add_argument('data_file_path', help='a tsv with the column to vectorize')
+    parser.add_argument('model_file_path', help='a saved word embedding model file')
     parser.add_argument('--column', help='column name to convert to vectors (default cdr3_aa)', default="cdr3_aa")
     parser.add_argument('--n_dim', help='vector size (default 100)', default=100)
     parser.add_argument('--inline', help='Save output on the input file (default True)', default=True, type=str2bool)
@@ -31,24 +31,28 @@ def main():
     args = parser.parse_args()
     n_dim = args.n_dim
     drop_duplicates = args.drop_duplicates
+    data_file_path = args.data_file_path
+    model_file_path = args.model_file_path
+    column = args.column
+    inline = args.inline
 
-    if not os.path.isfile(args.input_file) or args.input_file[:-4] == '.tsv':
+    if not os.path.isfile(data_file_path) or data_file_path[:-4] == '.tsv':
         print('Feature file ({}) error! Make sure the file exists and it is *.tsv file.\n'
-              'Exiting...'.format(args.input_file))
+              'Exiting...'.format(data_file_path))
         sys.exit(1)
-    print('Input file for embedding: ', args.input_file, '\nModel: ', args.model)
+    print('Input file for embedding: ', data_file_path, '\nModel: ', model_file_path)
  
-    data_file = pd.read_csv(args.input_file, sep='\t')
+    data_file = pd.read_csv(data_file_path, sep='\t')
 
     # load saved model
-    model = sequence_modeling.load_protvec(args.model)
+    model = sequence_modeling.load_protvec(model_file_path)
 
     # generate a vector for each junction
     data_len = len(data_file)
     print('Data length: ' + str(data_len))
 
     if drop_duplicates is True:
-        data_file.drop_duplicates(subset=['subject.subject_id', args.column], inplace=True)
+        data_file.drop_duplicates(subset=['subject.subject_id', column], inplace=True)
         print('Data length after dropping duplicates: ' + str(data_len))
 
     def embed_data(word):
@@ -57,27 +61,27 @@ def main():
         except:
             return np.nan
 
-    vectors = pd.DataFrame(data_file[args.column].apply(embed_data), index=data_file.index, columns=['vector'])
+    vectors = data_file[column].apply(embed_data)
 
-    print('{:.3}% of data not transformed'.format((100*sum(vectors['vector'].isna())/data_len)))
+    print('{:.3}% of data not transformed'.format((100*sum(vectors.isna())/data_len)))
 
     # drop the un translated rows from the file
-    vectors = vectors[vectors['vector'].notna()]
-    data_file = data_file.drop(vectors.index)
+    vectors = vectors[vectors.notna()]
+    data_file = data_file.drop(vectors[vectors.isna()].index, axis=0)
 
     # save to files:
-    file_name = os.path.basename(args.input_file).split(".tsv")[0]
-    dir_name = os.path.dirname(args.input_file)
+    file_name = os.path.basename(data_file_path).split(".tsv")[0]
+    dir_name = os.path.dirname(data_file_path)
 
-    vectors_file_output = os.path.join(dir_name, file_name + str(n_dim) + '_DIM_VECTORS.npy')
+    vectors_file_output = os.path.join(dir_name, file_name + '_' + str(n_dim) + 'DIM_VECTORS.npy')
 
-    if args.inline is True:
-        data_file_output = args.input_file
+    if inline is True:
+        data_file_output = data_file_path
     else:
-        dir_name = os.path.dirname(args.input_file)
+        dir_name = os.path.dirname(data_file_path)
         data_file_output = os.path.join(dir_name, file_name + '_FILTERED.tsv')
 
-    vectors = np.array(vectors['vector'].tolist())
+    vectors = np.array(vectors.tolist())
     np.save(vectors_file_output, vectors)
 
     data_file.to_csv(data_file_output, sep='\t', index=False)
