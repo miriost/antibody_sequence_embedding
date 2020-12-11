@@ -62,8 +62,8 @@ def main():
     print('{:.3}% of data not transformed'.format((100*sum(vectors.isna())/data_len)))
 
     # drop the un translated rows from the file
-    vectors = vectors[vectors.notna()]
     data_file = data_file.drop(vectors[vectors.isna()].index, axis=0)
+    vectors = vectors[vectors.notna()]
 
     # save to files:
     data_file_name = os.path.basename(data_file_path).split(".tsv")[0]
