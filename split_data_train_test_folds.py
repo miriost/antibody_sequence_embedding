@@ -60,6 +60,8 @@ def execute(args):
     shuffle_labels = args.shuffle_labels
 
     subjects = data_file.loc[:, ].groupby(by=[id_column])[label_column].apply(lambda x: x.iloc[0])
+    # sort index to ensure getting the same splits in different runs
+    subjects.sort_index(inplace=True)
 
     if shuffle_labels is True:
         print("shuffling labels before split")
