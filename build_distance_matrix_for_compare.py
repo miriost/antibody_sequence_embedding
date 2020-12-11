@@ -111,7 +111,7 @@ def execute(args):
         def create_row(x):
             row = np.zeros(knn + 1, dtype=int)
             row[:] = len(data_file)
-            neighbors_index = [data_file.index[data_file['document._id'] == doc_id] for doc_id in x]
+            neighbors_index = [data_file[data_file['document._id'] == doc_id].index[0] for doc_id in x]
             row[:len(neighbors_index)] = neighbors_index
             return row
 
