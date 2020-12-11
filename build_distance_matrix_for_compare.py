@@ -126,7 +126,7 @@ def execute(args):
         np.save(lev_dist_map_file, distances_map)
         data_file.loc[len(Y_sequences), 'document._id'] = None
         tagged_knn_map = np.array(np.apply_along_axis(lambda x: data_file.loc[x, 'document._id'].to_list(),
-                                                      0, knn_map).tolist())
+                                                      1, knn_map).tolist())
         np.savetxt(prefix + 'knn_map.npy', tagged_knn_map, fmt='%s')
         data_file.drop([len(Y_sequences)], axis=0, inplace=True)
 
