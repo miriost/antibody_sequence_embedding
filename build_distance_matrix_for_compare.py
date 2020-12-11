@@ -54,8 +54,10 @@ def auto_garbage_collect(pct=80.0):
 
 
 def execute(args):
+
     data_file_path = args.data_file_path
     vectors_file_path = args.vectors_file_path
+    num_cpus = args.num_cpus
 
     if not os.path.isfile(data_file_path) or data_file_path[:-4] == '.tsv':
         print('Data file error - file not exists or suffix is not .tsv, make sure data file path: {}\n'
@@ -67,7 +69,13 @@ def execute(args):
               'Exiting...'.format(vectors_file_path))
         sys.exit(1)
 
-    num_cpus = args.num_cpus
+    data_file = pd.read_csv(args.data_file_path, sep='\t')
+    vectors = np.load(vectors_file_path)
+
+    if vectors.shape[0] != data_file.shape[0]:
+        print('mismatch between data_file and vectors_file length\nExiting...')
+        sys.exit(1)
+
     if num_cpus is None:
         num_cpus = psutil.cpu_count()
 
@@ -83,9 +91,6 @@ def execute(args):
     step = args.step
     same_cdr3_length = args.same_cdr3_length
     plot_dim_reduction = args.plot_dim_reduction
-
-    data_file = pd.read_csv(args.data_file_path, sep='\t')
-    vectors = np.load(vectors_file_path)
 
     # sample the sequences
     if same_cdr3_length:
