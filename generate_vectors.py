@@ -22,14 +22,11 @@ def main():
     parser.add_argument('data_file_path', help='a tsv with the column to vectorize')
     parser.add_argument('model_file_path', help='a saved word embedding model file')
     parser.add_argument('--column', help='column name to convert to vectors (default cdr3_aa)', default="cdr3_aa")
-    parser.add_argument('--n_dim', help='vector size (default 100)', default=100)
     parser.add_argument('--inline', help='Save output on the input file (default True)', default=True, type=str2bool)
     parser.add_argument('--drop_duplicates', help='Drop duplicated sequences in the same repertoire, (default True)',
-                        default=True,
-                        type=str2bool)
+                        default=True, type=str2bool)
 
     args = parser.parse_args()
-    n_dim = args.n_dim
     drop_duplicates = args.drop_duplicates
     data_file_path = args.data_file_path
     model_file_path = args.model_file_path
@@ -61,6 +58,7 @@ def main():
         except:
             return np.nan
 
+    print('Generating vectors...')
     vectors = data_file[column].apply(embed_data)
 
     print('{:.3}% of data not transformed'.format((100*sum(vectors.isna())/data_len)))
@@ -70,26 +68,26 @@ def main():
     data_file = data_file.drop(vectors[vectors.isna()].index, axis=0)
 
     # save to files:
-    file_name = os.path.basename(data_file_path).split(".tsv")[0]
+    data_file_name = os.path.basename(data_file_path).split(".tsv")[0]
+    model_file_name = os.path.basename(model_file_path).split(".model")[0]
     dir_name = os.path.dirname(data_file_path)
-
-    vectors_file_output = os.path.join(dir_name, file_name + '_' + str(n_dim) + 'DIM_VECTORS.npy')
 
     if inline is True:
         data_file_output = data_file_path
     else:
         dir_name = os.path.dirname(data_file_path)
-        data_file_output = os.path.join(dir_name, file_name + '_FILTERED.tsv')
+        data_file_output = os.path.join(dir_name, data_file_name + '_FILTERED.tsv')
 
-    vectors = np.array(vectors.tolist())
-    np.save(vectors_file_output, vectors)
-
+    print('Saving ' + data_file_output)
     data_file.to_csv(data_file_output, sep='\t', index=False)
 
-    print('Data file saved: ' + data_file_output)
-    print('Vectors file saved: ' + vectors_file_output)
+    vectors = np.array(vectors.tolist())
+    vectors_file_output = os.path.join(dir_name, data_file_name + '_' + model_file_name + '_VECTORS.npy')
 
-    
+    print('Saving ' + vectors_file_output)
+    np.save(vectors_file_output, vectors)
+
+
 if __name__ == "__main__":
     main()
 
