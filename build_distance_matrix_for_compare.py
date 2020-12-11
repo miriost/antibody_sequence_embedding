@@ -106,19 +106,9 @@ def execute(args):
 
     if os.path.isfile(lev_dist_map_file) and os.path.isfile(lev_knn_map_file):
         print('loading knn map from file {}'.format(lev_knn_map_file))
-        tagged_knn_map = np.loadtxt(lev_knn_map_file, dtype=object)
-
-        def create_row(x):
-            row = np.zeros(knn + 1, dtype=int)
-            row[:] = len(data_file)
-            neighbors_index = [data_file[data_file['document._id'] == doc_id].index[0] for doc_id in x]
-            row[:len(neighbors_index)] = neighbors_index
-            return row
-
-        knn_map = np.apply_along_axis(create_row, 1, tagged_knn_map)
+        knn_map = np.loadtxt(lev_knn_map_file, dtype=int)
 
     else:
-
         X_sequences = data_file.loc[samples, 'cdr3_aa']
         Y_sequences = data_file['cdr3_aa']
 
@@ -127,7 +117,8 @@ def execute(args):
         data_file.loc[len(Y_sequences), 'document._id'] = None
         tagged_knn_map = np.array(np.apply_along_axis(lambda x: data_file.loc[x, 'document._id'].to_list(),
                                                       1, knn_map).tolist())
-        np.savetxt(prefix + 'knn_map.npy', tagged_knn_map, fmt='%s')
+        np.savetxt(prefix + 'knn_map.npy', tagged_knn_map, fmt='%u')
+        np.savetxt(prefix + 'tagged_knn_map.npy', tagged_knn_map, fmt='%s')
         data_file.drop([len(Y_sequences)], axis=0, inplace=True)
 
     X_vectors = vectors[samples, :]
