@@ -105,7 +105,7 @@ def execute(args):
     samples = np.sort(np.random.choice(data_file.index, replace=False, size=num_sequences)).tolist()
 
     if os.path.isfile(lev_dist_map_file) and os.path.isfile(lev_knn_map_file):
-        print('loading knn map from file {}'.format(lev_dist_map_file))
+        print('loading knn map from file {}'.format(lev_knn_map_file))
         tagged_knn_map = np.loadtxt(lev_knn_map_file, dtype=object)
 
         def create_row(x):
