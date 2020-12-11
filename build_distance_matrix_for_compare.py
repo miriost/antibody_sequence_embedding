@@ -111,8 +111,8 @@ def execute(args):
         def create_row(x):
             row = np.zeros(knn + 1, dtype=int)
             row[:] = len(data_file)
-            indexing = data_file.index[data_file['document._id'].isin(x)]
-            row[:len(indexing)] = indexing
+            neighbors_index = [data_file.index[data_file['document._id'] == doc_id] for doc_id in x]
+            row[:len(neighbors_index)] = neighbors_index
             return row
 
         knn_map = np.apply_along_axis(create_row, 1, tagged_knn_map)
