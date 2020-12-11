@@ -22,7 +22,6 @@ def main():
     parser.add_argument('data_file_path', help='a tsv with the column to vectorize')
     parser.add_argument('model_file_path', help='a saved word embedding model file')
     parser.add_argument('--column', help='column name to convert to vectors (default cdr3_aa)', default="cdr3_aa")
-    parser.add_argument('--inline', help='Save output on the input file (default True)', default=True, type=str2bool)
     parser.add_argument('--drop_duplicates', help='Drop duplicated sequences in the same repertoire, (default True)',
                         default=True, type=str2bool)
 
@@ -31,7 +30,6 @@ def main():
     data_file_path = args.data_file_path
     model_file_path = args.model_file_path
     column = args.column
-    inline = args.inline
 
     if not os.path.isfile(data_file_path) or data_file_path[:-4] == '.tsv':
         print('Feature file ({}) error! Make sure the file exists and it is *.tsv file.\n'
@@ -72,18 +70,13 @@ def main():
     model_file_name = os.path.basename(model_file_path).split(".model")[0]
     dir_name = os.path.dirname(data_file_path)
 
-    if inline is True:
-        data_file_output = data_file_path
-    else:
-        dir_name = os.path.dirname(data_file_path)
-        data_file_output = os.path.join(dir_name, data_file_name + '_FILTERED.tsv')
-
+    data_file_output = os.path.join(dir_name, data_file_name + '_' + model_file_name + '_FILTERED.tsv')
     print('Saving ' + data_file_output)
     data_file.to_csv(data_file_output, sep='\t', index=False)
 
     vectors = np.array(vectors.tolist())
-    vectors_file_output = os.path.join(dir_name, data_file_name + '_' + model_file_name + '_VECTORS.npy')
 
+    vectors_file_output = os.path.join(dir_name, data_file_name + '_' + model_file_name + '_VECTORS.npy')
     print('Saving ' + vectors_file_output)
     np.save(vectors_file_output, vectors)
 
