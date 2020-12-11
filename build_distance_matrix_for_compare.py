@@ -7,7 +7,6 @@ import sys
 import math
 from sklearn.metrics.pairwise import pairwise_distances
 import ray
-import json
 import psutil
 import gc
 import Levenshtein
@@ -22,8 +21,8 @@ def str2bool(v):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('data_file_path', help='the filtered data file path')
-    parser.add_argument('vector_column', help='the name of the column with the vector')
+    parser.add_argument('data_file_path', help='tsv data file path')
+    parser.add_argument('vectors_file_path', help='npy vectors file')
     parser.add_argument('--num_sequences', help='add num_sequences to matrix (row dim), default is 10k', type=int,
                         default=10000)
     parser.add_argument('--knn', help='add k nearest neighbors neighbors to matrix (columns dim), default is 400',
@@ -55,12 +54,15 @@ def auto_garbage_collect(pct=80.0):
 
 
 def execute(args):
-    if not os.path.isfile(args.data_file_path):
+    data_file_path = args.data_file_path
+    vectors_file_path = args.vectors_file_path
+
+    if not os.path.isfile(data_file_path):
         print('Data file error, make sure data file path: {}\nExiting...'.format(args.data_file_path))
         sys.exit(1)
 
-    if args.vector_column is None:
-        print("Missing vector_column argument\nExisting...")
+    if not os.path.isfile(vectors_file_path):
+        print('Data file error, make sure data file path: {}\nExiting...'.format(args.data_file_path))
         sys.exit(1)
 
     num_cpus = args.num_cpus
@@ -69,7 +71,6 @@ def execute(args):
 
     ray.init(num_cpus=num_cpus)
 
-    vector_column = args.vector_column
     knn = args.knn
     random_seed = args.random_seed
     num_sequences = args.num_sequences
@@ -82,7 +83,7 @@ def execute(args):
     plot_dim_reduction = args.plot_dim_reduction
 
     data_file = pd.read_csv(args.data_file_path, sep='\t')
-    data_file[vector_column] = data_file[vector_column].apply(lambda x: json.loads(x)).tolist()
+    vectors = np.load(vectors_file_path)
 
     # sample the sequences
     if same_cdr3_length:
@@ -122,18 +123,16 @@ def execute(args):
         np.savetxt(prefix + 'knn_map.npy', tagged_knn_map, fmt='%s')
         data_file.drop([len(Y_sequences)], axis=0, inplace=True)
 
-    X_vectors = np.array(data_file.loc[samples, vector_column].tolist())
-    Y_vectors = np.array(data_file[vector_column].tolist())
+    X_vectors = vectors[samples, :]
 
     for dist_metric in distance_metrics:
-        distances_map = create_dist_map(X_vectors, Y_vectors, knn_map, dist_metric, step)
+        distances_map = create_dist_map(X_vectors, vectors, knn_map, dist_metric, step)
         np.save(prefix + dist_metric + '_distances_map.npy', distances_map)
 
     if plot_dim_reduction is False:
         return
 
     indexing = data_file.index[data_file['document._id'].isin(np.unique(tagged_knn_map))]
-    vectors = np.array(data_file.loc[indexing, vector_column].to_list())
     pca = PCA(n_components=2)
     reduced_vectors = pca.fit_transform(vectors)
 
