@@ -30,10 +30,10 @@ def main():
     vectors_file = np.load(vectors_file_path)
 
     # save to files:
-    file_name = os.path.basename(vectors_file_path).split(".npy")[0]
+    file_name = os.path.basename(vectors_file_path).split("VECTORS.npy")[0]
     dir_name = os.path.dirname(vectors_file_path)
 
-    output_file_path = os.path.join(dir_name, file_name + '_' + str(n_dim) + 'DIM_PCA.npy')
+    output_file_path = os.path.join(dir_name, file_name + '_' + str(n_dim) + 'DIM_PCA_VECTORS.npy')
 
     print('Reducing dimension {}->{} using PCA...'.format(vectors_file.shape[1], n_dim))
     pca = PCA(n_components=n_dim)
