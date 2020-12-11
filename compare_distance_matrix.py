@@ -70,8 +70,8 @@ def execute(args):
         ax.set_ylabel(None)
         ax.set_title(dist_metric)
 
-    print('saving file ' + prefix + 'distance_comparing.png')
-    fig.savefig(prefix + 'distance_comparing.png')
+    print('saving file ' + os.path.join(work_dir, prefix + 'distance_comparing.png'))
+    fig.savefig(os.path.join(work_dir, prefix + 'distance_comparing.png'))
 
 
 if __name__ == '__main__':
