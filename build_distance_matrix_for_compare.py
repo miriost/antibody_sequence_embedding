@@ -57,12 +57,14 @@ def execute(args):
     data_file_path = args.data_file_path
     vectors_file_path = args.vectors_file_path
 
-    if not os.path.isfile(data_file_path):
-        print('Data file error, make sure data file path: {}\nExiting...'.format(args.data_file_path))
+    if not os.path.isfile(data_file_path) or data_file_path[:-4] == '.tsv':
+        print('Data file error - file not exists or suffix is not .tsv, make sure data file path: {}\n'
+              'Exiting...'.format(data_file_path))
         sys.exit(1)
 
-    if not os.path.isfile(vectors_file_path):
-        print('Data file error, make sure data file path: {}\nExiting...'.format(args.data_file_path))
+    if not os.path.isfile(vectors_file_path) or vectors_file_path[:-4] == '.npy':
+        print('Vectors file error - file not exists or suffix is not .npy, make sure vectors file path: {}\n'
+              'Exiting...'.format(vectors_file_path))
         sys.exit(1)
 
     num_cpus = args.num_cpus
