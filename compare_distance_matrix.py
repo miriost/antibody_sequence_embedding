@@ -7,6 +7,10 @@ import sys
 import math
 
 
+def str2bool(v):
+    return v.lower() in ("yes", "true", "t", "1")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--work_dir', help='path to the working directory, default is current directory', default='./')
@@ -25,7 +29,7 @@ def execute(args):
     dist_metrics = args.distance_metrics.split(';')
     same_cdr3_length = args.same_cdr3_length
 
-    if same_cdr3_length:
+    if same_cdr3_length is True:
         prefix = 'same_cdr3_length_'
     else:
         prefix = ''
@@ -37,8 +41,11 @@ def execute(args):
     lev_dist_map = np.load(lev_dist_file)
 
     plt.clf()
-    fig, axes = plt.subplots(ncols=math.ceil(len(dist_metrics)/2),
-                             nrows=math.ceil(len(dist_metrics)/2), constrained_layout=True)
+    fig_dim = math.ceil(len(dist_metrics)/2)
+    fig, axes = plt.subplots(ncols=fig_dim, nrows=fig_dim, constrained_layout=True)
+
+    if fig_dim == 1:
+        axes = np.array([axes]).reshape([1, -1])
 
     if same_cdr3_length is False:
         fig.suptitle('Immune2vec vector space vs Levenshtein distance')
@@ -67,5 +74,5 @@ def execute(args):
     fig.savefig(prefix + 'distance_comparing.png')
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
     main()
