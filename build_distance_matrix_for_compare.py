@@ -106,7 +106,7 @@ def execute(args):
 
     if os.path.isfile(lev_dist_map_file) and os.path.isfile(lev_knn_map_file):
         print('loading knn map from file {}'.format(lev_knn_map_file))
-        knn_map = np.loadtxt(lev_knn_map_file, dtype=int)
+        knn_map = np.load(lev_knn_map_file, dtype=int)
 
     else:
         X_sequences = data_file.loc[samples, 'cdr3_aa']
@@ -117,7 +117,7 @@ def execute(args):
         data_file.loc[len(Y_sequences), 'document._id'] = None
         tagged_knn_map = np.array(np.apply_along_axis(lambda x: data_file.loc[x, 'document._id'].to_list(),
                                                       1, knn_map).tolist())
-        np.savetxt(prefix + 'knn_map.npy', tagged_knn_map, fmt='%u')
+        np.save(prefix + 'knn_map.npy', tagged_knn_map)
         np.savetxt(prefix + 'tagged_knn_map.npy', tagged_knn_map, fmt='%s')
         data_file.drop([len(Y_sequences)], axis=0, inplace=True)
 
