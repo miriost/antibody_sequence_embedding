@@ -114,10 +114,11 @@ def execute(args):
 
         distances_map, knn_map = create_knn_map(X_sequences, Y_sequences, knn, step, same_cdr3_length)
         np.save(lev_dist_map_file, distances_map)
+        np.save(prefix + 'knn_map.npy', knn_map)
+        
         data_file.loc[len(Y_sequences), 'document._id'] = None
         tagged_knn_map = np.array(np.apply_along_axis(lambda x: data_file.loc[x, 'document._id'].to_list(),
                                                       1, knn_map).tolist())
-        np.save(prefix + 'knn_map.npy', tagged_knn_map)
         np.savetxt(prefix + 'tagged_knn_map.npy', tagged_knn_map, fmt='%s')
         data_file.drop([len(Y_sequences)], axis=0, inplace=True)
 
