@@ -106,7 +106,7 @@ def execute(args):
 
     if os.path.isfile(lev_dist_map_file) and os.path.isfile(lev_knn_map_file):
         print('loading knn map from file {}'.format(lev_knn_map_file))
-        knn_map = np.load(lev_knn_map_file, dtype=int)
+        knn_map = np.load(lev_knn_map_file)
 
     else:
         X_sequences = data_file.loc[samples, 'cdr3_aa']
