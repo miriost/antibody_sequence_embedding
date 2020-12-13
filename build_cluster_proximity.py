@@ -213,6 +213,7 @@ def build_maps(data: pd.DataFrame, vectors: np.array, cluster_size, unassigned, 
     step = min(vectors.shape[0], step)
     partitions = math.ceil(vectors.shape[0] / step)
     ranges = [[round(step*i), min(round(step*(i+1)), vectors.shape[0])] for i in range(partitions)]
+    vectors_id = ray.put(vectors)
 
     sequences_completed = 0
     results_ids = [build_distance_and_knn_maps.remote(vectors_id, sub_row_range, k=cluster_size+1,
