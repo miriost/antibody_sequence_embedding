@@ -128,3 +128,8 @@ def main():
                 break
 
     feature_list.to_csv('features_list', sep='\t', index=False)
+
+
+if __name__ == '__main__':
+    main()
+
