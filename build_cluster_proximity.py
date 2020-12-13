@@ -7,10 +7,9 @@ import sys
 import math
 from sklearn.metrics.pairwise import pairwise_distances
 import ray
-import json
-import ast
 import psutil
 import gc
+
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -27,7 +26,8 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('data_file_path', help='the filtered data file path')
-    parser.add_argument('vector_column', help='the name of the column with the vector')
+    parser.add_argument('vectors_file_path', help='the name of the column with the vector')
+    parser.add_argument('output_desc', help='description prefix for the output file names')
     parser.add_argument('--cluster_size', help='size of the cluster, default is 100', type=int, default=100)
     parser.add_argument('--same_junction_len', help='Limit cluster to same junction length. Default is False',
                         type=str2bool, default=False)
@@ -46,12 +46,15 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.isfile(args.data_file_path):
-        print('Data file error, make sure data file path: {}\nExiting...'.format(args.data_file_path))
+    data_file_path = args.data_file_path
+    vectors_file_path = args.vectors_file_path
+
+    if not os.path.isfile(data_file_path):
+        print('Data file error, make sure data file path: {}\nExiting...'.format(data_file_path))
         sys.exit(1)
 
-    if args.vector_column is None:
-        print("Missing vector_column argument\nExisting...")
+    if not os.path.isfile(vectors_file_path):
+        print('Data file error, make sure vectors file path: {}\nExiting...'.format(vectors_file_path))
         sys.exit(1)
 
     num_cpus = args.num_cpus
@@ -63,31 +66,57 @@ def main():
     else:
         ray.init(num_cpus=num_cpus, lru_evict=True)
    
-    vector_column = args.vector_column
     id_column = 'subject.subject_id'
     cluster_size = args.cluster_size
     dist_metric = args.dist_metric
     step = args.step
     same_genes = args.same_genes
     same_junction_len = args.same_junction_len
+    output_desc = args.output_desc
+
+    output_dir = os.path.dirname(data_file_path)
 
     data_file = pd.read_csv(args.data_file_path, sep='\t')
     data_file['index'] = data_file.index
 
+    vectors_file = np.load(vectors_file_path)
+
+    if vectors_file.shape[0] != data_file.shape[0]:
+        print('mismatch between data_file and vectors_file length\nExiting...')
+        sys.exit(1)
+
+    distances_file_path = os.path.join(output_dir, output_desc + '_distances.npy')
+    neighbors_file_path = os.path.join(output_dir, output_desc + '_neighbors.npy')
+
     if args.search_knn is True:
-        data_file = search_knn(data_file, vector_column, cluster_size, same_junction_len, same_genes,
+        data_file = search_knn(data_file, vectors_file, cluster_size, same_junction_len, same_genes,
                                dist_metric, step)
-        data_file.to_csv(args.data_file_path, sep='\t', index=False)
+
+        distances_map = np.array(data_file['cluster_distances'].to_list())
+        np.save(distances_map, distances_file_path)
+        del distances_map
+
+        neighbors_map = np.array(data_file['cluster_neighbors'].to_list())
+        np.savetxt(neighbors_map, neighbors_file_path, fmt='%s')
+        del neighbors_map
+
     elif 'cluster_neighbors' not in data_file.columns:
-        print("Missing cluster_neighbors column\nExisting...")
-        exit(1)
+
+        distances_map = np.load(distances_file_path)
+        data_file['cluster_distances'] = pd.Series(distances_map[:, :].tolist())
+        del distances_map
+
+        neighbors_map = np.loadtxt(neighbors_file_path, dtype=object)
+        data_file['cluster_neighbors'] = pd.Series(neighbors_map[:, :].tolist())
+        del neighbors_map
 
     if args.analyze_cluster is True:
         data_file = analyze_data(data_file, id_column, num_cpus, args.search_knn)
         data_file.to_csv(args.data_file_path, sep='\t', index=False)
 
 
-def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_genes, dist_metric, step):
+def search_knn(data_file: pd.DataFrame, vectors_file: np.array, cluster_size, same_junction_len, same_genes,
+               dist_metric, step):
 
     data_file['cluster_neighbors'] = None
     data_file['cluster_distances'] = None
@@ -104,7 +133,7 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
     if len(by) == 0:
         # look for k closest neighbors regardless of the junction length
         distance_map, knn_map = build_maps(data=data_file,
-                                           vector_column=vector_column,
+                                           vectors=vectors_file,
                                            cluster_size=cluster_size,
                                            unassigned=len(data_file),
                                            dist_metric=dist_metric,
@@ -134,7 +163,7 @@ def search_knn(data_file, vector_column, cluster_size, same_junction_len, same_g
 
         # look for k closest neighbors among sequences with the same junction length)
         distance_map, knn_map = build_maps(data=frame,
-                                           vector_column=vector_column,
+                                           vectors=vectors_file,
                                            cluster_size=cluster_size,
                                            unassigned=len(frame),
                                            dist_metric=dist_metric,
@@ -162,10 +191,7 @@ def auto_garbage_collect(pct=80.0):
         gc.collect()
 
 
-def build_maps(data: pd.DataFrame, vector_column, cluster_size, unassigned, dist_metric, step):
-
-    vectors = np.array(data[vector_column].apply(lambda x: json.loads(x)).tolist(), ndmin=2)
-    vectors_id = ray.put(vectors)
+def build_maps(data: pd.DataFrame, vectors: np.array, cluster_size, unassigned, dist_metric, step):
 
     if dist_metric == 'seuclidean':
         vectors_std  = np.std(vectors, axis=0)
@@ -235,9 +261,7 @@ def analyze_data(data_file: pd.DataFrame, id_column, num_cpus, search_knn: bool)
 
     results_ids = []
     for sub_range in ranges:
-        results_ids += [analyze_sub_data.remote(data_file.iloc[sub_range[0]:sub_range[1], :],
-                                                vector_subjects_id,
-                                                search_knn,
+        results_ids += [analyze_sub_data.remote(data_file.iloc[sub_range[0]:sub_range[1], :], vector_subjects_id,
                                                 sub_range)]
 
     analysis_df = pd.concat([ray.get(result_id) for result_id in results_ids], ignore_index=True)
@@ -248,16 +272,11 @@ def analyze_data(data_file: pd.DataFrame, id_column, num_cpus, search_knn: bool)
 
 
 @ray.remote
-def analyze_sub_data(data: pd.DataFrame, vector_subjects:pd.Series, search_knn: bool, sub_range: tuple):
+def analyze_sub_data(data: pd.DataFrame, vector_subjects:pd.Series, sub_range: tuple):
 
     print("analyze_sub_data: range {}".format(sub_range))
 
-    if search_knn:
-        # knn column was created now and it is not a string
-        knn_map = np.array(data['cluster_neighbors'].tolist())
-    else:
-        # knn column was loaded from file and need to be parsed to an array
-        knn_map = np.array(data['cluster_neighbors'].apply(lambda x: ast.literal_eval(x)).tolist())
+    knn_map = np.array(data['cluster_neighbors'].tolist())
 
     sub_output_df = pd.DataFrame()
 
