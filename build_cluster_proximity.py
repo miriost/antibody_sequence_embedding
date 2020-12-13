@@ -87,17 +87,18 @@ def main():
 
     distances_file_path = os.path.join(output_dir, output_desc + '_distances.npy')
     neighbors_file_path = os.path.join(output_dir, output_desc + '_neighbors.npy')
+    subjects_file_path = os.path.join(output_dir, output_desc + '_subjects.npy')
 
     if args.search_knn is True:
         data_file = search_knn(data_file, vectors_file, cluster_size, same_junction_len, same_genes,
                                dist_metric, step)
 
         distances_map = np.array(data_file['cluster_distances'].to_list())
-        np.save(distances_map, distances_file_path)
+        np.save(distances_file_path, distances_map)
         del distances_map
 
         neighbors_map = np.array(data_file['cluster_neighbors'].to_list())
-        np.savetxt(neighbors_map, neighbors_file_path, fmt='%s')
+        np.save(neighbors_file_path, neighbors_map, fmt='%s')
         del neighbors_map
 
     elif 'cluster_neighbors' not in data_file.columns:
@@ -113,6 +114,9 @@ def main():
     if args.analyze_cluster is True:
         data_file = analyze_data(data_file, id_column, num_cpus, args.search_knn)
         data_file.to_csv(args.data_file_path, sep='\t', index=False)
+        subjects_map = np.array(data_file['cluster_subjects'].to_list())
+        np.savetxt(subjects_file_path, subjects_map, fmt='%s')
+        del subjects_map
 
 
 def search_knn(data_file: pd.DataFrame, vectors_file: np.array, cluster_size, same_junction_len, same_genes,
@@ -211,7 +215,7 @@ def build_maps(data: pd.DataFrame, vectors: np.array, cluster_size, unassigned, 
     ranges = [[round(step*i), min(round(step*(i+1)), vectors.shape[0])] for i in range(partitions)]
 
     sequences_completed = 0
-    results_ids = [build_distance_and_knn_maps.remote(vectors_id, sub_row_range, k=cluster_size,
+    results_ids = [build_distance_and_knn_maps.remote(vectors_id, sub_row_range, k=cluster_size+1,
                                                       dist_metric=dist_metric, vectors_std=vectors_std_id,
                                                       n_jobs=n_jobs) for sub_row_range in ranges]
 
