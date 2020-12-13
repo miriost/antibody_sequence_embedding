@@ -1,9 +1,6 @@
 import sys, argparse, os
-from random import choices
 import pandas as pd
-import pathlib
 import numpy as np
-from sklearn.model_selection import StratifiedShuffleSplit
 
 
 def str2bool(v):
@@ -23,11 +20,9 @@ def main():
 
     parser.add_argument('data_file_path', help='The original tsv data file')
     parser.add_argument('vectors_file_path', help='A vector file to split according to the data files split')
-    parser.add_argument('data_file_desc', help='The description part in the train/test data file name, the split data '
-                                               'file name is of the format {desc}_{TRAIN/TEST}{fold number}.tsv')
     parser.add_argument('--folds_dir', help='A root dir containing the data folds, each fold is in a directory '
                                             'FOLD{fold number}, default is "./"', default='./')
-    parser.add_argument('--n_splits',  help='Number of CV splits, default=5', type=int, default=5)
+    parser.add_argument('--n_splits',  help='Number of splits, default=10', type=int, default=10)
     args = parser.parse_args()
 
     execute(args)
@@ -35,7 +30,7 @@ def main():
 
 def execute(args):
 
-    vectors_file_path = args.vectors_file
+    vectors_file_path = args.vectors_file_path
     folds_dir = args.folds_dir
     n_splits = args.n_splits
     data_file_path = args.data_file_path
@@ -56,9 +51,14 @@ def execute(args):
     vectors_file = np.load(vectors_file_path)
     print('Vectors file loaded, original file length: ', vectors_file.shape[0])
 
-    data_file_desc = os.path.basename(data_file).split('.tsv')[0]
+    if vectors_file.shape[0] != data_file.shape[0]:
+        print('mismatch between data_file and vectors_file length\nExiting...')
+        sys.exit(1)
+
+    data_file_desc = os.path.basename(data_file_path).split('.tsv')[0]
+    vectors_file_desc = os.path.basename(vectors_file_path).split('_VECTORS.npy')[0]
     for fold in range(n_splits):
-        for split in ['TRAIN', 'TEST']:
+        for split in ['TRAIN_', 'TEST_']:
             file_name = os.path.join(folds_dir, 'FOLD' + str(fold), data_file_desc + '_' + split + str(fold) + '.tsv')
             if not os.path.isfile(file_name):
                 print('{} file error! Make sure the file exists.\nSkipping...'.format(file_name))
@@ -66,10 +66,11 @@ def execute(args):
             sequences_ids = pd.read_csv(file_name, sep='\t', usecols=['document._id'])
             indexing = data_file['document._id'].isin(sequences_ids['document._id'])
             vectors = vectors_file[indexing, :]
-            vectors_file_name = os.path.join(folds_dir, 'FOLD' + str(fold), split + '_VECTORS.npy');
+            vectors_file_name = os.path.join(folds_dir, 'FOLD' + str(fold), vectors_file_desc + '_' + split +
+                                             'VECTORS.npy');
+            print('saving: ', vectors_file_name)
             np.save(vectors_file_name, vectors)
 
 
 if __name__ == "__main__":
     main()
-
