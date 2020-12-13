@@ -98,7 +98,7 @@ def main():
         del distances_map
 
         neighbors_map = np.array(data_file['cluster_neighbors'].to_list())
-        np.save(neighbors_file_path, neighbors_map, fmt='%s')
+        np.save(neighbors_file_path, neighbors_map)
         del neighbors_map
 
     elif 'cluster_neighbors' not in data_file.columns:
