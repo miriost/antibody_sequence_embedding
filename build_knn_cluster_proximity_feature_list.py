@@ -156,7 +156,8 @@ def main():
     features_df = data_file.iloc[selected_features, :].copy(deep=True)
     features_df.loc[selected_features, 'cluster_sequences'] = data_file.loc[selected_features,
                                                                             'cluster_neighbors'].apply(lambda x: data_file.loc[x, 'document._id'].to_list())
-    features_df[selected_features, 'vector'] = vectors_file[selected_features, :]
+    features_df[selected_features, 'vector'] = pd.Series(list(map(lambda x: x.tolist(),
+                                                                  vectors_file[selected_features, :])), index=features_df.index)
 
     if max_distance_diameter:
         features_df['max_distance'] = max_distance
