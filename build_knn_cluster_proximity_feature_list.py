@@ -34,6 +34,8 @@ def main():
                                                'is no shuffling.', type=int)
     parser.add_argument('--max_distance_diameter', help='use max distance as the cluster diameter, default is False',
                         type=str2bool, default=False)
+    parser.add_argument('--use_centroid', help='calculate cluster centroid as an average of all members coordinates',
+                        type=str2bool, default=False)
 
     args = parser.parse_args()
 
@@ -45,6 +47,7 @@ def main():
     shuffle_seed = args.shuffle_seed
     max_distance = args.max_distance
     max_distance_diameter = args.max_distance_diameter
+    use_centroid = args.use_centroid
     data_file_path = args.data_file_path
     vectors_file_path = args.vectors_file_path
     distances_file_path = args.distances_file_path
@@ -156,8 +159,12 @@ def main():
     features_df = data_file.iloc[selected_features, :].copy(deep=True)
     features_df.loc[selected_features, 'cluster_sequences'] = data_file.loc[selected_features,
                                                                             'cluster_neighbors'].apply(lambda x: data_file.loc[x, 'document._id'].to_list())
-    features_df[selected_features, 'vector'] = pd.Series(list(map(lambda x: x.tolist(),
-                                                                  vectors_file[selected_features, :])), index=features_df.index)
+
+    if use_centroid:
+        features_df.loc[selected_features, 'vector'] = features_df.loc['cluster_neighbors'].apply(lambda x: np.mean(vectors_file[x, :], axis=0).tolist())
+    else:
+        features_df.loc[selected_features, 'vector'] = pd.Series(list(map(lambda x: x.tolist(),
+                                                                      vectors_file[selected_features, :])), index=features_df.index)
 
     if max_distance_diameter:
         features_df['max_distance'] = max_distance
