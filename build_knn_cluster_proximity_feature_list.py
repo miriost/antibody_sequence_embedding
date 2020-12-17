@@ -49,7 +49,7 @@ def main():
     vectors_file_path = args.vectors_file_path
     distances_file_path = args.distances_file_path
     neighbors_file_path = args.neighbors_file_path
-    labels = args.lables
+    labels = args.labels
 
     if num_cpus is None:
         num_cpus = psutil.cpu_count()
