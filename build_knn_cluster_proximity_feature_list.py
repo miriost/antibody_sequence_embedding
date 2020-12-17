@@ -4,6 +4,7 @@ import sys, argparse
 import os
 import ray
 import psutil
+import gc
 
 
 def str2bool(v):
@@ -70,21 +71,25 @@ def main():
     if label_column not in data_file.columns:
         print("{} is not in data file columns: {}\nExisting...".format(label_column, data_file.columns))
         sys.exit(1)
+    print('loaded data file')
 
     vectors_file = np.load(vectors_file_path)
     if vectors_file.shape[0] != data_file.shape[0]:
         print('mismatch between data_file and vectors_file length\nExiting...')
         sys.exit(1)
+    print('loaded vectors file')
 
     distances_file = np.load(distances_file_path)
     if distances_file.shape[0] != data_file.shape[0]:
         print('mismatch between data_file and distances_file length\nExiting...')
         sys.exit(1)
+    print('loaded distances file')
 
     neighbors_file = np.load(neighbors_file_path)
     if neighbors_file.shape[0] != data_file.shape[0]:
         print('mismatch between data_file and neighbors_file length\nExiting...')
         sys.exit(1)
+    print('loaded neighbors file')
 
     ray.init(num_cpus=num_cpus)
 
@@ -95,6 +100,7 @@ def main():
 
     if max_distance is None:
         max_distance = np.percentile(distances_file, 15)
+        print('max_distance {}'.format(max_distance))
 
     subjects = data_file.loc[:, ].groupby(by=[id_column])[label_column].apply(lambda x: x.iloc[0])
     if shuffle_seed is not None:
@@ -109,12 +115,16 @@ def main():
     neighbors_file_id = ray.put(neighbors_file)
 
     data_file = pd.concat(ray.get([build_maps.remote(data_file_id,
+                                                     data_file[sub_range[0]:sub_range[1]],
                                                      distances_file_id,
                                                      neighbors_file_id,
                                                      sub_range,
                                                      subjects,
                                                      labels,
                                                      max_distance) for sub_range in ranges]))
+    if psutil.virtual_memory().percent >= 80.0:
+        gc.collect()
+
     # processing
     number_of_features_neto = 0
     number_of_features_bruto = 0
@@ -175,20 +185,21 @@ def main():
 
 
 @ray.remote
-def build_maps(data_file: pd.DataFrame, distances_file: np.array, neighbors_file: np.array, sub_range,
-               subjects: pd.Series, labels, max_distance):
-    data = data_file[sub_range[0]:sub_range[1]].copy(deep=True)
+def build_maps(data_file: pd.DataFrame, data: pd.DataFrame, distances_file: np.array, neighbors_file: np.array,
+               sub_range, subjects: pd.Series, labels, max_distance):
     distances_map = distances_file[sub_range[0]:sub_range[1], :]
     neighbors_map = neighbors_file[sub_range[0]:sub_range[1], :]
 
     # need to filter neighbors by max_distance
     filtering = np.logical_and(distances_map <= max_distance, neighbors_map < len(data_file))
 
+    print("adding cluster_distances column to rows {}".format(sub_range))
     cluster_distances = list(map(lambda i: distances_map[i, filtering[i, :]].tolist(), range(len(data))))
     data['cluster_distances'] = pd.Series(cluster_distances, index=data.index)
     del cluster_distances
     del distances_map
 
+    print("adding cluster_neighbors column to rows {}".format(sub_range))
     cluster_neighbors = list(map(lambda i: neighbors_map[i, filtering[i, :]].tolist(), range(len(data))))
     data.loc[data.index, 'cluster_neighbors'] = pd.Series(cluster_neighbors, index=data.index)
     del cluster_neighbors
@@ -196,6 +207,7 @@ def build_maps(data_file: pd.DataFrame, distances_file: np.array, neighbors_file
 
     del filtering
 
+    print("adding cluster_subjects column to rows {}".format(sub_range))
     data.loc[data.index, 'cluster_subjects'] = data.loc[data.index,
                                                         'cluster_neighbors'].apply(lambda x: data_file.loc[x, 'subject.subject_id'].to_list())
 
@@ -204,10 +216,12 @@ def build_maps(data_file: pd.DataFrame, distances_file: np.array, neighbors_file
     data['mean_distance'] = data['cluster_distances'].apply(lambda x: np.mean(x))
 
     # for analysis - subjects from each label in the clusters
+    print("adding label subject columns to rows {}".format(sub_range))
     for label in labels:
         data[label + ' subjects'] = data['cluster_subjects'].apply(lambda x: subjects[(subjects.index.isin(x)) & (subjects == label)].index.tolist())
 
     # for the cluster selection - what is the proportion of each label in the clusters
+    print("adding label significant columns to rows {}".format(sub_range))
     cluster_diagnosis = data['cluster_subjects'].apply(lambda x: subjects[x].value_counts(normalize=True,
                                                                                           dropna=True)).fillna(0)
     data[labels] = cluster_diagnosis[labels]
@@ -215,6 +229,8 @@ def build_maps(data_file: pd.DataFrame, distances_file: np.array, neighbors_file
 
     # for the cluster selection - how many subjects are in the clusters
     data['how_many_subjects'] = data['cluster_subjects'].apply(lambda x: len(x))
+
+    print("finished adding columns to rows {}".format(sub_range))
 
     return data
 
