@@ -26,6 +26,7 @@ def main():
     parser.add_argument('--col_names', help='comma separated list of columns names to add to output', type=str)
     parser.add_argument('--col_values', help='comma separated list of columns values to add to output', type=str)
     parser.add_argument('--grid_search', help='use grid search', type=str2bool, default=False)
+    parser.add_argument('--save_selected_features', help='Save the selected features', type=str2bool, default=False)
     parser.add_argument('--output_model_file', help='Suffix of file saving the trained models. if not provided models '
                                                     'will not be saved',
                         type=str)
@@ -97,6 +98,21 @@ def main():
     if len(x_test.columns) == 0:
         print('No features in test file.\nExiting...')
         sys.exit(1)
+
+    if args.save_selected_features:
+        our_classifier = Classifier(name="logistic_regression")
+        features = our_classifier.select_features()
+        train_dir = os.path.dirname(args.train_file)
+        train_name = os.path.basename(args.train_file).split('.csv')[0]
+        train_file.loc[:, features + [labels_col_name]].to_csv(os.path.join(train_dir,
+                                                                            'selected_' + train_name + '.csv'),
+                                                               index=False)
+        test_dir = os.path.dirname(args.test_file)
+        test_name = os.path.basename(args.test_file).split('.csv')[0]
+        test_file.loc[:, features + [labels_col_name]].to_csv(os.path.join(test_dir,
+                                                                           'selected_' + test_name + '.csv'),
+                                                              index=False)
+        return
 
     output = None
     if args.input_model_file:

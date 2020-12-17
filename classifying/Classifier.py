@@ -188,6 +188,10 @@ class Classifier:
                                                feature_selector=feature_selector,
                                                parameters=parameters)
 
+    def select_features(self, X_train, y_train):
+
+        self.classifier.select_features(X_train, y_train)
+        return self.classifier.features
 
     def run_once(self, X_train, X_test, y_train, y_test):
 
