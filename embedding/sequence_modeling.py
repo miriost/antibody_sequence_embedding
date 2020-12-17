@@ -13,13 +13,18 @@ from random import randint
 import random
 import numpy as np
 
-def split_ngrams_with_repetition(seq, n):
+
+def split_ngrams_with_repetition(seq, n, n_read_frames=None):
     """
     'AGAMQSASM' => [['AGA', 'MQS', 'ASM'], ['GAM','QSA'], ['AMQ', 'SAS']]
     """
-    a, b, c = zip(*[iter(seq)]*n), zip(*[iter(seq[1:])]*n), zip(*[iter(seq[2:])]*n)
+    if n_read_frames is None or n_read_frames > n:
+        n_read_frames = n
+
+    frames = [zip(*[iter(seq[frame:])]*n) for frame in range(n_read_frames)]
+
     str_ngrams = []
-    for ngrams in [a,b,c]:
+    for ngrams in frames:
         x = []
         for ngram in ngrams:
             x.append("".join(ngram))
@@ -141,14 +146,14 @@ class ProtVec(word2vec.Word2Vec):
         word2vec.Word2Vec.__init__(self, corpus, size=size, sg=sg, window=window, min_count=min_count, workers=workers)
         print('word2vec model, size={}, window={}, min_count={}, workers={})'.format(size, window, min_count, workers))
 
-    def to_vecs(self, seq):
+    def to_vecs(self, seq, n_read_frames=None):
             """
             convert sequence to three n-length vectors
             e.g. 'AGAMQSASM' => [ array([  ... * 100 ], array([  ... * 100 ], array([  ... * 100 ] ]
             !!!FIX 06.11.2020:
             summarize the three vector to one using weighted average
             """
-            ngram_patterns = split_ngrams_with_repetition(seq, self.n)
+            ngram_patterns = split_ngrams_with_repetition(seq, self.n, n_read_frames)
 
             protvecs = []
             words_len = 0

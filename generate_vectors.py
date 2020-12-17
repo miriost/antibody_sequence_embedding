@@ -24,15 +24,19 @@ def main():
     parser.add_argument('--column', help='column name to convert to vectors (default cdr3_aa)', default="cdr3_aa")
     parser.add_argument('--drop_duplicates', help='Drop duplicated sequences in the same repertoire, (default True)',
                         default=True, type=str2bool)
+    parser.add_argument('--n_read_frames', help='how many read frames to use for the embedding, default is all possible'
+                                                'read frames', type=int)
+
 
     args = parser.parse_args()
     drop_duplicates = args.drop_duplicates
     data_file_path = args.data_file_path
     model_file_path = args.model_file_path
     column = args.column
+    n_read_frames = args.n_read_frames
 
-    if not os.path.isfile(data_file_path) or data_file_path[:-4] == '.tsv':
-        print('Feature file ({}) error! Make sure the file exists and it is *.tsv file.\n'
+    if not os.path.isfile(data_file_path) or not data_file_path[:-4] == '.tsv':
+        print('Data file ({}) error! Make sure the file exists and it is *.tsv file.\n'
               'Exiting...'.format(data_file_path))
         sys.exit(1)
     print('Input file for embedding: ', data_file_path, '\nModel: ', model_file_path)
@@ -52,7 +56,7 @@ def main():
 
     def embed_data(word):
         try:
-            return list(model.to_vecs(word))
+            return list(model.to_vecs(word, n_read_frames=n_read_frames))
         except:
             return np.nan
 

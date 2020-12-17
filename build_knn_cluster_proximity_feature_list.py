@@ -42,13 +42,14 @@ def main():
     min_significance = args.min_significance
     min_subjects = args.min_subjects
     num_cpus = args.num_cpus
-    max_distance = args.max_distance
     shuffle_seed = args.shuffle_seed
+    max_distance = args.max_distance
     max_distance_diameter = args.max_distance_diameter
     data_file_path = args.data_file_path
     vectors_file_path = args.vectors_file_path
     distances_file_path = args.distances_file_path
     neighbors_file_path = args.neighbors_file_path
+    labels = args.lables
 
     if num_cpus is None:
         num_cpus = psutil.cpu_count()
@@ -62,7 +63,7 @@ def main():
         sys.exit(1)
 
     # load files
-    data_file = pd.read_csv(args.data_file_path, sep='\t')
+    data_file = pd.read_csv(data_file_path, sep='\t')
     if label_column not in data_file.columns:
         print("{} is not in data file columns: {}\nExisting...".format(label_column, data_file.columns))
         sys.exit(1)
@@ -77,17 +78,20 @@ def main():
         print('mismatch between data_file and distances_file length\nExiting...')
         sys.exit(1)
 
-    neighbors_file = np.load(vectors_file_path)
+    neighbors_file = np.load(neighbors_file_path)
     if neighbors_file.shape[0] != data_file.shape[0]:
         print('mismatch between data_file and neighbors_file length\nExiting...')
         sys.exit(1)
 
     ray.init(num_cpus=num_cpus)
 
-    if args.labels is None:
+    if labels is None:
         labels = data_file[label_column].unique().tolist()
     else:
         labels = args.labels.split(';')
+
+    if max_distance is None:
+        max_distance = np.percentile(distances_file, 15)
 
     subjects = data_file.loc[:, ].groupby(by=[id_column])[label_column].apply(lambda x: x.iloc[0])
     if shuffle_seed is not None:
@@ -107,8 +111,7 @@ def main():
                                                      sub_range,
                                                      subjects,
                                                      labels,
-                                                     max_distance,
-                                                     len(data_file)) for sub_range in ranges]))
+                                                     max_distance) for sub_range in ranges]))
     # processing
     number_of_features_neto = 0
     number_of_features_bruto = 0
@@ -164,34 +167,30 @@ def main():
 
 
 @ray.remote
-def build_maps(data: pd.DataFrame, distance_map: np.array, neighbors_map: np.array, sub_range, subjects: pd.Series,
-               labels, max_distance, unassinged):
-    data = data[sub_range[0]:sub_range[1]]
-    distance_map = distance_map[sub_range[0]:sub_range[1], :]
-    neighbors_map = neighbors_map[sub_range[0]:sub_range[1], :]
+def build_maps(data_file: pd.DataFrame, distances_file: np.array, neighbors_file: np.array, sub_range,
+               subjects: pd.Series, labels, max_distance):
+    unassinged = len(data_file)
+    data = data_file[sub_range[0]:sub_range[1]].copy(deep=True)
+    distances_map = distances_file[sub_range[0]:sub_range[1], :]
+    neighbors_map = neighbors_file[sub_range[0]:sub_range[1], :]
 
     # need to filter neighbors by max_distance
-    filtering = np.logical_and(distance_map <= max_distance, neighbors_map != unassinged)
+    filtering = np.logical_and(distances_map <= max_distance, neighbors_map != unassinged)
 
-    del neighbors_map
-    del distance_map
-
-    cluster_subjects = list(map(lambda i: np.unique(np.array(data.iloc[i, :]['cluster_subjects'])[filtering[i, :]]).tolist(),
-                                range(len(data))))
-    data['cluster_subjects'] = pd.Series(cluster_subjects, index=data.index)
-    del cluster_subjects
-
-    cluster_neighbors = list(map(lambda i: np.array(data.iloc[i, :]['cluster_neighbors'])[filtering[i, :]].tolist(),
-                                 range(len(data))))
-    data['cluster_neighbors'] = pd.Series(cluster_neighbors, index=data.index)
-    del cluster_neighbors
-
-    cluster_distances = list(map(lambda i: np.array(data.iloc[i, :]['cluster_distances'])[filtering[i, :]].tolist(),
-                                 range(len(data))))
+    cluster_distances = list(map(lambda i: distances_map[i, filtering[i, :]].tolist(), range(len(data))))
     data['cluster_distances'] = pd.Series(cluster_distances, index=data.index)
     del cluster_distances
+    del distances_map
+
+    cluster_neighbors = list(map(lambda i: neighbors_map[i, filtering[i, :]].tolist(), range(len(data))))
+    data.loc[data.index, 'cluster_neighbors'] = pd.Series(cluster_neighbors, index=data.index)
+    del cluster_neighbors
+    del neighbors_map
 
     del filtering
+
+    data.loc[data.index, 'cluster_subjects'] = data.loc[data.index,
+                                                        'cluster_neighbors'].apply(lambda x: data_file.loc[x, 'subject.subject.id'].to_list())
 
     # cluster diameter
     data['max_distance'] = data['cluster_distances'].apply(lambda x: np.max(x))
