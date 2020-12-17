@@ -101,7 +101,7 @@ def main():
 
     if args.save_selected_features is True:
         our_classifier = Classifier(name="logistic_regression", classes=classes)
-        features = our_classifier.select_features()
+        features = our_classifier.select_features(x_train, y_train)
         train_dir = os.path.dirname(args.train_file)
         train_name = os.path.basename(args.train_file).split('.csv')[0]
         train_file.loc[:, features + [labels_col_name]].to_csv(os.path.join(train_dir,
