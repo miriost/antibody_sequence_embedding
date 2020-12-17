@@ -25,6 +25,8 @@ def main():
                              'default is all labels.')
     parser.add_argument('--max_distance', help='max allowed distance in cluster, default is the 15 percentile of the '
                                                'knn distances', type=float)
+    parser.add_argument('--max_distance_percentile', help='percentile to determine max_distance if max_distance is not '
+                                                          'provided', type=int, default=15)
     parser.add_argument('--min_subjects', help='minimal number of subjects for cluster selection, default is 7',
                         type=int, default=7)
     parser.add_argument('--min_significance', help='minimal significance of label for cluster selection, default is 0.7',
@@ -54,6 +56,7 @@ def main():
     distances_file_path = args.distances_file_path
     neighbors_file_path = args.neighbors_file_path
     labels = args.labels
+    max_distance_percentile = args.max_distance_percentile
 
     if num_cpus is None:
         num_cpus = psutil.cpu_count()
@@ -99,8 +102,8 @@ def main():
         labels = args.labels.split(';')
 
     if max_distance is None:
-        max_distance = np.percentile(distances_file, 15)
-        print('max_distance {}'.format(max_distance))
+        max_distance = np.percentile(distances_file, max_distance_percentile)
+        print('max_distance {} (percentile {})'.format(max_distance, max_distance_percentile))
 
     subjects = data_file.loc[:, ].groupby(by=[id_column])[label_column].apply(lambda x: x.iloc[0])
     if shuffle_seed is not None:
