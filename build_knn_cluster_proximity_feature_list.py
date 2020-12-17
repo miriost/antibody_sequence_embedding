@@ -141,6 +141,8 @@ def main():
         candidates_pool = candidates_pool.sort_values(by=[label, 'how_many_subjects', 'max_distance'],
                                                       ascending=[False, False, True])
 
+        print('label {} candidate pool size is {}'.format(label, len(candidates_pool)))
+
         number_of_feature_labels = 0
         for idx, val in candidates_pool.iterrows():
             number_of_features_bruto += 1
