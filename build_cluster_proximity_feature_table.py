@@ -26,7 +26,7 @@ import pandas as pd
 import numpy as np
 import sys, argparse
 import os
-import random
+import psutil
 import ray
 import time
 import json
@@ -56,6 +56,8 @@ def main():
     features_file_path = args.features_file_path
     num_cpus = args.num_cpus
     dist_metric = args.dist_metric
+    output_folder = args.output_folder
+    output_description = args.output_description
 
     if not(os.path.isfile(data_file_path)):
         print('feature file error, make sure file path exists\nExiting...')
@@ -70,10 +72,6 @@ def main():
         sys.exit(1)
 
     data_file = pd.read_csv(data_file_path, sep='\t')
-    if args.vector_column not in data_file.columns:
-        print("{} is not in data file columns: {}\nExisting...".format(args.vector_column, data_file.columns))
-        sys.exit(1)
-    print('loaded data file')
 
     vectors_file = np.load(vectors_file_path)
     if vectors_file.shape[0] != data_file.shape[0]:
@@ -126,14 +124,14 @@ def main():
     # add subject labels column
     features_table[label_column] = None
     for subject, frame in by_subject:
-        label = frame[args.labels_col_name].unique()[0]
-        features_table.loc[subject, args.labels_col_name] = label
+        label = frame[label_column].unique()[0]
+        features_table.loc[subject, label_column] = label
 
     # save to file
-    features_table.to_csv(os.path.join(args.output_folder, args.output_description + '_feature_table.csv'),
+    features_table.to_csv(os.path.join(output_folder, output_description + '_feature_table.csv'),
                           index_label='SUBJECT')
       
-    print('file saved to ', os.path.join(args.output_folder, args.output_description + '_feature_table.csv'))
+    print('file saved to ', os.path.join(output_folder, output_description + '_feature_table.csv'))
 
 
 @ray.remote
