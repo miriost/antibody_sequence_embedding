@@ -36,11 +36,11 @@ from sklearn.metrics.pairwise import pairwise_distances
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('data_file',  help='the filtered data file path')
-    parser.add_argument('features_file',
+    parser.add_argument('data_file_path', help='the data tsv file path')
+    parser.add_argument('vectors_file_path', help='the vectors npy file path')
+    parser.add_argument('features_file_path',
                         help='feature list file, contains the list of relevent features, including feature '
                              'center and maximal distance from it')
-    parser.add_argument('vector_column', help='the name of the column with the vector', type=str)
     parser.add_argument('output_description',  help='description to use inside output file names', type=str)
     parser.add_argument('--output_folder', default="./",  help='Output folder for the feature table')
     parser.add_argument('--labels_col_name',
@@ -52,47 +52,58 @@ def main():
                         help='number of cpus to run parallel computing', default=2, type=int)
     parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
     args = parser.parse_args()
-    
-    if not(os.path.isfile(args.features_file)):
-        print('feature list file error, make sure file path exists\nExiting...')
-        sys.exit(1)
-                
-    if not(os.path.isfile(args.data_file)):
+
+    label_column = 'subject.disease_diagnosis'
+    id_column = 'subject.subject_id'
+    data_file_path = args.data_file_path
+    vectors_file_path = args.vectors_file_path
+    features_file_path = args.features_file_path
+
+    if not(os.path.isfile(data_file_path)):
         print('feature file error, make sure file path exists\nExiting...')
         sys.exit(1)
 
-    if args.vector_column is None:
-        print("Missing vector_column argument\nExisting...")
+    if not (os.path.isfile(vectors_file_path)):
+        print('vectors file error, make sure file path exists\nExiting...')
+        sys.exit(1)
+
+    if not(os.path.isfile(features_file_path)):
+        print('feature list file error, make sure file path exists\nExiting...')
         sys.exit(1)
 
     cpus = args.cpus
     dist_metric = args.dist_metric
 
-    feature_list = pd.read_csv(args.features_file, sep='\t')
-
     data_file = pd.read_csv(args.data_file, sep='\t')
     if args.vector_column not in data_file.columns:
         print("{} is not in data file columns: {}\nExisting...".format(args.vector_column, data_file.columns))
         sys.exit(1)
+    print('loaded data file')
 
-    vectors = np.array(data_file[args.vector_column].apply(lambda x: json.loads(x)).to_list())
-    vectors = pd.DataFrame(vectors, columns=list(range(vectors.shape[1])))
+    vectors_file = np.load(vectors_file_path)
+    if vectors_file.shape[0] != data_file.shape[0]:
+        print('mismatch between data_file and vectors_file length\nExiting...')
+        sys.exit(1)
+    print('loaded vectors file')
 
-    label_column = 'subject.disease_diagnosis'
+    features_file = pd.read_csv(args.features_file, sep='\t')
+    print('loaded features file')
+
     if label_column not in data_file.columns:
         print(f'label "{label_column}" column name doesnt exist in data file.\nExiting...')
         sys.exit(1)
 
-    id_column = 'subject.subject_id'
     if id_column not in data_file.columns:
         print(f'"{id_column}" column name doesnt exist in data file.\nExiting...')
         sys.exit(1)
     
-    if 'feature_index' not in feature_list.columns:
+    if 'feature_index' not in features_file.columns:
         print(f'"feature list file error, no "feature index" column. please check.\n exiting...')
         sys.exit(1)
-    else:
-        print(f'feature indexes: {feature_list.index}')
+
+    if 'vector' not in features_file.columns:
+        print(f'"feature list file error, no "feature index" column. please check.\n exiting...')
+        sys.exit(1)
 
     if args.thread_memory is not None:
         ray.init(memory=args.thread_memory, object_store_memory=args.thread_memory)
@@ -103,15 +114,18 @@ def main():
     # for each subject - add feature frequency columns
     result_ids = []
 
-    features = np.array(feature_list[args.vector_column].apply(lambda x: json.loads(x)).to_list())
-    features = pd.DataFrame(features, columns=list(range(features.shape[1])))
-    max_distance = np.array(feature_list.loc[:, 'max_distance']).reshape(1, len(feature_list))
-    features_idx = feature_list['feature_index']
+    features = np.array(features_file['vector'].apply(lambda x: json.loads(x)).to_list())
+    max_distance = np.array(features_file.loc[:, 'max_distance']).reshape(1, len(feature_list))
+    features_idx = features_file['feature_index']
+
+    vectors_file_id = ray.put(vectors_file)
+    features_id = ray.put(features)
+    max_distance_id = ray.put(max_distance)
+    features_idx_id = ray.put(features_idx)
 
     for subject, frame in by_subject:
-        subject_vectors = vectors.iloc[frame.index]
-        result_ids += [get_subject_feature_table.remote(subject, features, max_distance, features_idx,
-                                                        subject_vectors, cpus, dist_metric)]
+        result_ids += [get_subject_feature_table.remote(subject, vectors_file_id, features_id, max_distance_id,
+                                                        features_idx_id, frame.index, dist_metric)]
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
     # add subject labels column
@@ -128,14 +142,15 @@ def main():
 
 
 @ray.remote
-def get_subject_feature_table(subject, features: pd.DataFrame, max_distance: np.ndarray, features_idx: list,
-                              subject_vectors: pd.DataFrame, cpus=2, dist_metric='euclidean'):
+def get_subject_feature_table(subject: str, vectors: np.ndarray, features: np.ndarray, max_distance: np.ndarray,
+                              features_idx: pd.Series, subject_index, dist_metric):
+    subject_vectors = vectors[subject_index, :]
 
     print('Start creating feature table for subject {}'.format(subject))
     t0 = time.time()
-    subject_features_table = pd.DataFrame(0, index=[subject], columns=features_idx.to_list())
+    subject_features_table = pd.DataFrame(0, index=[subject], columns=features_idx.values)
     # for each vector belonging to the subject
-    distances = pairwise_distances(X=subject_vectors.to_numpy(), Y=features.to_numpy(), metric=dist_metric, n_jobs=cpus)
+    distances = pairwise_distances(X=subject_vectors, Y=features, metric=dist_metric)
     distance_close_enough_mat = np.logical_or(np.isclose(distances, max_distance, rtol=1e-10, atol=1e-10),
                                               np.less_equal(distances, max_distance))
 
@@ -151,37 +166,6 @@ def get_subject_feature_table(subject, features: pd.DataFrame, max_distance: np.
                                                                                              features_count,
                                                                                              time.time()-t0))
     return subject_features_table
-
-
-def test_get_subject_feature_table():
-    data = pd.DataFrame()
-    data['SUBJECT'] = random.choices(['P1_I1', 'P1_I2', 'P1_I3', 'P1_I4', 'P1_I5', 'P1_I6', 'P1_I7', 'P1_I8'], k=1000)
-    for subject in data['SUBJECT'].unique():
-        data.loc[data['SUBJECT'] == subject, 'labels'] = random.sample(['healthy', 'celiac'], k=1)[0]
-    vectors = pd.DataFrame(np.random.rand(1000, 100))
-    feature_list = pd.DataFrame(np.random.rand(100, 100), columns=list(range(100)))
-    feature_list['feature_index'] = list(range(100))
-    feature_list['max_distance'] = np.random.rand(100, 1) + 4
-    cols = feature_list.columns.tolist()
-    cols = cols[-2:] + cols[:-2]
-    feature_list = feature_list[cols]
-    by_subject = data.groupby('SUBJECT')
-
-    result_ids = []
-    for subject, frame in by_subject:
-        subject_vectors = vectors.iloc[frame.index]
-        result_ids += [get_subject_feature_table.remote(subject, feature_list, subject_vectors)]
-    features_table = pd.concat([ray.get(id) for id in result_ids])
-
-    features_table = features_table.div(features_table.sum(axis=1), axis=0)
-
-    # add subject labels column
-    features_table['labels'] = None
-    for subject, frame in by_subject:
-        label = frame['labels'].unique()[0]
-        features_table.loc[subject, 'labels'] = label
-
-    return features_table
 
 
 if __name__ == '__main__':
