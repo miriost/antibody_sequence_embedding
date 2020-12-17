@@ -43,14 +43,10 @@ def main():
                              'center and maximal distance from it')
     parser.add_argument('output_description',  help='description to use inside output file names', type=str)
     parser.add_argument('--output_folder', default="./",  help='Output folder for the feature table')
-    parser.add_argument('--labels_col_name',
-                        help='labels column name in data file, default "subject.disease_diagnosis"',
-                        default='subject.disease_diagnosis', type=str)
     parser.add_argument('--dist_metric',
                         help='type of distance to use, default=euclidean', default='euclidean', type=str)
-    parser.add_argument('--cpus',
+    parser.add_argument('--num_cpus',
                         help='number of cpus to run parallel computing', default=2, type=int)
-    parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
     args = parser.parse_args()
 
     label_column = 'subject.disease_diagnosis'
@@ -58,6 +54,8 @@ def main():
     data_file_path = args.data_file_path
     vectors_file_path = args.vectors_file_path
     features_file_path = args.features_file_path
+    num_cpus = args.num_cpus
+    dist_metric = args.dist_metric
 
     if not(os.path.isfile(data_file_path)):
         print('feature file error, make sure file path exists\nExiting...')
@@ -71,10 +69,7 @@ def main():
         print('feature list file error, make sure file path exists\nExiting...')
         sys.exit(1)
 
-    cpus = args.cpus
-    dist_metric = args.dist_metric
-
-    data_file = pd.read_csv(args.data_file, sep='\t')
+    data_file = pd.read_csv(data_file_path, sep='\t')
     if args.vector_column not in data_file.columns:
         print("{} is not in data file columns: {}\nExisting...".format(args.vector_column, data_file.columns))
         sys.exit(1)
@@ -86,7 +81,7 @@ def main():
         sys.exit(1)
     print('loaded vectors file')
 
-    features_file = pd.read_csv(args.features_file, sep='\t')
+    features_file = pd.read_csv(features_file_path, sep='\t')
     print('loaded features file')
 
     if label_column not in data_file.columns:
@@ -105,17 +100,17 @@ def main():
         print(f'"feature list file error, no "feature index" column. please check.\n exiting...')
         sys.exit(1)
 
-    if args.thread_memory is not None:
-        ray.init(memory=args.thread_memory, object_store_memory=args.thread_memory)
-    else:
-        ray.init()
+    if num_cpus is None:
+        num_cpus = psutil.cpu_count()
+
+    ray.init(num_cpus=num_cpus)
 
     by_subject = data_file.groupby(id_column)
     # for each subject - add feature frequency columns
     result_ids = []
 
     features = np.array(features_file['vector'].apply(lambda x: json.loads(x)).to_list())
-    max_distance = np.array(features_file.loc[:, 'max_distance']).reshape(1, len(feature_list))
+    max_distance = np.array(features_file.loc[:, 'max_distance']).reshape(1, len(features))
     features_idx = features_file['feature_index']
 
     vectors_file_id = ray.put(vectors_file)
