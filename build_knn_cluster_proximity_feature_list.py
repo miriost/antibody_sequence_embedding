@@ -23,8 +23,8 @@ def main():
     parser.add_argument('--labels',
                         help='semicolon separated list of labels from which derive cluster significance, '
                              'default is all labels.')
-    parser.add_argument('--max_distance', help='max allowed distance in cluster, default is 999', type=float,
-                        default=1.0)
+    parser.add_argument('--max_distance', help='max allowed distance in cluster, default is the 15 percentile of the '
+                                               'knn distances', type=float)
     parser.add_argument('--min_subjects', help='minimal number of subjects for cluster selection, default is 7',
                         type=int, default=7)
     parser.add_argument('--min_significance', help='minimal significance of label for cluster selection, default is 0.7',
