@@ -176,7 +176,7 @@ def main():
                                                                             'cluster_neighbors'].apply(lambda x: data_file.loc[x, 'document._id'].to_list())
 
     if use_centroid:
-        features_df.loc[selected_features, 'vector'] = features_df.loc['cluster_neighbors'].apply(lambda x: np.mean(vectors_file[x, :], axis=0).tolist())
+        features_df.loc[selected_features, 'vector'] = features_df['cluster_neighbors'].apply(lambda x: np.mean(vectors_file[x, :], axis=0).tolist())
     else:
         features_df.loc[selected_features, 'vector'] = pd.Series(list(map(lambda x: x.tolist(),
                                                                       vectors_file[selected_features, :])), index=features_df.index)
