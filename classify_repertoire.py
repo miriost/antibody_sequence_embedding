@@ -99,8 +99,8 @@ def main():
         print('No features in test file.\nExiting...')
         sys.exit(1)
 
-    if args.save_selected_features:
-        our_classifier = Classifier(name="logistic_regression")
+    if args.save_selected_features is True:
+        our_classifier = Classifier(name="logistic_regression", classes=classes)
         features = our_classifier.select_features()
         train_dir = os.path.dirname(args.train_file)
         train_name = os.path.basename(args.train_file).split('.csv')[0]

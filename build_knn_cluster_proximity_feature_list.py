@@ -221,7 +221,7 @@ def build_maps(data_file: pd.DataFrame, data: pd.DataFrame, distances_file: np.a
     data['mean_distance'] = data['cluster_distances'].apply(lambda x: np.mean(x))
 
     # for analysis - subjects from each label in the clusters
-    print("adding label subject columns to rows {}".format(sub_range))
+    print("adding label subjects columns to rows {}".format(sub_range))
     for label in labels:
         data[label + ' subjects'] = data['cluster_subjects'].apply(lambda x: subjects[(subjects.index.isin(x)) & (subjects == label)].index.tolist())
 

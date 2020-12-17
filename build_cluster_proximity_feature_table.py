@@ -30,6 +30,7 @@ import psutil
 import ray
 import time
 import json
+import gc
 from sklearn.metrics.pairwise import pairwise_distances
 
 
@@ -120,6 +121,9 @@ def main():
         result_ids += [get_subject_feature_table.remote(subject, vectors_file_id, features_id, max_distance_id,
                                                         features_idx_id, frame.index, dist_metric)]
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
+
+    if psutil.virtual_memory().percent >= 80.0:
+        gc.collect()
 
     # add subject labels column
     features_table[label_column] = None
