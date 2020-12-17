@@ -169,13 +169,12 @@ def main():
 @ray.remote
 def build_maps(data_file: pd.DataFrame, distances_file: np.array, neighbors_file: np.array, sub_range,
                subjects: pd.Series, labels, max_distance):
-    unassinged = len(data_file)
     data = data_file[sub_range[0]:sub_range[1]].copy(deep=True)
     distances_map = distances_file[sub_range[0]:sub_range[1], :]
     neighbors_map = neighbors_file[sub_range[0]:sub_range[1], :]
 
     # need to filter neighbors by max_distance
-    filtering = np.logical_and(distances_map <= max_distance, neighbors_map != unassinged)
+    filtering = np.logical_and(distances_map <= max_distance, neighbors_map < len(data_file))
 
     cluster_distances = list(map(lambda i: distances_map[i, filtering[i, :]].tolist(), range(len(data))))
     data['cluster_distances'] = pd.Series(cluster_distances, index=data.index)
@@ -190,7 +189,7 @@ def build_maps(data_file: pd.DataFrame, distances_file: np.array, neighbors_file
     del filtering
 
     data.loc[data.index, 'cluster_subjects'] = data.loc[data.index,
-                                                        'cluster_neighbors'].apply(lambda x: data_file.loc[x, 'subject.subject.id'].to_list())
+                                                        'cluster_neighbors'].apply(lambda x: data_file.loc[x, 'subject.subject_id'].to_list())
 
     # cluster diameter
     data['max_distance'] = data['cluster_distances'].apply(lambda x: np.max(x))
