@@ -113,7 +113,6 @@ def main():
 
     if args.analyze_cluster is True:
         data_file = analyze_data(data_file, id_column, num_cpus, args.search_knn)
-        data_file.to_csv(args.data_file_path, sep='\t', index=False)
         subjects_map = np.array(data_file['cluster_subjects'].to_list())
         np.savetxt(subjects_file_path, subjects_map, fmt='%s')
         del subjects_map
