@@ -35,7 +35,7 @@ def main():
     column = args.column
     n_read_frames = args.n_read_frames
 
-    if not os.path.isfile(data_file_path) or not data_file_path[:-4] == '.tsv':
+    if not os.path.isfile(data_file_path):
         print('Data file ({}) error! Make sure the file exists and it is *.tsv file.\n'
               'Exiting...'.format(data_file_path))
         sys.exit(1)
