@@ -58,7 +58,7 @@ def execute(args):
     data_file_desc = os.path.basename(data_file_path).split('.tsv')[0]
     vectors_file_desc = os.path.basename(vectors_file_path).split('_VECTORS.npy')[0]
     for fold in range(n_splits):
-        for split in ['TRAIN_', 'TEST_']:
+        for split in ['TRAIN', 'TEST']:
             file_name = os.path.join(folds_dir, 'FOLD' + str(fold), data_file_desc + '_' + split + '.tsv')
             if not os.path.isfile(file_name):
                 print('{} file error! Make sure the file exists.\nSkipping...'.format(file_name))
