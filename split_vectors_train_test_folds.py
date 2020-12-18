@@ -59,15 +59,15 @@ def execute(args):
     vectors_file_desc = os.path.basename(vectors_file_path).split('_VECTORS.npy')[0]
     for fold in range(n_splits):
         for split in ['TRAIN_', 'TEST_']:
-            file_name = os.path.join(folds_dir, 'FOLD' + str(fold), data_file_desc + '_' + split + str(fold) + '.tsv')
+            file_name = os.path.join(folds_dir, 'FOLD' + str(fold), data_file_desc + '_' + split + '.tsv')
             if not os.path.isfile(file_name):
                 print('{} file error! Make sure the file exists.\nSkipping...'.format(file_name))
                 continue
             sequences_ids = pd.read_csv(file_name, sep='\t', usecols=['document._id'])
             indexing = data_file['document._id'].isin(sequences_ids['document._id'])
             vectors = vectors_file[indexing, :]
-            vectors_file_name = os.path.join(folds_dir, 'FOLD' + str(fold), vectors_file_desc + '_' + split +
-                                             'VECTORS.npy');
+            vectors_file_name = os.path.join(folds_dir, 'FOLD' + str(fold), vectors_file_desc +'_VECTORS_' + split +
+                                             '.npy');
             print('saving: ', vectors_file_name)
             np.save(vectors_file_name, vectors)
 
