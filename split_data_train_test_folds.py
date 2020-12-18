@@ -85,8 +85,8 @@ def execute(args):
             output_dir = os.path.join(args.output_dir, 'FOLD' + str(fold))
             pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
             file_name = os.path.basename(args.data_file).replace('.tsv', '')
-            train_output.to_csv(os.path.join(output_dir, file_name + '_TRAIN_' + str(fold) + '.tsv'), sep='\t', index=False)
-            test_output.to_csv(os.path.join(output_dir, file_name + '_TEST_' + str(fold) + '.tsv'), sep='\t', index=False)
+            train_output.to_csv(os.path.join(output_dir, file_name + '_TRAIN.tsv'), sep='\t', index=False)
+            test_output.to_csv(os.path.join(output_dir, file_name + '_TEST.tsv'), sep='\t', index=False)
 
             fold += 1
 
