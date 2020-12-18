@@ -52,7 +52,7 @@ def main():
 
     if drop_duplicates is True:
         data_file.drop_duplicates(subset=['subject.subject_id', column], inplace=True)
-        print('Data length after dropping duplicates: ' + str(data_len))
+        print('Data length after dropping duplicates: ' + str(len(data_file)))
 
     def embed_data(word):
         try:
