@@ -32,8 +32,8 @@ def main():
                         type=str2bool, default=True)
     parser.add_argument('--dist_metric',
                         help='type of distance to use, default=euclidean', type=str, default='euclidean')
-    parser.add_argument('--step', help='How many rows to calculate in parallel, default is 15k.',
-                        type=int, default=15000)
+    parser.add_argument('--step', help='How many rows to calculate in parallel, default is 100.',
+                        type=int, default=100)
     parser.add_argument('--num_cpus', help='How many cpus are available for ray threads', type=int)
     parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
 
@@ -70,9 +70,11 @@ def main():
     output_dir = os.path.dirname(data_file_path)
 
     data_file = pd.read_csv(args.data_file_path, sep='\t')
+    print('loaded data file')
     data_file['index'] = data_file.index
 
     vectors_file = np.load(vectors_file_path)
+    print('loaded vectors file')
 
     if vectors_file.shape[0] != data_file.shape[0]:
         print('mismatch between data_file and vectors_file length\nExiting...')
