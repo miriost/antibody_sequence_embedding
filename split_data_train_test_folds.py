@@ -22,8 +22,8 @@ def main():
     parser.add_argument('--output_dir',
                         help='Output directory where the folds directories will be created, default: "./"',
                         default='./')
-    parser.add_argument('--balance_train_labels', type=str2bool, default=False, help='keep the labels ratio in the '
-                                                                                     'train set balanced')
+    parser.add_argument('--balance_train_labels', help='keep the labels ratio in the train set balanced, default is '
+                                                       'False', type=str2bool, default=False)
     args = parser.parse_args()
 
     execute(args)
@@ -76,7 +76,7 @@ def execute(args):
             test = []
             for label in labels:
                 label_subjects = subjects[subjects.values == label]
-                label_train = np.choice(label_subjects.index, label_train_size, replace=False).tolist()
+                label_train = np.random.choice(label_subjects.index, label_train_size, replace=False).tolist()
                 label_test = label_subjects.drop(label_train).index.tolist()
                 train += label_train
                 test += label_test
