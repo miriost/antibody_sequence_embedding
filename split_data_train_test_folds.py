@@ -81,9 +81,9 @@ def execute(args):
                 train_subjects += label_train
                 test_subjects += label_test
 
-            train_output = data_file.loc[data_file[id_column].isin(train_subjects.index), :]
+            train_output = data_file.loc[data_file[id_column].isin(train_subjects), :]
 
-            test_output = data_file.loc[data_file[id_column].isin(test_subjects.index), :]
+            test_output = data_file.loc[data_file[id_column].isin(test_subjects), :]
 
             output_dir = os.path.join(args.output_dir, 'FOLD' + str(fold))
             pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
