@@ -7,14 +7,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 
 def str2bool(v):
-    if isinstance(v, bool):
-       return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1', "True"):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0', "False"):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
+    return v.lower() in ("yes", "true", "t", "1")
 
 
 def main():
@@ -29,6 +22,8 @@ def main():
     parser.add_argument('--output_dir',
                         help='Output directory where the folds directories will be created, default: "./"',
                         default='./')
+    parser.add_argument('--balance_train_labels', type=str2bool, default=False, help='keep the labels ratio in the '
+                                                                                     'train set balanced')
     args = parser.parse_args()
 
     execute(args)
@@ -58,6 +53,7 @@ def execute(args):
     n_splits = args.n_splits
     test_size = args.test_size
     shuffle_labels = args.shuffle_labels
+    balance_train_labels = args.balance_train_labels
 
     subjects = data_file.loc[:, ].groupby(by=[id_column])[label_column].apply(lambda x: x.iloc[0])
     # sort index to ensure getting the same splits in different runs
@@ -65,9 +61,43 @@ def execute(args):
 
     if shuffle_labels is True:
         print("shuffling labels before split")
+        np.random.seed(0)
         subjects[:] = np.random.permutation(subjects)
         for subject_id, label in subjects.iteritems():
             data_file.loc[data_file[id_column] == subject_id, label_column] = label
+
+    if balance_train_labels is True:
+        np.random.seed(0)
+        labels = np.unique(subjects.values)
+        train_size = len(subjects) * (1 - test_size)
+        label_train_size = int(train_size / len(labels))
+        for fold in range(n_repeats * n_splits):
+            train = []
+            test = []
+            for label in labels:
+                label_subjects = subjects[subjects.values == label]
+                label_train = np.choice(label_subjects.index, label_train_size, replace=False).tolist()
+                label_test = label_subjects.drop(label_train).index.tolist()
+                train += label_train
+                test += label_test
+
+            train_subjects = subjects.iloc[train]
+            train_output = data_file.loc[data_file[id_column].isin(train_subjects.index), :]
+
+            test_subjects = subjects.iloc[test]
+            test_output = data_file.loc[data_file[id_column].isin(test_subjects.index), :]
+
+            output_dir = os.path.join(args.output_dir, 'FOLD' + str(fold))
+            pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
+            file_name = os.path.basename(args.data_file).replace('.tsv', '')
+            train_output.to_csv(os.path.join(output_dir, file_name + '_TRAIN.tsv'), sep='\t', index=False)
+            test_output.to_csv(os.path.join(output_dir, file_name + '_TEST.tsv'), sep='\t', index=False)
+
+            fold += 1
+
+            print(f'----- fold {fold} files saved -----')
+
+        return
 
     fold = 0
     for random_state in range(n_repeats):
