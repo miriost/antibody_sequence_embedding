@@ -72,19 +72,17 @@ def execute(args):
         train_size = len(subjects) * (1 - test_size)
         label_train_size = int(train_size / len(labels))
         for fold in range(n_repeats * n_splits):
-            train = []
-            test = []
+            train_subjects = []
+            test_subjects = []
             for label in labels:
                 label_subjects = subjects[subjects.values == label]
                 label_train = np.random.choice(label_subjects.index, label_train_size, replace=False).tolist()
                 label_test = label_subjects.drop(label_train).index.tolist()
-                train += label_train
-                test += label_test
+                train_subjects += label_train
+                test_subjects += label_test
 
-            train_subjects = subjects.iloc[train]
             train_output = data_file.loc[data_file[id_column].isin(train_subjects.index), :]
 
-            test_subjects = subjects.iloc[test]
             test_output = data_file.loc[data_file[id_column].isin(test_subjects.index), :]
 
             output_dir = os.path.join(args.output_dir, 'FOLD' + str(fold))
