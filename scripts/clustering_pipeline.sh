@@ -139,8 +139,8 @@ for fold in ${folds} ; do
           max_distance_percentil_dir=${min_significance_dir}/max_distance_percentil_${max_distance_percentil_itr}
           mkdir -p ${max_distance_percentil_dir}
 
-          if [ -f ${max_distance_percentil_dir}/festure_list.tsv ] ; then
-            echo "${max_distance_percentil_dir}/festure_list.tsv already exists, skipping building feature list."
+          if [ -f ${max_distance_percentil_dir}/feature_list.tsv ] ; then
+            echo "${max_distance_percentil_dir}/feature_list.tsv already exists, skipping building feature list."
           else
             # build feature list
             cmd="nice -19 python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
