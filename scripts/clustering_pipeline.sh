@@ -8,21 +8,21 @@ function show_help {
   echo "knn KNN - Optional, space separated list of the K nearest neighbors to serach in the clusters construction. Deafult is 100."
   echo "max_distance_percentile MAX_DISTANCE_PERCENTILE - Optional, space separated list of max distance pecentile for filtering cluster neighbors. Default is \"100\" (all knn neighbors)."
   echo "min_significant MIN_SIGNIFICANT - Optional, space separated list of minimal significant threshould for the cluster selection. Default is \"0.7\"."
-  echo "min_subjects MIN_SUBJECTS - Optional, a space separated list of the number minimal of subjects threshold for the cluster selection. Default is \"10\"."
-  echo "work_dir WORK_DIR - Optional, the folds root directory where the folds are. Default is 50\"./\"."
+  echo "min_subjects MIN_SUBJECTS - Optional, a space separated list of the number minimal of subjects threshold for the cluster selection. Default is \"7\"."
+  echo "work_dir WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\"."
 }
 
 folds=0
 knn=100
 significance_level="0.7"
 work_dir=./
-min_subjects=10
+min_subjects=7
 max_distance_percentile=100
 
 # Read command line options
 ARGUMENT_LIST=(
     "folds"
-    "cluster_size"
+    "knn"
     "max_distance_percentile"
     "min_significant"
     "min_subjects"
@@ -33,42 +33,44 @@ echo $opts
 
 eval set --$opts
 
-while true; do
+while [[ $# -gt 0 ]]; do
     case "$1" in
-    --help)
-      show_help
-      exit 0
-      ;;
-    --folds)
-      shift
-      folds=$1
-      ;;
-    --knn)
-      shift
-      knn=$1
-      ;;
-    --max_distance_percentile)
-      shift
-      max_distance_percentile=$1
-      ;;
-    --min_significant)
-      shift
-      min_significant=$1
-      ;;
-    --min_subjects)
-      shift
-      min_subjects=$1
-      ;;
-    --work_dir)
-      shift
-      work_dir=$1
-      ;;
-    --)
-      shift
-      break
-      ;;
+      --help)
+        show_help
+        exit 0
+        ;;
+      --folds)
+        folds=$2
+        shift 2
+        ;;
+      --knn)
+        knn=$2
+        shift 2
+        ;;
+      --max_distance_percentile)
+        max_distance_percentile=$2
+        shift 2
+        ;;
+      --min_significant)
+        min_significant=$2
+        shift 2
+        ;;
+      --min_subjects)
+        min_subjects=$2
+        shift 2
+        ;;
+      --work_dir)
+        work_dir=$2
+        shift 2
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+          break
+          ;;
     esac
-    shift
 done
 
 # change to the working directory
@@ -79,7 +81,7 @@ for fold in ${folds} ; do
 	echo "Fold ${fold}"; echo ""
 	fold_dir=FOLD${fold}
 	
-	# loop cluster size
+	# loop knn value
 	for knn_itr in ${knn}; do
 		echo "knn ${knn_itr}"; echo ""
 		knn_dir=${fold_dir}/knn_${knn_itr}
@@ -90,7 +92,7 @@ for fold in ${folds} ; do
 		else
 			# search K nearest neighbors
 			echo "Starting KNN search and analysis..."
-			eval nice -19 python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py ${fold_dir}/*_TRAIN.tsv ${fold_dir}/*_TRAIN.npy --cluster_size ${knn_itr} ${knn_itr}knn
+			eval nice -19 eval python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py ${fold_dir}/*_TRAIN.tsv ${fold_dir}/*_TRAIN.npy --cluster_size ${knn_itr} ${knn_itr}knn
 			--output_folder_path ${knn_dir} --num_cpus 12
 		fi
 
@@ -112,10 +114,15 @@ for fold in ${folds} ; do
           max_distnace_percentile_dir=${min_significant_dir}/max_distnace_percentile_${max_distnace_percentile_itr}
           mkdir -p ${max_distnace_percentile_dir}
 
-            if [ -f ${max_distnace_percentile_dir}/festure_list.tsv ] ; then
-              echo "${max_distnace_percentile_dir}/festure_list.tsv already exists, skipping building train feature table."
-              continue
-            fi
+          if [ -f ${max_distnace_percentile_dir}/festure_list.tsv ] ; then
+            echo "${max_distnace_percentile_dir}/festure_list.tsv already exists, skipping building train feature table."
+            continue
+          fi
+
+          # build feature list
+          nice -19 eval python -u ${fold_dir}/*_TRAIN.tsv ${fold_dir}/*_TRAIN.npy ${knn_dir}/${knn_itr}knn_distances.npy  ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distnace_percentile_dir}
+          100knn_${p}p_feature_list --min_subjects ${min_subjects_itr} --min_significant ${min_significant_itr} --max_distance_percentile ${max_distnace_percentile_itr}
+
         done # max_distnace_percentile loop
       done # min_significant loop
 		done # min_subjects loop

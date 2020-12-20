@@ -99,7 +99,7 @@ while [[ $# -gt 0 ]]; do
       *)
           break
           ;;
-      esac
+    esac
 done
 
 # change dirctory to input directory
