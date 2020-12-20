@@ -65,21 +65,22 @@ def main():
         print('mismatch between data_file and vectors_file length\nExiting...')
         sys.exit(1)
 
-    if distances_file_path:
+    distance_threshold = 0.15
+    if distances_file_path is not None:
         distances_file = np.load(distances_file_path)
         if distances_file.shape[0] != data_file.shape[0]:
             print('mismatch between data_file and distances_file length\nExiting...')
             sys.exit(1)
 
-    distance_threshold = np.percentile(distances_file, q=25)
+        distance_threshold = np.percentile(distances_file, q=25)
 
-    if neighbors_file_path:
+    if neighbors_file_path is not None:
         neighbors_file = np.load(neighbors_file_path)
         if neighbors_file.shape[0] != data_file.shape[0]:
             print('mismatch between data_file and neighbors_file length\nExiting...')
             sys.exit(1)
 
-        if neighbors_file.shape[1] != distances_file.shape[1]:
+        if distances_file_path is not None and neighbors_file.shape[1] != distances_file.shape[1]:
             print('mismatch between neighbors_file and distances_file number of columns\nExiting...')
             sys.exit(1)
 
