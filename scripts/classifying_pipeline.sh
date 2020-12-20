@@ -119,7 +119,7 @@ vectors_file=${description}_VECTORS_TRAIN.npy
 test_data_file=${description}_FILTERED_TEST.tsv
 test_vectors_file=${description}_VECTORS_TEST.npy
 
-${output_file}=${description}.tsv
+output_file=${description}.tsv
 
 # loop folds
 for fold in ${folds} ; do

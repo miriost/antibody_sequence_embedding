@@ -142,7 +142,9 @@ else
 	fi
 	
 	echo "Importing data..."
-	nice -19 python -u /work/data/es_lab/import_data.py --index sequence_v1 --query "${query}" --include_fields --count_only False --output_file ${import_file} --max_records 4000000
+	cmd="nice -19 python -u /work/data/es_lab/import_data.py --index sequence_v1 --query "${query}" --include_fields --count_only False --output_file ${import_file} --max_records 4000000"
+	echo ${cmd}
+	eval ${cmd}
 fi
 
 # Reprocess mkdb
@@ -151,8 +153,9 @@ if [ -f ${mkdb_file} ]; then
   echo "File ${mkdb_file} already exists, skipping reprocess mkdb."; echo ""
 else
   echo "Reprocess mkdb..."; echo ""
-  echo "nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${mkdb_file} --naive ${naive} --min_seq_per_subject ${sample_size}"
-  nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${mkdb_file} --naive ${naive} --min_seq_per_subject ${sample_size}
+  cmd="nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${mkdb_file} --naive ${naive} --min_seq_per_subject ${sample_size}"
+  echo ${cmd}
+  eval ${cmd}
 fi
 
 if [[ "${sample}" == "True" ]]; then
@@ -184,8 +187,9 @@ else
       echo "Model file ${model_file} already exists, skipping generate model."; echo ""
     else
       echo "Generate model..."; echo ""
-      echo "nice -19 python ~/antibody_sequence_embedding/generate_model.py ${mkdb_file} ${model_desc} --n_dim ${n_dim}"
-      nice -19 python ~/antibody_sequence_embedding/generate_model.py ${mkdb_file} ${model_desc} --n_dim ${n_dim}
+      cmd="nice -19 python ~/antibody_sequence_embedding/generate_model.py ${mkdb_file} ${model_desc} --n_dim ${n_dim}"
+      echo ${cmd}
+      eval ${cmd}
     fi
   fi
 
@@ -196,8 +200,9 @@ else
       echo "File ${sampled_file} already exists, skipping sampling."; echo ""
     else
       echo "Sample file..."; echo ""
-      echo "nice -19 python ~/antibody_sequence_embedding/sample_file.py ${mkdb_file} ${sampled_file} ${sample_size} --exclude_duplicates ${exclude_duplicates}"
-      nice -19 python ~/antibody_sequence_embedding/sample_file.py ${mkdb_file} ${sampled_file} ${sample_size} --exclude_duplicates ${exclude_duplicates}
+      cmd="nice -19 python ~/antibody_sequence_embedding/sample_file.py ${mkdb_file} ${sampled_file} ${sample_size} --exclude_duplicates ${exclude_duplicates}"
+      echo ${cmd}
+      eval ${cmd}
     fi
   else
     sampled_file=${mkdb_file}
@@ -205,8 +210,9 @@ else
 
   # generate vectors
   echo "Generate vectors..."; echo ""
-  echo "nice -19 python ~/antibody_sequence_embedding/generate_vectors.py ${sampled_file} ${model_file} --drop_duplicates ${exclude_duplicates}"
-  nice -19 python ~/antibody_sequence_embedding/generate_vectors.py ${sampled_file} ${model_file} --drop_duplicates ${exclude_duplicates}
+  cmd="nice -19 python ~/antibody_sequence_embedding/generate_vectors.py ${sampled_file} ${model_file} --drop_duplicates ${exclude_duplicates}"
+  echo ${cmd}
+  eval ${cmd}
 fi
 
 # create repeated cross validation folds
@@ -215,9 +221,11 @@ if [ -d ${folds_dir} ]; then
 	echo "Folds dir ${folds_dir} already exists, skipping folds creation."; echo ""
 else
 	echo "Split folds..."; echo ""
-	echo "nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}"
-	nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}
-	echo "nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds} --folds_dir ${folds_dir}"
-	nice -19 python ~/antibody_sequence_embedding/split_vectors_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds} --folds_dir ${folds_dir}
+	cmd="nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}"
+  echo ${cmd}
+  eval ${cmd}
+	cmd="nice -19 python ~/antibody_sequence_embedding/split_vectors_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds} --folds_dir ${folds_dir}"
+  echo ${cmd}
+  eval ${cmd}
 fi
 
