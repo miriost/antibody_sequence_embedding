@@ -55,7 +55,7 @@ eval set --$opts
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-      --help)
+      h)
           show_help
           exit 0
           ;;
@@ -108,7 +108,7 @@ cd ${work_dir}
 # arguments validation
 if [ -z "${description}" ]; then
 	echo "Missing mandatory description argument. Exiting..."
-	print_help
+	show_help
 	echo "pre_clustering_pipeline.sh -h for additional help."
 	exit -1
 fi
@@ -126,8 +126,7 @@ if [ -f ${import_file} ]; then
 else
 	if [ -z "${query}" ]; then
 		echo "Missing mandatory query argument. Exiting..."
-		print_help
-		echo "pre_clustering_pipeline.sh -h for additional help."
+		show_help
 		exit -1
 	fi
 	
@@ -158,7 +157,7 @@ else
     # model file was already provided
     if ! [ -f ${model_file} ]; then
       echo "Bad path for model file: ${model_file}. Exiting..."
-      print_help
+      show_help
       echo "pre_clustering_pipeline.sh -h for additional help."
       exit -1
     else
