@@ -29,7 +29,13 @@ ARGUMENT_LIST=(
     "work_dir"
 )
 
-echo $opts
+# read arguments
+opts=$(getopt \
+    --longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
+    --name "$(basename "$0")" \
+    --options "" \
+    -- "$@"
+)
 
 eval set --$opts
 
