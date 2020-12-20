@@ -146,7 +146,7 @@ for fold in ${folds} ; do
           echo "max_distance_percentil ${max_distance_percentil_itr}"; echo ""
           max_distance_percentil_dir=${min_significance_dir}/max_distance_percentil_${max_distance_percentil_itr}
 
-          cmd="nice -19 python -u ~/antibody_sequence_embedding/classify_repertoire.py --train_file ${max_distance_percentil_dir}/train_feature_table.csv --test_file
+          cmd="nice -19 python -u ~/antibody_sequence_embedding/classify_repertoire.py ${max_distance_percentil_dir}/train_feature_table.csv
           ${max_distance_percentil_dir}/test_feature_table.csv --col_names=\"knn,min_subjects,min_significance,max_distance_percentil\" --col_values=\"${knn_itr},${min_subjects_itr},
           ${min_significance_itr},${max_distance_percentil_itr}\" --output_file ${output_dir}/${output_file} --models ${models} --grid_search=${optimize}"
           echo ${cmd}
