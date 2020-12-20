@@ -217,7 +217,7 @@ else
 	echo "Split folds..."; echo ""
 	echo "nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}"
 	nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}
-	echo "nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds}"
+	echo "nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds}" --folds_dir ${folds_dir}
 	nice -19 python ~/antibody_sequence_embedding/split_vectors_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds}
 fi
 
