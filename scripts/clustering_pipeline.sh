@@ -18,9 +18,12 @@ significance_level="0.7"
 work_dir=./
 min_subjects=7
 max_distance_percentile=100
+description=""
 
 # Read command line options
 ARGUMENT_LIST=(
+    "help"
+    "description"
     "folds"
     "knn"
     "max_distance_percentile"
@@ -44,6 +47,10 @@ while [[ $# -gt 0 ]]; do
       --help)
         show_help
         exit 0
+        ;;
+      --description)
+        description=$2
+        shift 2
         ;;
       --folds)
         folds=$2
@@ -75,8 +82,19 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# arguments validation
+if [ -z "${description}" ]; then
+	echo "Missing mandatory description argument. Exiting..."
+	show_help
+	echo "pre_clustering_pipeline.sh -h for additional help."
+	exit -1
+fi
+
 # change to the working directory
 cd ${work_dir}
+
+data_file=${description}_FILTERED_TRAIN.tsv
+vectors_file=${description}_VECTORS_TRAIN.npy
 
 # loop folds
 for fold in ${folds} ; do
@@ -93,10 +111,10 @@ for fold in ${folds} ; do
 			echo "${knn_dir}/${knn_itr}knn_neighbors.npy and ${knn_dir}/${knn_itr}knn_distances.npy already exists, skipping KNN search."
 		else
 			# search K nearest neighbors
-			echo "Starting KNN search and analysis..."
-			echo "nice -19 python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py $(${fold_dir}/*_TRAIN.tsv) $(${fold_dir}/*_TRAIN.npy) --cluster_size ${knn_itr}
-			${knn_itr}knn"
-			nice -19 python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py $(${fold_dir}/*_TRAIN.tsv) $(${fold_dir}/*_TRAIN.npy) --cluster_size ${knn_itr} ${knn_itr}knn
+			echo "Starting KNN search..."
+			echo "nice -19 python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} --cluster_size ${knn_itr} ${knn_itr}knn"
+			nice -19 python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} --cluster_size ${knn_itr} ${knn_itr}knn
+			${fold_dir}/${hcv_bcr_heavy_chain_sampled_n5000_hcv_bcr_heavy_chain_100dim}_VECTORS_TRAIN.npy --cluster_size ${knn_itr} ${knn_itr}knn
 			--output_folder_path ${knn_dir} --num_cpus 12
 		fi
 
@@ -124,7 +142,9 @@ for fold in ${folds} ; do
           fi
 
           # build feature list
-          nice -19 eval python -u ${fold_dir}/*_TRAIN.tsv ${fold_dir}/*_TRAIN.npy ${knn_dir}/${knn_itr}knn_distances.npy  ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distnace_percentile_dir}
+          echo "nice -19 eval python -u ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy  ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distnace_percentile_dir}
+          100knn_${p}p_feature_list --min_subjects ${min_subjects_itr} --min_significant ${min_significant_itr} --max_distance_percentile ${max_distnace_percentile_itr}"
+          nice -19 eval python -u ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy  ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distnace_percentile_dir}
           100knn_${p}p_feature_list --min_subjects ${min_subjects_itr} --min_significant ${min_significant_itr} --max_distance_percentile ${max_distnace_percentile_itr}
 
         done # max_distnace_percentile loop
