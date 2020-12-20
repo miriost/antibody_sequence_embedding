@@ -18,7 +18,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('data_file', help='an input tsv file with', type=str)
     parser.add_argument('desc', help='desc for the output files names', type=str)
-    parser.add_argument('data_column', help='name of the column with the data for the model generation', type=str)
     parser.add_argument('--n_dim', help='vector size (default 100)', default=100, type=int)
     parser.add_argument('--n_gram', help='n-gram parameter from the prot to vec (default 3)', type=int, default=3)
     parser.add_argument('--corpus_file', help='an input corpus file - if data-file was not provided', type=str)
