@@ -76,7 +76,7 @@ while [[ $# -gt 0 ]]; do
           shift 2
           ;;
       --min_sample_size)
-          min_sample_size=$2
+          sample_size=$2
           shift 2
           ;;
       --sample)
@@ -151,8 +151,8 @@ if [ -f ${mkdb_file} ]; then
   echo "File ${mkdb_file} already exists, skipping reprocess mkdb."; echo ""
 else
   echo "Reprocess mkdb..."; echo ""
-  echo "nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${mkdb_file} --naive ${naive} --min_seq_per_subject ${min_sample_size}"
-  nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${mkdb_file} --naive ${naive} --min_seq_per_subject ${min_sample_size}
+  echo "nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${mkdb_file} --naive ${naive} --min_seq_per_subject ${sample_size}"
+  nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${mkdb_file} --naive ${naive} --min_seq_per_subject ${sample_size}
 fi
 
 if [[ "${sample}" == "True" ]]; then
@@ -196,8 +196,8 @@ else
       echo "File ${sampled_file} already exists, skipping sampling."; echo ""
     else
       echo "Sample file..."; echo ""
-      echo "nice -19 python ~/antibody_sequence_embedding/sample_file.py ${mkdb_file} ${sampled_file} ${min_sample_size} --exclude_duplicates ${exclude_duplicates}"
-      nice -19 python ~/antibody_sequence_embedding/sample_file.py ${mkdb_file} ${sampled_file} ${min_sample_size} --exclude_duplicates ${exclude_duplicates}
+      echo "nice -19 python ~/antibody_sequence_embedding/sample_file.py ${mkdb_file} ${sampled_file} ${sample_size} --exclude_duplicates ${exclude_duplicates}"
+      nice -19 python ~/antibody_sequence_embedding/sample_file.py ${mkdb_file} ${sampled_file} ${sample_size} --exclude_duplicates ${exclude_duplicates}
     fi
   else
     sampled_file=${mkdb_file}
