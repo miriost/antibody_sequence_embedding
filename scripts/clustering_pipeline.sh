@@ -69,13 +69,9 @@ while [[ $# -gt 0 ]]; do
         work_dir=$2
         shift 2
         ;;
-      --)
-        shift
+      *)
         break
         ;;
-      *)
-          break
-          ;;
     esac
 done
 
@@ -98,7 +94,9 @@ for fold in ${folds} ; do
 		else
 			# search K nearest neighbors
 			echo "Starting KNN search and analysis..."
-			nice -19 eval python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py ${fold_dir}/*_TRAIN.tsv ${fold_dir}/*_TRAIN.npy --cluster_size ${knn_itr} ${knn_itr}knn
+			echo "nice -19 python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py $(${fold_dir}/*_TRAIN.tsv) $(${fold_dir}/*_TRAIN.npy) --cluster_size ${knn_itr}
+			${knn_itr}knn"
+			nice -19 python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py $(${fold_dir}/*_TRAIN.tsv) $(${fold_dir}/*_TRAIN.npy) --cluster_size ${knn_itr} ${knn_itr}knn
 			--output_folder_path ${knn_dir} --num_cpus 12
 		fi
 
