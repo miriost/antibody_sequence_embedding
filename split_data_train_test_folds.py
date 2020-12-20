@@ -70,7 +70,7 @@ def execute(args):
     if balance_train_labels is True:
         np.random.seed(0)
         labels = np.unique(subjects.values)
-        train_size = len(subjects) * (1 - test_size)
+        train_size = int(len(subjects) * (1 - test_size))
         print('number of subject in train {}'.format(train_size))
         label_train_size = int(train_size / len(labels))
         print('number of subjects for each label in train is {}'.format(label_train_size))
@@ -84,8 +84,10 @@ def execute(args):
                 train_subjects += label_train
                 test_subjects += label_test
 
-            train_output = data_file.loc[data_file[id_column].isin(train_subjects), :]
+            print("fold {} train subjects: {}".format(fold, train_subjects))
+            print("fold {} test subjects: {}".format(fold, test_subjects))
 
+            train_output = data_file.loc[data_file[id_column].isin(train_subjects), :]
             test_output = data_file.loc[data_file[id_column].isin(test_subjects), :]
 
             output_dir = os.path.join(args.output_dir, 'FOLD' + str(fold))
