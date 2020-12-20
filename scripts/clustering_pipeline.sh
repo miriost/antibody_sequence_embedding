@@ -112,8 +112,8 @@ for fold in ${folds} ; do
 		else
 			# search K nearest neighbors
 			echo "Starting KNN search..."
-			echo "nice -19 python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} --cluster_size ${knn_itr} ${knn_itr}knn"
-			nice -19 python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} --cluster_size ${knn_itr} ${knn_itr}knn
+			echo "nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} --cluster_size ${knn_itr} ${knn_itr}knn"
+			nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} --cluster_size ${knn_itr} ${knn_itr}knn
 			${fold_dir}/${hcv_bcr_heavy_chain_sampled_n5000_hcv_bcr_heavy_chain_100dim}_VECTORS_TRAIN.npy --cluster_size ${knn_itr} ${knn_itr}knn
 			--output_folder_path ${knn_dir} --num_cpus 12
 		fi
@@ -142,9 +142,11 @@ for fold in ${folds} ; do
           fi
 
           # build feature list
-          echo "nice -19 eval python -u ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy  ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distnace_percentile_dir}
+          echo "nice -19 eval python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
+          ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distnace_percentile_dir}
           100knn_${p}p_feature_list --min_subjects ${min_subjects_itr} --min_significant ${min_significant_itr} --max_distance_percentile ${max_distnace_percentile_itr}"
-          nice -19 eval python -u ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy  ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distnace_percentile_dir}
+          nice -19 eval python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
+          ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distnace_percentile_dir}
           100knn_${p}p_feature_list --min_subjects ${min_subjects_itr} --min_significant ${min_significant_itr} --max_distance_percentile ${max_distnace_percentile_itr}
 
         done # max_distnace_percentile loop
