@@ -12,6 +12,7 @@ random_seed=0
 work_dir=./
 exclude_duplicates="True"
 sampe_file="False"
+n_dim=100
 
 function show_help {
   echo "Execute all the pre processing steps before clustering a data set."
@@ -26,6 +27,7 @@ function show_help {
   echo "--work_dir WORK_DIR - Optional, the work directory. Deafult is \"./\""
   echo "--naive NAIVE - Optional, Is the data naive cells - affects the squence filtering during the reprocess_mkdb. Deafult is True."
   echo "--exclude_duplicates EXCLUDE_DUPLICATES - Optional, exclude duplicated cdr3_aa sequences in teh subject when sampling and/or before embedding. Deafult is True."
+  echo "--n_dim N_DIM - Optional, how many dimensions to use for the embedding. Deafult is 100."
 }
 
 # Read command line options
@@ -41,6 +43,7 @@ ARGUMENT_LIST=(
     "work_dir"
     "naive"
     "exclude_duplicates"
+    "n_dim"
 )
 
 # read arguments
@@ -96,6 +99,10 @@ while [[ $# -gt 0 ]]; do
           naive=$2
           shift 2
           ;;
+      --n_dim)
+          n_dim=$2
+          shift 2
+          ;;
       *)
           break
           ;;
@@ -140,17 +147,19 @@ if [ -f ${mkdb_file} ]; then
   echo "File ${mkdb_file} already exists, skipping reprocess mkdb."; echo ""
 else
   echo "Reprocess mkdb..."; echo ""
-  nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${desc}_db.tsv --naive ${naive} --min_seq_per_subject ${min_sample_size}
+  nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${mkdb_file} --naive ${naive} --min_seq_per_subject ${min_sample_size}
 fi
 
 if [[ "${sample_file}" == "True" ]]; then
   description=${description}_${model_desc}_sampled_n${sample_size}
+else
+  description=${description}_${model_desc}
 fi
 
 vectors_file=${description}_VECTORS.npy
 data_file=${description}_FILTERED.tsv
 
-if ! [ -f ${vectors_file} && -f ${data_file} ]; then
+if [ -f ${vectors_file} ] && [ -f ${data_file} ]; then
   echo "${vectors_file} and ${data_file} already exists, skipping generate model and generate vectors."; echo ""
 else
   if ! [ -z "${model_file}" ]; then
