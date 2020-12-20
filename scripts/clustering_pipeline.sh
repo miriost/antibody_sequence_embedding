@@ -6,7 +6,7 @@ function show_help {
   echo "Build clusters and feature tables for train/test folds."
   echo "folds FOLDS - Optional, space separated list of folds numbers. Deafult is 0."
   echo "knn KNN - Optional, space separated list of the K nearest neighbors to serach in the clusters construction. Deafult is 100."
-  echo "max_distance_percentile MAX_DISTANCE_PERCENTILE - Optional, space separated list of max distance pecentile for filtering cluster neighbors. Default is \"100\" (all knn neighbors)."
+  echo "max_distance_percentil MAX_DISTANCE_percentil - Optional, space separated list of max distance pecentile for filtering cluster neighbors. Default is \"100\" (all knn neighbors)."
   echo "min_significant MIN_SIGNIFICANT - Optional, space separated list of minimal significant threshould for the cluster selection. Default is \"0.7\"."
   echo "min_subjects MIN_SUBJECTS - Optional, a space separated list of the number minimal of subjects threshold for the cluster selection. Default is \"7\"."
   echo "work_dir WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\"."
@@ -14,10 +14,10 @@ function show_help {
 
 folds=0
 knn=100
-significance_level="0.7"
+min_significant="0.7"
 work_dir=./
 min_subjects=7
-max_distance_percentile=100
+max_distance_percentil=100
 description=""
 
 # Read command line options
@@ -26,7 +26,7 @@ ARGUMENT_LIST=(
     "description"
     "folds"
     "knn"
-    "max_distance_percentile"
+    "max_distance_percentil"
     "min_significant"
     "min_subjects"
     "work_dir"
@@ -60,8 +60,8 @@ while [[ $# -gt 0 ]]; do
         knn=$2
         shift 2
         ;;
-      --max_distance_percentile)
-        max_distance_percentile=$2
+      --max_distance_percentil)
+        max_distance_percentil=$2
         shift 2
         ;;
       --min_significant)
@@ -129,26 +129,26 @@ for fold in ${folds} ; do
         min_significant_dir=${min_subjects_dir}/min_significant_${min_significant_itr}
         mkdir -p ${min_significant_dir}
 
-        #loop max_distnace_percentile
-        for max_distnace_percentile_itr in ${max_distnace_percentile}; do
-          echo "max_distnace_percentile ${max_distnace_percentile_itr}"; echo ""
-          max_distnace_percentile_dir=${min_significant_dir}/max_distnace_percentile_${max_distnace_percentile_itr}
-          mkdir -p ${max_distnace_percentile_dir}
+        #loop max_distance_percentil
+        for max_distance_percentil_itr in ${max_distance_percentil}; do
+          echo "max_distance_percentil ${max_distance_percentil_itr}"; echo ""
+          max_distance_percentil_dir=${min_significant_dir}/max_distance_percentil_${max_distance_percentil_itr}
+          mkdir -p ${max_distance_percentil_dir}
 
-          if [ -f ${max_distnace_percentile_dir}/festure_list.tsv ] ; then
-            echo "${max_distnace_percentile_dir}/festure_list.tsv already exists, skipping building train feature table."
+          if [ -f ${max_distance_percentil_dir}/festure_list.tsv ] ; then
+            echo "${max_distance_percentil_dir}/festure_list.tsv already exists, skipping building train feature table."
             continue
           fi
 
           # build feature list
           echo "nice -19 eval python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
-          ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distnace_percentile_dir}
-          100knn_${p}p_feature_list --min_subjects ${min_subjects_itr} --min_significant ${min_significant_itr} --max_distance_percentile ${max_distnace_percentile_itr}"
+          ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_percentil_dir}
+          100knn_${p}p_feature_list --min_subjects ${min_subjects_itr} --min_significant ${min_significant_itr} --max_distance_percentil ${max_distance_percentil_itr}"
           nice -19 eval python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
-          ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distnace_percentile_dir}
-          100knn_${p}p_feature_list --min_subjects ${min_subjects_itr} --min_significant ${min_significant_itr} --max_distance_percentile ${max_distnace_percentile_itr}
+          ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_percentil_dir}
+          100knn_${p}p_feature_list --min_subjects ${min_subjects_itr} --min_significant ${min_significant_itr} --max_distance_percentil ${max_distance_percentil_itr}
 
-        done # max_distnace_percentile loop
+        done # max_distance_percentil loop
       done # min_significant loop
 		done # min_subjects loop
 	done # knnloop
