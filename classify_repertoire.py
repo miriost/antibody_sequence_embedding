@@ -15,11 +15,8 @@ def main():
                        tables where each row is an observation and each column is a feature. It's output is a confusion 
                        matrix and a score.''',
         epilog="""All's well that ends well.""")
-    parser.add_argument('--train_file', help='a *.csv file containing the TRAIN features table, including labels '
-                                             'column')
-    parser.add_argument('--test_file', help='a *.csv file containing the TEST features table, including labels column')
-    parser.add_argument('--labels_col_name', help='Name of the labels column, default: "repertoire.disease_diagnosis"',
-                        default='repertoire.disease_diagnosis')
+    parser.add_argument('train_file', help='a *.csv file containing the TRAIN features table, including labels column')
+    parser.add_argument('test_file', help='a *.csv file containing the TEST features table, including labels column')
     parser.add_argument('--labels', help='a semicolon speparated list of target labels for the classification - '
                                          'default all labels')
     parser.add_argument('--output_file', help='name of the output file, default is None (no output file)', type=str)
@@ -32,13 +29,15 @@ def main():
                         type=str)
     parser.add_argument('--input_model_file', help='Input file to load the model from. Makes the models argument '
                                                    'redundant', type=str)
-    parser.add_argument('-M', '--models',
+    parser.add_argument('--models',
                         help='comma separated list of classifiers. current supported models: logistic_regression, '
                              'decision_tree, kNN, linear_svm, RBF_SVM, Gaussian, Random_Forest, MLP, ADA, MLP, '
                              'naive_bayes, QDA. default: "decision_tree"',
                         default="decision_tree")
 
     args = parser.parse_args()
+
+    label_column = 'subject.disease_diagnosis'
 
     if not (os.path.isfile(args.train_file) and os.path.splitext(os.path.split(args.train_file)[1])[1] == '.csv'):
         print('train file {} error! Make sure the file exists and it is *.csv file.\nExiting...'.format(
@@ -53,14 +52,12 @@ def main():
     test_file = pd.read_csv(args.test_file, index_col=0)
     test_file.fillna(0, inplace=True)
 
-    if (not args.labels_col_name in train_file.columns) or (not args.labels_col_name in test_file.columns):
+    if (label_column not in train_file.columns) or (not label_column in test_file.columns):
         print('label column name doesnt exist.\nExiting...')
         sys.exit(1)
 
-    labels_col_name = args.labels_col_name
-
     if args.labels is None:
-        labels = train_file[args.labels_col_name].unique().tolist()
+        labels = train_file[label_column].unique().tolist()
     else:
         labels = args.labels.split(';')
 
@@ -78,18 +75,18 @@ def main():
             sys.exit(1)
 
     print("~~~~~~~~ Begin classifing...\nTrain file: {}\nTest file: {}\nLabels column name: {}\nModel: "
-          "{}\n~~~~~~~".format(os.path.abspath(args.train_file), os.path.abspath(args.test_file), labels_col_name,
+          "{}\n~~~~~~~".format(os.path.abspath(args.train_file), os.path.abspath(args.test_file), label_column,
                                args.models))
 
-    train_file.loc[~train_file[labels_col_name].isin(labels), labels_col_name] = 'Neutral'			
-    x_train = train_file.drop(labels_col_name, axis=1)
-    y_train = train_file[labels_col_name]
+    train_file.loc[~train_file[label_column].isin(labels), label_column] = 'Neutral'			
+    x_train = train_file.drop(label_column, axis=1)
+    y_train = train_file[label_column]
 
-    test_file.loc[~test_file[labels_col_name].isin(labels), labels_col_name] = 'Neutral'
-    x_test = test_file.drop(labels_col_name, axis=1)
-    y_test = test_file[labels_col_name]
+    test_file.loc[~test_file[label_column].isin(labels), label_column] = 'Neutral'
+    x_test = test_file.drop(label_column, axis=1)
+    y_test = test_file[label_column]
 
-    classes = train_file[labels_col_name].unique()
+    classes = train_file[label_column].unique()
 
     if len(x_train.columns) == 0:
         print('No features in training file.\nExiting...')
@@ -104,12 +101,12 @@ def main():
         features = our_classifier.select_features(x_train, y_train)
         train_dir = os.path.dirname(args.train_file)
         train_name = os.path.basename(args.train_file).split('.csv')[0]
-        train_file.loc[:, features + [labels_col_name]].to_csv(os.path.join(train_dir,
+        train_file.loc[:, features + [label_column]].to_csv(os.path.join(train_dir,
                                                                             'selected_' + train_name + '.csv'),
                                                                index=False)
         test_dir = os.path.dirname(args.test_file)
         test_name = os.path.basename(args.test_file).split('.csv')[0]
-        test_file.loc[:, features + [labels_col_name]].to_csv(os.path.join(test_dir,
+        test_file.loc[:, features + [label_column]].to_csv(os.path.join(test_dir,
                                                                            'selected_' + test_name + '.csv'),
                                                               index=False)
         return

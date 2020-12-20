@@ -4,12 +4,12 @@ trap "exit" INT
 
 function show_help {
   echo "Build clusters and feature tables for train/test folds."
-  echo "folds FOLDS - Optional, space separated list of folds numbers. Deafult is 0."
-  echo "knn KNN - Optional, space separated list of the K nearest neighbors to serach in the clusters construction. Deafult is 100."
-  echo "max_distance_percentil MAX_DISTANCE_percentil - Optional, space separated list of max distance pecentile for filtering cluster neighbors. Default is \"100\" (all knn neighbors)."
-  echo "min_significance MIN_significance - Optional, space separated list of minimal significance threshould for the cluster selection. Default is \"0.7\"."
-  echo "min_subjects MIN_SUBJECTS - Optional, a space separated list of the number minimal of subjects threshold for the cluster selection. Default is \"7\"."
-  echo "work_dir WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\"."
+  echo "--folds FOLDS - Optional, space separated list of folds numbers. Deafult is 0."
+  echo "--knn KNN - Optional, space separated list of the K nearest neighbors to serach in the clusters construction. Deafult is 100."
+  echo "--max_distance_percentil MAX_DISTANCE_PERCENTIL - Optional, space separated list of max distance pecentile for filtering cluster neighbors. Default is \"100\" (all knn neighbors)."
+  echo "--min_significance MIN_significance - Optional, space separated list of minimal significance threshould for the cluster selection. Default is \"0.7\"."
+  echo "--min_subjects MIN_SUBJECTS - Optional, a space separated list of the number minimal of subjects threshold for the cluster selection. Default is \"7\"."
+  echo "--work_dir WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\"."
 }
 
 folds=0

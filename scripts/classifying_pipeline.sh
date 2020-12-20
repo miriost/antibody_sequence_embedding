@@ -2,124 +2,204 @@
 
 trap "exit" INT
 
-usage="USAGE: run_classification.sh -f [folds] -c [cluster_sizes] -m [max_features] -o [output_file] -r [replace] -M [model] -g [grid_serach] -w [work_dir] -l [labels] -s [min_subjects:max_subjects]"
-help="
--f FOLDS - Optional, space separated list of folds numbers. Deafult is 0..9.
--c CLUSTER_SIZES - Optional, space separated list of cluster sizes. Deafult is 100.
--m MAX_FEATURES - Optional, space separated list of min subjects for the feature (cluster) selection. Default is 50.
--M MODEL - Optional, which model to use for the classification. Default is all.
--o OUTPUT_FILE - Optional, classification results output file name. Default is classification_res.csv
--r REPLACE - Optional, override existing results file. Default is false.
--g GRID_SEARCH - Use grid search over repeated cross validation folds for optimizing the classsifier hyper parameters. Default is false.
--w WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\".
--l LABELS - Optional, the labels to classify.
--s MIN_SUBJECTS:MAX_SUBJECTS - Optional, the minimal and maximal number of subjects for the cluster selection. Default is 5:100.
-"
 
-folds=$(seq 0 1 9)
-cluster_sizes=100
-max_features=50
-output_file=classification_res.csv
-replace="false"
-models=all
-optimize="false"
+#!/bin/bash
+
+trap "exit" INT
+
+function show_help {
+  echo "Build clusters and feature tables for train/test folds."
+  echo "--description DESCRIPTION - Mandatory, decription for the calssification results file name"
+  echo "--folds FOLDS - Optional, space separated list of folds numbers. Deafult is 0."
+  echo "--model MODEL - Optional, which model to use for the classification. Default is logistic_regression."
+  echo "--optimize OPTMIZE - Optional, try to optimize the training using cross validation. Default is False."
+  echo "--knn KNN - Optional, space separated list of the K nearest neighbors to serach in the clusters construction. Deafult is 100."
+  echo "--max_distance_percentil MAX_DISTANCE_percentil - Optional, space separated list of max distance pecentile for filtering cluster neighbors. Default is \"100\" (all knn neighbors)."
+  echo "--min_significance MIN_significance - Optional, space separated list of minimal significance threshould for the cluster selection. Default is \"0.7\"."
+  echo "--min_subjects MIN_SUBJECTS - Optional, a space separated list of the number minimal of subjects threshold for the cluster selection. Default is \"7\"."
+  echo "--work_dir WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\"."
+}
+
+folds=0
+knn=100
+min_significance="0.7"
 work_dir=./
-labels=""
-min_subjects=5
-max_subjects=100
+min_subjects=7
+max_distance_percentil=100
+description=""
+model=logistic_regression
+optimize=False
 
-while getopts "hf:c:m:o:r:M:g:w:l:s:" opt; do
-	case ${opt} in
-		h ) echo "${usage}" ; echo "${help}"; exit 1
-      ;;
-    f ) folds=${OPTARG}
-      ;;
-		c ) cluster_sizes=${OPTARG}
-			;;
-		m ) max_features=${OPTARG}
-			;;
-		o ) output_file=${OPTARG}
-			;;
-		r ) replace=${OPTARG}
-			;;
-		M ) models=${OPTARG}
-			;;
-		g ) optimize=${OPTARG}
-			;;
-		w ) work_dir=${OPTARG}
-			;;
-		l ) labels=${OPTARG}
-			;;
-		s ) min_subjects=$(echo ${OPTARG} | awk -F $':' '{print $1}'); max_subjects=$(echo ${OPTARG} | awk -F $':' '{print $2}')
-			;;
-		\? ) echo ${usage}; echo "classifiying_pipeline.sh -h for additional help."; exit 1
-      			;;
-	esac
+# Read command line options
+ARGUMENT_LIST=(
+    "help"
+    "description"
+    "folds"
+    "knn"
+    "max_distance_percentil"
+    "min_significance"
+    "min_subjects"
+    "work_dir"
+    "model"
+)
+
+# read arguments
+opts=$(getopt \
+    --longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
+    --name "$(basename "$0")" \
+    --options "" \
+    -- "$@"
+)
+
+eval set --$opts
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --help)
+        show_help
+        exit 0
+        ;;
+      --description)
+        description=$2
+        shift 2
+        ;;
+      --folds)
+        folds=$2
+        shift 2
+        ;;
+      --knn)
+        knn=$2
+        shift 2
+        ;;
+      --max_distance_percentil)
+        max_distance_percentil=$2
+        shift 2
+        ;;
+      --min_significance)
+        min_significance=$2
+        shift 2
+        ;;
+      --min_subjects)
+        min_subjects=$2
+        shift 2
+        ;;
+      --work_dir)
+        work_dir=$2
+        shift 2
+        ;;
+      --model)
+        model=$2
+        shift 2
+        ;;
+      --optmize)
+        optmize=$2
+        shift 2
+        ;;
+      *)
+        break
+        ;;
+    esac
 done
 
-# change to working dir
+# arguments validation
+if [ -z "${description}" ]; then
+	echo "Missing mandatory description argument. Exiting..."
+	show_help
+	echo "pre_clustering_pipeline.sh -h for additional help."
+	exit -1
+fi
+
+# change to the working directory
+echo "cd ${work_dir}"
 cd ${work_dir}
+
+data_file=${description}_FILTERED_TRAIN.tsv
+vectors_file=${description}_VECTORS_TRAIN.npy
+
+test_data_file=${description}_FILTERED_TEST.tsv
+test_vectors_file=${description}_VECTORS_TEST.npy
+
+${output_file}=${description}.tsv
 
 # loop folds
 for fold in ${folds} ; do
-	echo "Fold ${fold}"
+	echo "Fold ${fold}"; echo ""
 	fold_dir=FOLD${fold}
-	# loop cluster size
-	for cs in ${cluster_sizes}; do
-		echo "Cluster size ${cs}"
-		cs_dir=${fold_dir}/cs_${cs}
-		# loop max features
-		for mf in ${max_features}; do 
-			echo "Max features ${mf}"
-			output_dir=${cs_dir}/subjects_${min_subjects}_${max_subjects}_max_features_${mf}
-		
-			if [ -f ${output_dir}/${output_file} ] && [[ "${replace}" == "false" ]] ; then
-				echo "file ${output_dir}/${output_file} already exists, skipping classification."
-				continue
-			fi
-			if ! [ -d ${output_dir}  ] ; then
-				echo "directory ${output_dir} does not exits, skipping."
-				continue
-			fi
-			# runt the classification
-			echo "Classifying..."
-			if [ -z "${labels}" ]; then
-				python -u ~/antibody_sequence_embedding/executable_scripts/classify_no_splitting.py --train_file ${output_dir}/train_feature_table.csv  --test_file ${output_dir}/test_feature_table.csv --col_names="max_features,fold,cluster_size" --col_values="${mf},${fold},${cs}" --output_file ${output_dir}/${output_file} -M ${models} --grid_search=${optimize} 2>&1 | tee ${output_dir}/classifiy_no_splitting.log.txt
-			else
-				python -u ~/antibody_sequence_embedding/executable_scripts/classify_no_splitting.py --train_file ${output_dir}/train_feature_table.csv  --test_file ${output_dir}/test_feature_table.csv --col_names="max_features,fold,cluster_size" --col_values="${mf},${fold},${cs}" --output_file ${output_dir}/${output_file} -M ${models} --grid_search=${optimize} --labels "${labels}" 2>&1 | tee ${output_dir}/classifiy_no_splitting.log.txt
-			fi
-		done # max features loop
-	done # cluster size loop
+
+	# loop knn value
+	for knn_itr in ${knn}; do
+		echo "knn ${knn_itr}"; echo ""
+		knn_dir=${fold_dir}/knn_${knn_itr}
+
+		#loop max features
+		for min_subjects_itr in ${min_subjects}; do
+			echo "min_subjects ${min_subjects_itr}"; echo ""
+			min_subjects_dir=${knn_dir}/min_subjects_${min_subjects_itr}
+
+      #loop min significance
+      for min_significance_itr in ${min_significance}; do
+        echo "min_significance ${min_significance_itr}"; echo ""
+        min_significance_dir=${min_subjects_dir}/min_significance_${min_significance_itr}
+
+        #loop max_distance_percentil
+        for max_distance_percentil_itr in ${max_distance_percentil}; do
+          echo "max_distance_percentil ${max_distance_percentil_itr}"; echo ""
+          max_distance_percentil_dir=${min_significance_dir}/max_distance_percentil_${max_distance_percentil_itr}
+
+          cmd="nice 19 python -u ~/antibody_sequence_embedding/classify_no_splitting.py --train_file ${max_distance_percentil_dir}/train_feature_table.csv --test_file
+          ${max_distance_percentil_dir}/test_feature_table.csv --col_names=\"knn,min_subjects,min_significance,max_distance_percentil\" --col_values=\"${knn_itr},${min_subjects_itr},
+          ${min_significance_itr},${max_distance_percentil_itr}\" --output_file ${output_dir}/${output_file} --models ${models} --grid_search=${optimize}"
+          echo ${cmd}
+          eval ${cmd}
+
+        done # max_distance_percentil loop
+      done # min_significance loop
+		done # min_subjects loop
+	done # knnloop
 done # fold loop
-#!/bin/bash
 
-# merge the results to single CSV
-# reset file if exists
 rm -f all_${output_file}
-# loop all folds
+# loop folds
 for fold in ${folds} ; do
+	echo "Fold ${fold}"; echo ""
 	fold_dir=FOLD${fold}
-	# loop cluster size
-	for cs in ${cluster_sizes}; do
-		cs_dir=${fold_dir}/cs_${cs}
-		# loop max features
-		for mf in ${max_features}; do 
-			output_dir=${cs_dir}/subjects_${min_subjects}_${max_subjects}_max_features_${mf}
-			echo  ${output_dir}/${output_file} 
-			if ! [ -f ${output_dir}/${output_file} ]; then
-				continue
-			fi
-			if ! [ -f all_${output_file} ] ; then
-				head -n1 ${output_dir}/${output_file} > all_${output_file}	 
-			fi	
-			echo "merging ${output_dir}/${output_file}"
-			tail -n+2 ${output_dir}/${output_file} >> all_${output_file}	
-		done # max features loop
-	done # cluster size loop
-done  # fold loop
 
+	# loop knn value
+	for knn_itr in ${knn}; do
+		knn_dir=${fold_dir}/knn_${knn_itr}
+
+		#loop max features
+		for min_subjects_itr in ${min_subjects}; do
+			min_subjects_dir=${knn_dir}/min_subjects_${min_subjects_itr}
+
+      #loop min significance
+      for min_significance_itr in ${min_significance}; do
+        min_significance_dir=${min_subjects_dir}/min_significance_${min_significance_itr}
+
+        #loop max_distance_percentil
+        for max_distance_percentil_itr in ${max_distance_percentil}; do
+          max_distance_percentil_dir=${min_significance_dir}/max_distance_percentil_${max_distance_percentil_itr}
+
+          if ! [ -f ${output_dir}/${output_file} ]; then
+				    continue
+			    fi
+
+          if ! [ -f all_${output_file} ] ; then
+            head -n1 ${output_dir}/${output_file} > all_${output_file}
+          fi
+
+          echo "merging ${output_dir}/${output_file}"
+          tail -n+2 ${output_dir}/${output_file} >> all_${output_file}
+
+        done # max_distance_percentil loop
+      done # min_significance loop
+		done # min_subjects loop
+	done # knnloop
+done # fold loop
 
 # analyze the results
 echo "Analyzing..."
 output_dir=$(echo ${output_file} | awk -F $'.' '{print $1}')_analysis
-python -u ~/antibody_sequence_embedding/executable_scripts/analyze_classification.py --input_file all_${output_file} --output_dir ${output_dir} 2>&1 | tee analyze_classification_results.log.txt
+cmd="nice -19 python -u ~/antibody_sequence_embedding/analyze_classification.py --input_file all_${output_file} --output_dir ${output_dir} 2>&1 | tee analyze_classification_results.log.txt"
+echo ${cmd}
+eval ${cmd}
