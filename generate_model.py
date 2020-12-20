@@ -30,16 +30,18 @@ def main():
 
     args = parser.parse_args()
 
+    data_column = 'cdr3_aa'
+
     data = None
     if args.data_file is not None:
         if not os.path.isfile(args.data_file):
             print('Invalid data_file argument: {}\n Existing...'.format(args.data_file))
             sys.exit(2)
         data_df = pd.read_csv(args.data_file, sep='\t')
-        if args.data_column not in data_df.columns:
-            print('{}} is not in {} columns\n Existing...'.format(args.data_column, args.data_file))
+        if data_column not in data_df.columns:
+            print('{}} is not in {} columns\n Existing...'.format(data_column, args.data_file))
             sys.exit(2)
-        data = data_df[args.data_column]
+        data = data_df[data_column]
     elif args.corpus_file is not None:
         if not os.path.isfile(args.corpus_file):
             print('Invalid corpus_file argument: {}\n Existing...'.format(args.corpus_file))
