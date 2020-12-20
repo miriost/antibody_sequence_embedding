@@ -113,8 +113,8 @@ for fold in ${folds} ; do
 		else
 			# search K nearest neighbors
 			echo "Starting KNN search..."
-			echo "nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn --cluster_size ${knn_itr} --num_cpus 12 --output_folder_path ${knn_dir}"
-			nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn --cluster_size ${knn_itr} --num_cpus 12 --output_folder_path ${knn_dir}
+			echo "nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn ${knn_dir} --cluster_size ${knn_itr} --num_cpus 12"
+			nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn ${knn_dir} --cluster_size ${knn_itr} --num_cpus 12
 		fi
 
 		#loop max features

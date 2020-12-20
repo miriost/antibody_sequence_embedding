@@ -102,7 +102,7 @@ def main():
     if num_cpus is None:
         num_cpus = psutil.cpu_count()
 
-    ray.init(num_cpus=num_cpus)
+    ray.init(num_cpus=num_cpus, lru_evict=True)
 
     by_subject = data_file.groupby(id_column)
     # for each subject - add feature frequency columns

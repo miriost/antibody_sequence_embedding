@@ -94,7 +94,7 @@ def main():
         sys.exit(1)
     print('loaded neighbors file')
 
-    ray.init(num_cpus=num_cpus)
+    ray.init(num_cpus=num_cpus, lru_evict=True)
 
     if labels is None:
         labels = data_file[label_column].unique().tolist()

@@ -21,6 +21,7 @@ def main():
     parser.add_argument('data_file_path', help='the filtered data file path')
     parser.add_argument('vectors_file_path', help='the name of the column with the vector')
     parser.add_argument('output_desc', help='description prefix for the output file names')
+    parser.add_argument('output_folder_path', help='Output folder for the output knn files')
     parser.add_argument('--cluster_size', help='size of the cluster, default is 100', type=int, default=100)
     parser.add_argument('--same_junction_len', help='Limit cluster to same junction length. Default is False',
                         type=str2bool, default=False)
@@ -35,7 +36,6 @@ def main():
     parser.add_argument('--step', help='How many rows to calculate in parallel, default is 100.',
                         type=int, default=100)
     parser.add_argument('--num_cpus', help='How many cpus are available for ray threads', type=int)
-    parser.add_argument('--thread_memory', help='memory size for ray thread (bytes)', type=int)
 
     args = parser.parse_args()
 
@@ -53,11 +53,8 @@ def main():
     num_cpus = args.num_cpus
     if num_cpus is None:
         num_cpus = psutil.cpu_count() 
-    
-    if args.thread_memory is not None:
-        ray.init(num_cpus=num_cpus, memory=args.thread_memory, object_store_memory=args.thread_memory, lru_evict=True)
-    else:
-        ray.init(num_cpus=num_cpus, lru_evict=True)
+
+    ray.init(num_cpus=num_cpus, lru_evict=True)
    
     id_column = 'subject.subject_id'
     cluster_size = args.cluster_size
@@ -67,7 +64,7 @@ def main():
     same_junction_len = args.same_junction_len
     output_desc = args.output_desc
 
-    output_dir = os.path.dirname(data_file_path)
+    output_dir = args.output_folder_path
 
     data_file = pd.read_csv(args.data_file_path, sep='\t')
     print('loaded data file')
