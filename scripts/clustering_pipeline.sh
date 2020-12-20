@@ -91,6 +91,7 @@ if [ -z "${description}" ]; then
 fi
 
 # change to the working directory
+echo "cd ${work_dir}"
 cd ${work_dir}
 
 data_file=${description}_FILTERED_TRAIN.tsv
