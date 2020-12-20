@@ -144,7 +144,7 @@ for fold in ${folds} ; do
           # build feature list
           cmd="nice -19 python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}\knn_distances
           .npy ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_percentil_dir} 100knn_${p}p_feature_list --min_subjects ${min_subjects_itr} --min_significance
-          ${min_significance_itr}\ --max_distance_percentil ${max_distance_percentil_itr}"
+          \"${min_significance_itr}\"\ --max_distance_percentil ${max_distance_percentil_itr}"
           echo ${cmd}
           eval ${cmd}
 
