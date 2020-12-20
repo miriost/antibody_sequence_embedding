@@ -13,6 +13,7 @@ work_dir=./
 exclude_duplicates="True"
 sampe_file="False"
 n_dim=100
+models=logistic_regression
 
 function show_help {
   echo "Execute all the pre processing steps before clustering a data set."
@@ -44,6 +45,7 @@ ARGUMENT_LIST=(
     "naive"
     "exclude_duplicates"
     "n_dim"
+    "models"
 )
 
 # read arguments
@@ -105,6 +107,10 @@ while [[ $# -gt 0 ]]; do
           ;;
       --exclude_duplicates)
           exclude_duplicates=$2
+          shift 2
+          ;;
+      --models)
+          models=$2
           shift 2
           ;;
       *)
