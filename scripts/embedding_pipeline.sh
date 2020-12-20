@@ -103,6 +103,10 @@ while [[ $# -gt 0 ]]; do
           n_dim=$2
           shift 2
           ;;
+      --exclude_duplicates)
+          exclude_duplicates=$2
+          shift 2
+          ;;
       *)
           break
           ;;
@@ -214,6 +218,6 @@ else
 	echo "nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}"
 	nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}
 	echo "nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds}"
-	nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds}
+	nice -19 python ~/antibody_sequence_embedding/split_vectors_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds}
 fi
 
