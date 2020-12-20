@@ -51,58 +51,55 @@ opts=$(getopt \
     -- "$@"
 )
 
-echo $opts
-
 eval set --$opts
 
-while true; do
+while [[ $# -gt 0 ]]; do
     case "$1" in
-    --help)
-        show_help
-        exit 0
-        ;;
-    --description)
-        shift
-        description=$1
-        ;;
-    --query)
-        shift
-        query=$1
-        ;;
-    --model_file)
-        shift
-        model_file=$1
-        ;;
-    --min_sample_size)
-        shift
-        min_sample_size=$1
-        ;;
-    --sample)
-        shift
-        sample=$1
-        ;;
-    --random_seed)
-        shift
-        random_seed=$1
-        ;;
-    --n_folds)
-        shift
-        n_folds=$1
-        ;;
-    --work_dir)
-        shift
-        work_dir=$1
-        ;;
-    --naive)
-        shift
-        naive=$1
-        ;;
-    --)
-      shift
-      break
-      ;;
-    esac
-    shift
+      --help)
+          show_help
+          exit 0
+          ;;
+      --description)
+          description=$2
+          shift 2
+          ;;
+      --query)
+          query=$2
+          shift 2
+          ;;
+      --model_file)
+          shift
+          model_file=$2
+          shift 2
+          ;;
+      --min_sample_size)
+          min_sample_size=$2
+          shift 2
+          ;;
+      --sample)
+          sample=$2
+          shift 2
+          ;;
+      --random_seed)
+          random_seed=$2
+          shift 2
+          ;;
+      --n_folds)
+          n_folds=$2
+          shift 2
+          ;;
+      --work_dir)
+          work_dir=$2
+          shift 2
+          ;;
+      --naive)
+          naive=$2
+          shift 2
+          ;;
+      *)
+          break
+          ;;
+      esac
 done
 
 # change dirctory to input directory
