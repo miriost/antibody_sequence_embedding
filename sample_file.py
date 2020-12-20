@@ -53,6 +53,8 @@ def main():
         # sample subject without replacement and save to list
         if exclude_duplicates is True:
             tmp_df = frame.drop_duplicates(subset=['cdr3_aa'])
+        else
+            tmp_df = frame
         if len(tmp_df) < args.min_samples:
             print('Lower number of sequences {}, subject removed.\n'.format(len(tmp_df)))
             continue
