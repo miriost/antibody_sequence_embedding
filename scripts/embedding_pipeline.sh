@@ -5,7 +5,7 @@ trap "exit" INT
 trim_start=2
 trim_end=1
 query=""
-sample_size=2000
+sample_size=5000
 description=""
 model_file=""
 random_seed=0
@@ -20,7 +20,7 @@ function show_help {
   echo "--description DESCRIPTION - Mandatory, decription of which will be used as suffix for the resulting files and added columns. For example \"-d celiac_heavy_chain\"."
   echo "--query QUERY - A KQL query to import data from the elastic search. Mandatory if <decsription>.tsv file doesn't exist in input direction"
   echo "--model_file MODEL_FILE - Optional, model file to be used to embed the junction_aa, if not provided a model will be generated from data set"
-  echo "--min_sample_size SAMPLE_SIZE - Optional, number of sequences to sample from each subject repertoire for the clustering. Default is 2000"
+  echo "--min_sample_size SAMPLE_SIZE - Optional, number of sequences to sample from each subject repertoire for the clustering. Default is 5000"
   echo "--sample - Optional, whether to sampel min_sample_size from each subject, Default is False"
   echo "--random_seed RANDOM_SEED - Optional, seed for the sampling. Default is 0."
   echo "--n_folds N_FOLDS - Optional, number of folds for the repeated cross validation splitting. Deafult is 10."
@@ -151,14 +151,14 @@ else
   nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${mkdb_file} --naive ${naive} --min_seq_per_subject ${min_sample_size}
 fi
 
-if [[ "${sample_file}" == "True" ]]; then
-  description=${description}_${model_desc}_sampled_n${sample_size}
+if [[ "${sample}" == "True" ]]; then
+  description=${description}_sampled_n${sample_size}
 else
-  description=${description}_${model_desc}
+  description=${description}
 fi
 
-vectors_file=${description}_VECTORS.npy
-data_file=${description}_FILTERED.tsv
+vectors_file=${description}_${model_desc}_VECTORS.npy
+data_file=${description}_${model_desc}_FILTERED.tsv
 
 if [ -f ${vectors_file} ] && [ -f ${data_file} ]; then
   echo "${vectors_file} and ${data_file} already exists, skipping generate model and generate vectors."; echo ""
@@ -211,8 +211,9 @@ if [ -d ${folds_dir} ]; then
 	echo "Folds dir ${folds_dir} already exists, skipping folds creation."; echo ""
 else
 	echo "Split folds..."; echo ""
-	echo ${sampled_file}
+	echo "nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}"
 	nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}
+	echo "nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds}"
 	nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds}
 fi
 

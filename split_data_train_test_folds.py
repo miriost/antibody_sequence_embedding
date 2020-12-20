@@ -32,7 +32,7 @@ def main():
 def execute(args):
 
     if not os.path.isfile(args.data_file):
-        print('feature file error! Make sure the file exists and it is *.csv file.\nExiting...')
+        print('data file error! Make sure the file exists.\nExiting...')
         sys.exit(1)
     data_file = pd.read_csv(args.data_file, sep='\t')
     print('Data file loaded, original file length: ', str(len(data_file)))
