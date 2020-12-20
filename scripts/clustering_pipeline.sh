@@ -87,12 +87,12 @@ for fold in ${folds} ; do
 		knn_dir=${fold_dir}/knn_${knn_itr}
 		mkdir -p ${knn_dir}
 
-		if [ -f ${knn_dir}/${knn_itr}knn_neighbors.npy &&  -f ${knn_dir}/${knn_itr}knn_distances.npy ] ; then
+		if [ -f ${knn_dir}/${knn_itr}knn_neighbors.npy ] && [ -f ${knn_dir}/${knn_itr}knn_distances.npy ] ; then
 			echo "${knn_dir}/${knn_itr}knn_neighbors.npy and ${knn_dir}/${knn_itr}knn_distances.npy already exists, skipping KNN search."
 		else
 			# search K nearest neighbors
 			echo "Starting KNN search and analysis..."
-			eval nice -19 eval python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py ${fold_dir}/*_TRAIN.tsv ${fold_dir}/*_TRAIN.npy --cluster_size ${knn_itr} ${knn_itr}knn
+			nice -19 eval python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py ${fold_dir}/*_TRAIN.tsv ${fold_dir}/*_TRAIN.npy --cluster_size ${knn_itr} ${knn_itr}knn
 			--output_folder_path ${knn_dir} --num_cpus 12
 		fi
 
