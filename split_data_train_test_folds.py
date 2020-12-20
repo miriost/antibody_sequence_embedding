@@ -71,7 +71,7 @@ def execute(args):
         labels = np.unique(subjects.values)
         train_size = len(subjects) * (1 - test_size)
         label_train_size = int(train_size / len(labels))
-        for fold in range(n_repeats * n_splits):
+        for fold in range(n_splits):
             train_subjects = []
             test_subjects = []
             for label in labels:
@@ -150,4 +150,6 @@ def test_create_folds():
 
 if __name__ == "__main__":
     main()
+
+
 

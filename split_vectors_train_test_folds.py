@@ -43,7 +43,7 @@ def execute(args):
         print('data file error! Make sure the file exists and it is *.tsv file.\nExiting...')
         sys.exit(1)
     data_file = pd.read_csv(data_file_path, sep='\t')
-    print('Vectors file loaded, original file length: ', data_file.shape[0])
+    print('Data file loaded, original file length: ', data_file.shape[0])
 
     if not os.path.isfile(vectors_file_path):
         print('vectors file error! Make sure the file exists and it is *.npy file.\nExiting...')

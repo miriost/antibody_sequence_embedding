@@ -2,65 +2,77 @@
 
 trap "exit" INT
 
-usage="USAGE: clustring_pipline.sh -v <vector_column> -l <labels> -f [folds] -c [cluster_sizes] -m [max_features] -w [work_dir] -s [min_subjects:max_subjects]"
-help="Build clusters and feature tables for train/test folds.
--v VECTOR_COLUMN - Mandatory, name of the column in the tsv file with the embedded vector.
--l LABELS - Mandatory, semicolon separated list of target labels for the clustering analysis and selection
--f FOLDS - Optional, space separated list of folds numbers. Deafult is 0..9.
--c CLUSTER_SIZES - Optional, space separated list of cluster sizes. Deafult is 100.
--m MAX_FEATURES - Optional, space separated list of max features to select per label. Default is 100.
--w WORK_DIR - Optional, the folds root directory where the folds are. Default is 50\"./\".
--s MIN_SUBJECTS:MAX_SUBJECTS - Optional, the minimal and maximal number of subjects for the cluster selection. Default is 5:100.
-"
-folds=$(seq 0 1 9)
-cluster_sizes=100
-significance_levels=70
-max_features=50
-vector_column=""
-work_dir=./
-labels=""
-min_subjects=5
-max_subjects=100
+function show_help {
+  echo "Build clusters and feature tables for train/test folds."
+  echo "folds FOLDS - Optional, space separated list of folds numbers. Deafult is 0."
+  echo "knn KNN - Optional, space separated list of the K nearest neighbors to serach in the clusters construction. Deafult is 100."
+  echo "max_distance_percentile MAX_DISTANCE_PERCENTILE - Optional, space separated list of max distance pecentile for filtering cluster neighbors. Default is \"100\" (all knn neighbors)."
+  echo "min_significant MIN_SIGNIFICANT - Optional, space separated list of minimal significant threshould for the cluster selection. Default is \"0.7\"."
+  echo "min_subjects MIN_SUBJECTS - Optional, a space separated list of the number minimal of subjects threshold for the cluster selection. Default is \"10\"."
+  echo "work_dir WORK_DIR - Optional, the folds root directory where the folds are. Default is 50\"./\"."
+}
 
-while getopts "hf:c:m:v:w:l:s:" opt; do
-	case ${opt} in
-		h ) echo "${usage}" ; echo "${help}"; exit 1
-      			;;
-    f ) folds=${OPTARG}
-      			;;
-		c ) cluster_sizes=${OPTARG}
-			      ;;
-		m ) max_features=${OPTARG}
-			      ;;
-		v ) vector_column=${OPTARG}
-			      ;;
-		l ) labels=${OPTARG}
-		        ;;
-		w ) work_dir=${OPTARG}
-			;;
-		s ) min_subjects=$(echo ${OPTARG} | awk -F $':' '{print $1}'); max_subjects=$(echo ${OPTARG} | awk -F $':' '{print $2}')
-			;;
-		\? ) echo ${usage}; echo "cluster_pipline.sh -h for additional help"; exit 1
-      			;;
-	esac
+folds=0
+knn=100
+significance_level="0.7"
+work_dir=./
+min_subjects=10
+max_distance_percentile=100
+
+# Read command line options
+ARGUMENT_LIST=(
+    "folds"
+    "cluster_size"
+    "max_distance_percentile"
+    "min_significant"
+    "min_subjects"
+    "work_dir"
+)
+
+echo $opts
+
+eval set --$opts
+
+while true; do
+    case "$1" in
+    --help)
+      show_help
+      exit 0
+      ;;
+    --folds)
+      shift
+      folds=$1
+      ;;
+    --knn)
+      shift
+      knn=$1
+      ;;
+    --max_distance_percentile)
+      shift
+      max_distance_percentile=$1
+      ;;
+    --min_significant)
+      shift
+      min_significant=$1
+      ;;
+    --min_subjects)
+      shift
+      min_subjects=$1
+      ;;
+    --work_dir)
+      shift
+      work_dir=$1
+      ;;
+    --)
+      shift
+      break
+      ;;
+    esac
+    shift
 done
 
 # change to the working directory
 cd ${work_dir}
-
-# validate arguments
-if [ -z "${vector_column}" ]; then
-	echo "${usage}"
-	echo "cluster_pipline.sh -h for additional help"
-	exit -1
-fi
-
-if [ -z "${labels}" ]; then
-	echo "${usage}"
-	echo "cluster_pipline.sh -h for additional help"
-	exit -1
-fi
-
 
 # loop folds
 for fold in ${folds} ; do
@@ -68,58 +80,44 @@ for fold in ${folds} ; do
 	fold_dir=FOLD${fold}
 	
 	# loop cluster size
-	for cs in ${cluster_sizes}; do
-		echo "Cluster size ${cs}"; echo ""
-		cs_dir=${fold_dir}/cs_${cs}
-		mkdir -p ${cs_dir}
-		if [ -f ${cs_dir}/NN_cs_${cs}.tsv ] ; then
-			echo "${cs_dir}/NN_cs_${cs}.tsv already exists, skipping KNN search."
+	for knn_itr in ${knn}; do
+		echo "knn ${knn_itr}"; echo ""
+		knn_dir=${fold_dir}/knn_${knn_itr}
+		mkdir -p ${knn_dir}
+
+		if [ -f ${knn_dir}/${knn_itr}knn_neighbors.npy &&  -f ${knn_dir}/${knn_itr}knn_distances.npy ] ; then
+			echo "${knn_dir}/${knn_itr}knn_neighbors.npy and ${knn_dir}/${knn_itr}knn_distances.npy already exists, skipping KNN search."
 		else
 			# search K nearest neighbors
 			echo "Starting KNN search and analysis..."
-			eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --perform_NN=True --perform_results_analysis=True --output_folder_path ${cs_dir} --output_description cs_${cs} --vector_column ${vector_column} --cluster_size ${cs} --cpus=12 --step=10000 --id repertoire.repertoire_name 2>&1 | tee -a ${cs_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
+			eval nice -19 python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity.py ${fold_dir}/*_TRAIN.tsv ${fold_dir}/*_TRAIN.npy --cluster_size ${knn_itr} ${knn_itr}knn
+			--output_folder_path ${knn_dir} --num_cpus 12
 		fi
-		if [ -f ${cs_dir}/cs_${cs}_analysis.csv ] ; then
-			echo "${cs_dir}/cs_${cs}_analysis.csv already exists, skipping KNN analysis."
-		else
-			# analyze K nearest neighbors
-			echo "Starting KNN analysis..."
-			eval python -u ~/antibody_sequence_embedding/executable_scripts/cluster_proximity_brute_force.py --data_file_path ${fold_dir}/*_TRAIN_*.tsv --NN_file_path=${cs_dir}/NN_cs_${cs}.tsv --perform_NN=False --perform_results_analysis=True --output_folder_path ${cs_dir} --vector_column ${vector_column} --output_description cs_${cs} --cluster_size ${cs} --cpus=12 --step=10000 --id repertoire.repertoire_name 2>&1 | tee -a ${cs_dir}/cs_${cs}_cluster_proximity_brute_force.log.txt
-		fi
-		#if ! [ -d  ${cs_dir}/clustering_analysis ]; then
- 		#	echo "Plotting cluster analysis..."
-		#	mkdir -p ${cs_dir}/clustering_analysis
-		#	python ~/antibody_sequence_embedding/executable_scripts/analyze_clustering.py --analysis_file ${cs_dir}/cs_${cs}_analysis.csv --labels "${labels}" --output_dir ${cs_dir}/clustering_analysis
-		#fi
+
 		#loop max features
-		for mf in ${max_features}; do 
-			echo "Max features ${mf}"; echo ""
-			output_dir=${cs_dir}/subjects_${min_subjects}_${max_subjects}_max_features_${mf}
-			mkdir -p ${output_dir}
-			if [ -f ${output_dir}/feature_list.csv ] ; then
-			echo "${output_dir}/feature_list.csv already exists, skipping building feature list." 
-			else	
-			# create feature list
-			echo "Building feature list..."
-			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximty_feature_list.py --labels "${labels}" --data_file_path ${fold_dir}/*_TRAIN_*.tsv --analysis_file_path ${cs_dir}/cs_${cs}_analysis.csv --output_folder ${output_dir} --output_description feature_list --max_features ${mf} --min_subjects ${min_subjects} --max_subjects ${max_subjects} 2>&1 | tee
-			${output_dir}/build_cluster_proximity_feature_list.log.txt
-			fi
+		for min_subjects_itr in ${min_subjects}; do
+			echo "min_subjects ${min_subjects_itr}"; echo ""
+			min_subjects_dir=${knn_dir}/min_subjects_${min_subjects_itr}
+			mkdir -p ${min_subjects_dir}
 
-			if [ -f ${output_dir}/train_feature_table.csv ] ; then
-			echo "${output_dir}/train_feature_table.csv already exists, skipping building train feature table."
-			else
-			echo "Building train feature table..."
-			# create train feature table
-			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity_feature_table.py --features_list ${output_dir}/feature_list.csv --data_file_path ${fold_dir}/*_TRAIN_*.tsv --vector_column ${vector_column} --output_folder ${output_dir} --output_description train --subject_col_name repertoire.repertoire_name --labels_col_name repertoire.disease_diagnosis --cpus=12 2>&1 | tee ${output_dir}/build_cluster_proximity_feature_table_with_labels.log.txt
-			fi
-			if [ -f ${output_dir}/test_feature_table.csv ] ; then
-			echo "${output_dir}/test_feature_table.csv already exists, skipping building test feature table."	
-			else
-			echo "Building test feature table..."
-			# create test feature table
-			python -u ~/antibody_sequence_embedding/executable_scripts/build_cluster_proximity_feature_table.py --labels "${labels}" --features_list ${output_dir}/feature_list.csv --data_file_path ${fold_dir}/*_TEST_*.tsv --vector_column ${vector_column} --output_folder ${output_dir} --output_description test --subject_col_name repertoire.repertoire_name --labels_col_name repertoire.disease_diagnosis --cpus=12 2>&1 | tee -a ${output_dir}/build_cluster_proximity_feature_table_with_labels.log.txt
+      #loop min significant
+      for min_significant_itr in ${min_significant}; do
+        echo "min_significant ${min_significant_itr}"; echo ""
+        min_significant_dir=${min_subjects_dir}/min_significant_${min_significant_itr}
+        mkdir -p ${min_significant_dir}
 
-			fi
-		done # max features loop
-	done # cluster size loop
+        #loop max_distnace_percentile
+        for max_distnace_percentile_itr in ${max_distnace_percentile}; do
+          echo "max_distnace_percentile ${max_distnace_percentile_itr}"; echo ""
+          max_distnace_percentile_dir=${min_significant_dir}/max_distnace_percentile_${max_distnace_percentile_itr}
+          mkdir -p ${max_distnace_percentile_dir}
+
+            if [ -f ${max_distnace_percentile_dir}/festure_list.tsv ] ; then
+              echo "${max_distnace_percentile_dir}/festure_list.tsv already exists, skipping building train feature table."
+              continue
+            fi
+        done # max_distnace_percentile loop
+      done # min_significant loop
+		done # min_subjects loop
+	done # knnloop
 done # fold loop

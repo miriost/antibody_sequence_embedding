@@ -128,6 +128,9 @@ def main():
     if psutil.virtual_memory().percent >= 80.0:
         gc.collect()
 
+    data_file[labels + ['how_many_subjects']].to_csv(os.path.join(args.output_folder_path, args.output_description +
+                                                                  '_clusters.tsv'), sep='\t', index=False)
+
     # processing
     number_of_features_neto = 0
     number_of_features_bruto = 0
@@ -243,3 +246,18 @@ def build_maps(data_file: pd.DataFrame, data: pd.DataFrame, distances_file: np.a
 if __name__ == '__main__':
     main()
 
+
+
+    label_column = 'subject.disease_diagnosis'
+    id_column = 'subject.subject_id'
+    min_significance = 0.7
+    min_subjects = 7
+    num_cpus = 1
+    shuffle_seed = None
+    max_distance = None
+    max_distance_diameter = False
+    data_file_path = 'data/FOLD0/celiac_bcr_light_chain_db_celiac_bcr_light_chain_prot2vec_10dim_FILTERED_TRAIN_0.tsv'
+    vectors_file_path = 'data/FOLD0/celiac_bcr_light_chain_db_celiac_bcr_light_chain_prot2vec_10dim_TRAIN_VECTORS.npy'
+    distances_file_path = 'data/FOLD0/10dim_200knn_distances.npy'
+    neighbors_file_path = 'data/FOLD0/10dim_200knn_neighbors.npy'
+    labels = None
