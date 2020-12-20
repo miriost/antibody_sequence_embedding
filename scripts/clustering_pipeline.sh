@@ -163,7 +163,7 @@ for fold in ${folds} ; do
             echo "${max_distance_percentil_dir}/test_feature_table.csv already exists, skipping building train feature table."
           else
             cmd="nice -19 python ~/antibody_sequence_embedding/build_cluster_proximity_feature_table.py ${fold_dir}/${test_data_file} ${fold_dir}/${test_vectors_file}
-            ${max_distance_percentil_dir}/feature_list.tsv train ${max_distance_percentil_dir}"
+            ${max_distance_percentil_dir}/feature_list.tsv test ${max_distance_percentil_dir}"
             echo ${cmd}
             eval ${cmd}
           fi
