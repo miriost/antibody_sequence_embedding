@@ -147,6 +147,7 @@ if [ -f ${mkdb_file} ]; then
   echo "File ${mkdb_file} already exists, skipping reprocess mkdb."; echo ""
 else
   echo "Reprocess mkdb..."; echo ""
+  echo "nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${mkdb_file} --naive ${naive} --min_seq_per_subject ${min_sample_size}"
   nice -19 python -u ~/antibody_sequence_embedding/reprocess_makedb_dir.py ${import_file} ${mkdb_file} --naive ${naive} --min_seq_per_subject ${min_sample_size}
 fi
 
@@ -179,27 +180,30 @@ else
       echo "Model file ${model_file} already exists, skipping generate model."; echo ""
     else
       echo "Generate model..."; echo ""
+      echo "nice -19 python ~/antibody_sequence_embedding/generate_model.py ${mkdb_file} ${model_desc} --n_dim ${n_dim}"
       nice -19 python ~/antibody_sequence_embedding/generate_model.py ${mkdb_file} ${model_desc} --n_dim ${n_dim}
     fi
   fi
 
   # sample file
-  if [[ "${sample_file}" == "True" ]]; then
+  if [[ "${sample}" == "True" ]]; then
     sampled_file=${description}.tsv
     if [ -f ${sampled_file} ]; then
       echo "File ${sampled_file} already exists, skipping sampling."; echo ""
     else
       echo "Sample file..."; echo ""
+      echo "nice -19 python ~/antibody_sequence_embedding/sample_file.py ${mkdb_file} ${sampled_file} ${min_sample_size} --exclude_duplicates ${exclude_duplicates}"
       nice -19 python ~/antibody_sequence_embedding/sample_file.py ${mkdb_file} ${sampled_file} ${min_sample_size} --exclude_duplicates ${exclude_duplicates}
     fi
+  else
     sampled_file=${mkdb_file}
   fi
 
   # generate vectors
   echo "Generate vectors..."; echo ""
+  echo "nice -19 python ~/antibody_sequence_embedding/generate_vectors.py ${sampled_file} ${model_file} --drop_duplicates ${exclude_duplicates}"
   nice -19 python ~/antibody_sequence_embedding/generate_vectors.py ${sampled_file} ${model_file} --drop_duplicates ${exclude_duplicates}
 fi
-
 
 # create repeated cross validation folds
 folds_dir=${description}_${n_folds}folds
