@@ -43,7 +43,7 @@ def main():
                         help='feature list file, contains the list of relevent features, including feature '
                              'center and maximal distance from it')
     parser.add_argument('output_description',  help='description to use inside output file names', type=str)
-    parser.add_argument('--output_folder', default="./",  help='Output folder for the feature table')
+    parser.add_argument('output_folder', help='Output folder for the feature table')
     parser.add_argument('--dist_metric',
                         help='type of distance to use, default=euclidean', default='euclidean', type=str)
     parser.add_argument('--num_cpus',

@@ -97,6 +97,9 @@ cd ${work_dir}
 data_file=${description}_FILTERED_TRAIN.tsv
 vectors_file=${description}_VECTORS_TRAIN.npy
 
+test_data_file=${description}_FILTERED_TEST.tsv
+test_vectors_file=${description}_VECTORS_TEST.npy
+
 # loop folds
 for fold in ${folds} ; do
 	echo "Fold ${fold}"; echo ""
@@ -137,16 +140,33 @@ for fold in ${folds} ; do
           mkdir -p ${max_distance_percentil_dir}
 
           if [ -f ${max_distance_percentil_dir}/festure_list.tsv ] ; then
-            echo "${max_distance_percentil_dir}/festure_list.tsv already exists, skipping building train feature table."
-            continue
+            echo "${max_distance_percentil_dir}/festure_list.tsv already exists, skipping building feature list."
+          else
+            # build feature list
+            cmd="nice -19 python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
+            ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_percentil_dir} feature_list --min_subjects ${min_subjects_itr} --min_significance ${min_significance_itr}
+            --max_distance_percentil ${max_distance_percentil_itr}"
+            echo ${cmd}
+            eval ${cmd}
           fi
 
-          # build feature list
-          cmd="nice -19 python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
-          ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_percentil_dir} 100knn_${p}p_feature_list --min_subjects ${min_subjects_itr} --min_significance ${min_significance_itr}
-          --max_distance_percentil ${max_distance_percentil_itr}"
-          echo ${cmd}
-          eval ${cmd}
+          if [ -f ${max_distance_percentil_dir}/train_feature_table.csv ] ; then
+            echo "${max_distance_percentil_dir}/train_feature_table.csv already exists, skipping building train feature table."
+          else
+            cmd="nice 19 python ~/antibody_sequence_embedding/build_cluster_proximity_feature_table.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${max_distance_percentil_dir}/feature_list
+            .tsv train ${max_distance_percentil_dir}"
+            echo ${cmd}
+            eval ${cmd}
+          fi
+
+          if [ -f ${max_distance_percentil_dir}/train_feature_table.csv ] ; then
+            echo "${max_distance_percentil_dir}/train_feature_table.csv already exists, skipping building train feature table."
+          else
+            cmd="nice 19 python ~/antibody_sequence_embedding/build_cluster_proximity_feature_table.py ${fold_dir}/${test_data_file} ${fold_dir}/${test_vectors_file}
+            ${max_distance_percentil_dir}/feature_list.tsv train ${max_distance_percentil_dir}"
+            echo ${cmd}
+            eval ${cmd}
+          fi
 
         done # max_distance_percentil loop
       done # min_significance loop
