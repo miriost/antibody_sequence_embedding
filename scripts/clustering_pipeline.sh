@@ -113,10 +113,8 @@ for fold in ${folds} ; do
 		else
 			# search K nearest neighbors
 			echo "Starting KNN search..."
-			echo "nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn --cluster_size ${knn_itr}
-			${fold_dir}/${hcv_bcr_heavy_chain_sampled_n5000_hcv_bcr_heavy_chain_100dim}_VECTORS_TRAIN.npy ${knn_itr}knn --cluster_size ${knn_itr} --output_folder_path ${knn_dir} --num_cpus 12"
-			nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn --cluster_size ${knn_itr}
-			${fold_dir}/${hcv_bcr_heavy_chain_sampled_n5000_hcv_bcr_heavy_chain_100dim}_VECTORS_TRAIN.npy ${knn_itr}knn --cluster_size ${knn_itr} --output_folder_path ${knn_dir} --num_cpus 12
+			echo "nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn --cluster_size ${knn_itr} --num_cpus 12 --output_folder_path ${knn_dir}"
+			nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn --cluster_size ${knn_itr} --num_cpus 12 --output_folder_path ${knn_dir}
 		fi
 
 		#loop max features
