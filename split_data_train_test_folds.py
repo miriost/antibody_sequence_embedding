@@ -56,6 +56,7 @@ def execute(args):
     balance_train_labels = args.balance_train_labels
 
     subjects = data_file.loc[:, ].groupby(by=[id_column])[label_column].apply(lambda x: x.iloc[0])
+    print('total number of subject is {}'.format(len(subjects)))
     # sort index to ensure getting the same splits in different runs
     subjects.sort_index(inplace=True)
 
@@ -70,7 +71,9 @@ def execute(args):
         np.random.seed(0)
         labels = np.unique(subjects.values)
         train_size = len(subjects) * (1 - test_size)
+        print('number of subject in train {}'.format(train_size))
         label_train_size = int(train_size / len(labels))
+        print('number of subjects for each label in train is {}'.format(label_train_size))
         for fold in range(n_splits):
             train_subjects = []
             test_subjects = []
