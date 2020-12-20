@@ -11,7 +11,7 @@ function show_help {
   echo "Build clusters and feature tables for train/test folds."
   echo "--description DESCRIPTION - Mandatory, decription for the calssification results file name"
   echo "--folds FOLDS - Optional, space separated list of folds numbers. Deafult is 0."
-  echo "--model MODEL - Optional, which model to use for the classification. Default is logistic_regression."
+  echo "--models MODELS - Optional, which models to use for the classification. Default is logistic_regression."
   echo "--optimize OPTMIZE - Optional, try to optimize the training using cross validation. Default is False."
   echo "--knn KNN - Optional, space separated list of the K nearest neighbors to serach in the clusters construction. Deafult is 100."
   echo "--max_distance_percentil MAX_DISTANCE_percentil - Optional, space separated list of max distance pecentile for filtering cluster neighbors. Default is \"100\" (all knn neighbors)."
@@ -27,7 +27,7 @@ work_dir=./
 min_subjects=7
 max_distance_percentil=100
 description=""
-model=logistic_regression
+models=logistic_regression
 optimize=False
 
 # Read command line options
@@ -40,7 +40,7 @@ ARGUMENT_LIST=(
     "min_significance"
     "min_subjects"
     "work_dir"
-    "model"
+    "models"
 )
 
 # read arguments
@@ -87,8 +87,8 @@ while [[ $# -gt 0 ]]; do
         work_dir=$2
         shift 2
         ;;
-      --model)
-        model=$2
+      --models)
+        models=$2
         shift 2
         ;;
       --optmize)
