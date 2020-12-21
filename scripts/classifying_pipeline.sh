@@ -148,7 +148,7 @@ for fold in ${folds} ; do
 
           cmd="nice -19 python -u ~/antibody_sequence_embedding/classify_repertoire.py ${max_distance_percentil_dir}/train_feature_table.csv
           ${max_distance_percentil_dir}/test_feature_table.csv --col_names=\"knn,min_subjects,min_significance,max_distance_percentil\" --col_values=\"${knn_itr},${min_subjects_itr},
-          ${min_significance_itr},${max_distance_percentil_itr}\" --output_file ${output_dir}/${output_file} --models ${models} --grid_search=${optimize}"
+          ${min_significance_itr},${max_distance_percentil_itr}\" --output_file ${max_distance_percentil_dir}/${output_file} --models ${models} --grid_search=${optimize}"
           echo ${cmd}
           eval ${cmd}
 
@@ -180,16 +180,16 @@ for fold in ${folds} ; do
         for max_distance_percentil_itr in ${max_distance_percentil}; do
           max_distance_percentil_dir=${min_significance_dir}/max_distance_percentil_${max_distance_percentil_itr}
 
-          if ! [ -f ${output_dir}/${output_file} ]; then
+          if ! [ -f ${max_distance_percentil_dir}/${output_file} ]; then
 				    continue
 			    fi
 
           if ! [ -f all_${output_file} ] ; then
-            head -n1 ${output_dir}/${output_file} > all_${output_file}
+            head -n1 ${max_distance_percentil_dir}/${output_file} > all_${output_file}
           fi
 
-          echo "merging ${output_dir}/${output_file}"
-          tail -n+2 ${output_dir}/${output_file} >> all_${output_file}
+          echo "merging ${max_distance_percentil_dir}/${output_file}"
+          tail -n+2 ${max_distance_percentil_dir}/${output_file} >> all_${output_file}
 
         done # max_distance_percentil loop
       done # min_significance loop
