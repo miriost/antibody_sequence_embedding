@@ -43,6 +43,9 @@ class RepertoireClassifier:
         X_train = self.scaler.transform(X_train)
 
         estimator = clone(self.estimator)
+        if (len(self.parameters) == 1) and (len(self.parameters[0]) == 0):
+            n_splits = 1
+
         self.trained_model = GridSearchCV(estimator,
                                           self.parameters,
                                           cv=KFold(n_splits=n_splits, shuffle=repeated, random_state=0),

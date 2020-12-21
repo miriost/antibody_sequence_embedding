@@ -124,7 +124,7 @@ def main():
         else:
             models = args.models.split(",")
         for model_name in models:
-            if args.grid_search:
+            if args.grid_search is True:
                 parameters = None
             else:
                 parameters = [{}]
