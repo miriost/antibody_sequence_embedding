@@ -41,6 +41,7 @@ ARGUMENT_LIST=(
     "min_subjects"
     "work_dir"
     "models"
+    "optimize"
 )
 
 # read arguments
@@ -91,8 +92,8 @@ while [[ $# -gt 0 ]]; do
         models=$2
         shift 2
         ;;
-      --optmize)
-        optmize=$2
+      --optimize)
+        optimize=$2
         shift 2
         ;;
       *)

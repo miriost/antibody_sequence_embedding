@@ -44,7 +44,7 @@ class RepertoireClassifier:
 
         estimator = clone(self.estimator)
         if (len(self.parameters) == 1) and (len(self.parameters[0]) == 0):
-            n_splits = 1
+            n_splits = 2
 
         self.trained_model = GridSearchCV(estimator,
                                           self.parameters,
