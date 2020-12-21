@@ -29,7 +29,7 @@ class RepertoireClassifier:
         X_train = pd.DataFrame(self.scaler.transform(X_train), columns=columns)
 
         estimator = clone(self.estimator)
-        self.features = self.feature_selector(estimator, X_train, y_train, n_splits, repeated)
+        self.features = self.feature_selector(estimator, X_train, y_train, X_train.shape[0], repeated)
         self.features = X_train.columns.to_list()
 
     def fit(self, X_train, y_train, n_splits=20, repeated=True):
