@@ -161,7 +161,7 @@ fi
 if [[ "${sample}" == "True" ]]; then
   description=${description}_sampled_n${sample_size}
 else
-  description=${description}
+  description=${description}_db
 fi
 
 vectors_file=${description}_${model_desc}_VECTORS.npy
@@ -220,6 +220,7 @@ folds_dir=${description}_${n_folds}folds
 if [ -d ${folds_dir} ]; then
 	echo "Folds dir ${folds_dir} already exists, skipping folds creation."; echo ""
 else
+	mkdir -p ${folds_dir}
 	echo "Split folds..."; echo ""
 	cmd="nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}"
   echo ${cmd}
