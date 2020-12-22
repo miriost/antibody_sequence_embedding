@@ -217,7 +217,7 @@ def build_maps(data_file: pd.DataFrame, data: pd.DataFrame, distances_file: np.a
 
     print("adding cluster_subjects column to rows {}".format(sub_range))
     data.loc[data.index, 'cluster_subjects'] = data.loc[data.index,
-                                                        'cluster_neighbors'].apply(lambda x: data_file.loc[x, 'subject.subject_id'].to_list())
+                                                        'cluster_neighbors'].apply(lambda x: np.unique(data_file.loc[x, 'subject.subject_id']).tolist())
 
     # for analysis - subjects from each label in the clusters
     print("adding label subjects columns to rows {}".format(sub_range))
