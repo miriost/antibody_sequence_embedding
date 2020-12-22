@@ -237,8 +237,8 @@ def build_maps(data_file: pd.DataFrame, data: pd.DataFrame, distances_file: np.a
     # cluster diameter
     data.loc[data['how_many_subjects'] > 0, 'max_distance'] = data.loc[data['how_many_subjects'] > 0,
                                                                        'cluster_distances'].apply(lambda x: np.max(x))
-    data.loc[data['how_many_subjects'] > 0, 'mean_distance'] = data[data['how_many_subjects'] > 0,
-                                                                    'cluster_distances'].apply(lambda x: np.mean(x))
+    data.loc[data['how_many_subjects'] > 0, 'mean_distance'] = data.loc[data['how_many_subjects'] > 0,
+                                                                        'cluster_distances'].apply(lambda x: np.mean(x))
 
     print("finished adding columns to rows {}".format(sub_range))
 
