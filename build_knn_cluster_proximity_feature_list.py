@@ -219,10 +219,6 @@ def build_maps(data_file: pd.DataFrame, data: pd.DataFrame, distances_file: np.a
     data.loc[data.index, 'cluster_subjects'] = data.loc[data.index,
                                                         'cluster_neighbors'].apply(lambda x: data_file.loc[x, 'subject.subject_id'].to_list())
 
-    # cluster diameter
-    data['max_distance'] = data['cluster_distances'].apply(lambda x: np.max(x))
-    data['mean_distance'] = data['cluster_distances'].apply(lambda x: np.mean(x))
-
     # for analysis - subjects from each label in the clusters
     print("adding label subjects columns to rows {}".format(sub_range))
     for label in labels:
@@ -238,6 +234,10 @@ def build_maps(data_file: pd.DataFrame, data: pd.DataFrame, distances_file: np.a
     # for the cluster selection - how many subjects are in the clusters
     data['how_many_subjects'] = data['cluster_subjects'].apply(lambda x: len(x))
 
+    # cluster diameter
+    data.loc[data['how_many_subjects'] > 0, 'max_distance'] = data['cluster_distances'].apply(lambda x: np.max(x))
+    data.loc[data['how_many_subjects'] > 0, 'mean_distance'] = data['cluster_distances'].apply(lambda x: np.mean(x))
+
     print("finished adding columns to rows {}".format(sub_range))
 
     return data
@@ -245,19 +245,3 @@ def build_maps(data_file: pd.DataFrame, data: pd.DataFrame, distances_file: np.a
 
 if __name__ == '__main__':
     main()
-
-
-
-    label_column = 'subject.disease_diagnosis'
-    id_column = 'subject.subject_id'
-    min_significance = 0.7
-    min_subjects = 7
-    num_cpus = 1
-    shuffle_seed = None
-    max_distance = None
-    max_distance_diameter = False
-    data_file_path = 'data/FOLD0/celiac_bcr_light_chain_db_celiac_bcr_light_chain_prot2vec_10dim_FILTERED_TRAIN_0.tsv'
-    vectors_file_path = 'data/FOLD0/celiac_bcr_light_chain_db_celiac_bcr_light_chain_prot2vec_10dim_TRAIN_VECTORS.npy'
-    distances_file_path = 'data/FOLD0/10dim_200knn_distances.npy'
-    neighbors_file_path = 'data/FOLD0/10dim_200knn_neighbors.npy'
-    labels = None
