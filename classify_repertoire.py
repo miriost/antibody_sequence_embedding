@@ -80,7 +80,7 @@ def main():
                                args.models))
 
     train_file.loc[~train_file[label_column].isin(labels), label_column] = 'Neutral'			
-    x_train = train_file.drop([label_column, subject_column])
+    x_train = train_file.drop(columns=[label_column, subject_column])
     y_train = train_file[label_column]
 
     test_file.loc[~test_file[label_column].isin(labels), label_column] = 'Neutral'
