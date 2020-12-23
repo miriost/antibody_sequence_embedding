@@ -168,9 +168,13 @@ for fold in ${folds} ; do
             eval ${cmd}
           fi
 
-          cmd="nice -19 python ~/antibody_sequence_embedding/select_features.py train_feature_table.csv test_feature_table.csv"
-          echo ${cmd}
-          eval ${cmd}
+          if [ -f ${max_distance_percentil_dir}/selected_train_feature_table.csv ] && [ -f ${max_distance_percentil_dir}/selected_test_feature_table.csv ] ; then
+            echo "${max_distance_percentil_dir}/selected_train_feature_table.csv and ${max_distance_percentil_dir}/selected_test_feature_table.csv already exits, skipping feature selection."
+          else
+            cmd="nice -19 python ~/antibody_sequence_embedding/select_features.py ${max_distance_percentil_dir}/train_feature_table.csv ${max_distance_percentil_dir}/test_feature_table.csv"
+            echo ${cmd}
+            eval ${cmd}
+          fi
 
         done # max_distance_percentil loop
       done # min_significance loop
