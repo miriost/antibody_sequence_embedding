@@ -54,7 +54,7 @@ def execute(args):
     train_feature_table = pd.read_csv(train_feature_file)
 
     if not(os.path.isfile(test_feature_file)):
-        print('train feature file error, make sure file path exists\nExiting...')
+        print('test feature file error, make sure file path exists\nExiting...')
         sys.exit(1)
     test_feature_table = pd.read_csv(train_feature_file)
 

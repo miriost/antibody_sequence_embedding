@@ -168,6 +168,10 @@ for fold in ${folds} ; do
             eval ${cmd}
           fi
 
+          cmd="nice -19 python ~/antibody_sequence_embedding/select_features.py train_feature_table.csv test_feature_table.csv"
+          echo ${cmd}
+          eval ${cmd}
+
         done # max_distance_percentil loop
       done # min_significance loop
 		done # min_subjects loop
