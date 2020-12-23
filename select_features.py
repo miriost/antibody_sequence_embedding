@@ -129,7 +129,7 @@ def execute(args):
 
         # saving selected features
         index_feature = [i for i, x in enumerate(rfe.support_) if x]
-        selected_features = X.columns.values[index_feature].to_list()
+        selected_features = X.columns.values[index_feature].tolist()
 
     selected_features.append(label_column)
     selected_features.append(subject_column)
