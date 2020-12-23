@@ -8,6 +8,8 @@ from sklearn.feature_selection import SelectFromModel
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import StratifiedKFold
 from sklearn.feature_selection import RFECV
+from sklearn.feature_selection import RFE
+from sklearn.linear_model import LogisticRegression
 
 
 def str2bool(v):
@@ -78,7 +80,7 @@ def execute(args):
                                                                     label_column])] = scaler.transform(tmp)
 
     y_train = train_feature_table[label_column]
-    X_train = train_feature_table.drop(columns=[label_column])
+    X_train = train_feature_table.drop(columns=[label_column, subject_column])
 
     selected_features = X_train.columns
 
@@ -92,7 +94,7 @@ def execute(args):
         print('using rfecv feature selection')
         rf = RandomForestClassifier()
         min_features_to_select = 1  # Minimum number of features to consider
-        rfecv = RFECV(estimator=rf, step=1, cv=StratifiedKFold(10),
+        rfecv = RFECV(estimator=rf, step=1, cv=StratifiedKFold(5),
                       scoring='accuracy',
                       min_features_to_select=min_features_to_select)
         rfecv.fit(X_train, y_train)
@@ -127,20 +129,23 @@ def execute(args):
 
         # saving selected features
         index_feature = [i for i, x in enumerate(rfe.support_) if x]
-        selected_features = X.columns.values[index_feature]
+        selected_features = X.columns.values[index_feature].to_list()
 
-    print('selected {} features from {} features'.format(len(selected_features), X_train.shpae[0]))
+    selected_features.append(label_column)
+    selected_features.append(subject_column)
 
-    base_name = os.path.basename(train_feature_file).split['.csv'][0]
+    print('selected {} features from {} features'.format(len(selected_features), X_train.shape[0]))
+
+    base_name = os.path.basename(train_feature_file).split('.csv')[0]
     dir_name = os.path.dirname(train_feature_file)
     full_path = os.path.join(dir_name, 'selected_' + base_name + '.csv')
-    train_feature_table[selected_features + [label_column, subject_column]].to_csv(os.path.join(full_path))
+    train_feature_table[selected_features].to_csv(os.path.join(full_path))
     print('saved {}'.format(full_path))
 
-    base_name = os.path.basename(test_feature_file).split['.csv'][0]
+    base_name = os.path.basename(test_feature_file).split('.csv')[0]
     dir_name = os.path.dirname(test_feature_file)
     full_path = os.path.join(dir_name, 'selected_' + base_name + '.csv')
-    test_feature_table[selected_features + [label_column, subject_column]].to_csv(os.path.join(full_path))
+    test_feature_table[selected_features].to_csv(os.path.join(full_path))
     print('saved {}'.format(full_path))
 
 
