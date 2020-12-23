@@ -104,7 +104,7 @@ def execute(args):
         print('using custom feature selection')
         data_x = X_train
         data_y = y_train
-        kf = StratifiedKFold(n_splits=10, shuffle=True)
+        kf = StratifiedKFold(n_splits=5, shuffle=True)
         N = round(len(X_train.columns) * 0.3)
         all_importances = pd.DataFrame()
         for train, _ in kf.split(data_x, data_y):
