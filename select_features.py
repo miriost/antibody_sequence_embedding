@@ -19,7 +19,7 @@ def main():
                                                  'the feature_table')
     parser.add_argument('train_feature_file', help='the train feature table csv file')
     parser.add_argument('test_feature_file', help='the test feature table csv file')
-    parser.add_argument('--max_features', help='the maximum number of features, default is 300', type=int, deafult=300)
+    parser.add_argument('--max_features', help='the maximum number of features, default is 300', type=int, default=300)
     parser.add_argument('--threshold', help='A scaling factor for the feature selection importance threshold (e.g., '
                                             '“factor*mean_importance”)', type=float, default=1.0)
     parser.add_argument('--normalize_rows', help='normalize the rows (divide by row sum). Default is True.',
@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--scale_columns', help='use min-max scaler to scale rows, Default is False', type=str2bool,
                         default=False)
     parser.add_argument('--selection_method', help='which cross validation method to use, options are: '
-                                                   'rfecv, SelectFromModel, custom', type=str,
+                                                   'rfecv, SelectFromModel, custom. Default is custom.', type=str,
                         default='custom')
 
     args = parser.parse_args()
@@ -43,7 +43,7 @@ def execute(args):
     normalize_rows = args.normalize_rows
     scale_columns = args.scale_columns
     label_column = 'subject.disease_diagnosis'
-    subject_column = 'subject.subject_id'
+    subject_column = 'SUBJECT'
     selection_method = args.selection_method
 
     if not(os.path.isfile(train_feature_file)):
