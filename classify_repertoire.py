@@ -38,6 +38,7 @@ def main():
     args = parser.parse_args()
 
     label_column = 'subject.disease_diagnosis'
+    subject_column = 'SUBJECT'
 
     if not (os.path.isfile(args.train_file) and os.path.splitext(os.path.split(args.train_file)[1])[1] == '.csv'):
         print('train file {} error! Make sure the file exists and it is *.csv file.\nExiting...'.format(
@@ -79,11 +80,11 @@ def main():
                                args.models))
 
     train_file.loc[~train_file[label_column].isin(labels), label_column] = 'Neutral'			
-    x_train = train_file.drop(label_column, axis=1)
+    x_train = train_file.drop([label_column, subject_column])
     y_train = train_file[label_column]
 
     test_file.loc[~test_file[label_column].isin(labels), label_column] = 'Neutral'
-    x_test = test_file.drop(label_column, axis=1)
+    x_test = test_file.drop(columns=[label_column, subject_column])
     y_test = test_file[label_column]
 
     classes = train_file[label_column].unique()
