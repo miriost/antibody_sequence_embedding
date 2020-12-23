@@ -134,7 +134,7 @@ def execute(args):
     selected_features.append(label_column)
     selected_features.append(subject_column)
 
-    print('selected {} features from {} features'.format(len(selected_features), X_train.shape[0]))
+    print('selected {} features from {} features'.format(len(selected_features), X_train.shape[1]))
 
     base_name = os.path.basename(train_feature_file).split('.csv')[0]
     dir_name = os.path.dirname(train_feature_file)
