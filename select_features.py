@@ -133,10 +133,10 @@ def execute(args):
         index_feature = [i for i, x in enumerate(rfe.support_) if x]
         selected_features = X.columns.values[index_feature].tolist()
 
+    print('selected {} features from {} features'.format(len(selected_features), X_train.shape[1]))
+
     selected_features.append(label_column)
     selected_features.append(subject_column)
-
-    print('selected {} features from {} features'.format(len(selected_features), X_train.shape[1]))
 
     base_name = os.path.basename(train_feature_file).split('.csv')[0]
     dir_name = os.path.dirname(train_feature_file)
