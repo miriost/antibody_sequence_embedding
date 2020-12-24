@@ -56,7 +56,7 @@ def execute(args):
     if not(os.path.isfile(test_feature_file)):
         print('test feature file error, make sure file path exists\nExiting...')
         sys.exit(1)
-    test_feature_table = pd.read_csv(train_feature_file)
+    test_feature_table = pd.read_csv(test_feature_file)
 
     if normalize_rows:
         print('normalizing the rows')
