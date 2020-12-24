@@ -141,13 +141,13 @@ def execute(args):
     base_name = os.path.basename(train_feature_file).split('.csv')[0]
     dir_name = os.path.dirname(train_feature_file)
     full_path = os.path.join(dir_name, 'selected_' + base_name + '.csv')
-    train_feature_table[selected_features].to_csv(os.path.join(full_path))
+    train_feature_table[selected_features].to_csv(os.path.join(full_path), index=False)
     print('saved {}'.format(full_path))
 
     base_name = os.path.basename(test_feature_file).split('.csv')[0]
     dir_name = os.path.dirname(test_feature_file)
     full_path = os.path.join(dir_name, 'selected_' + base_name + '.csv')
-    test_feature_table[selected_features].to_csv(os.path.join(full_path))
+    test_feature_table[selected_features].to_csv(os.path.join(full_path), index=False)
     print('saved {}'.format(full_path))
 
 
