@@ -6,7 +6,7 @@ function show_help {
   echo "Build clusters and feature tables for train/test folds."
   echo "--folds FOLDS - Optional, space separated list of folds numbers. Deafult is 0."
   echo "--knn KNN - Optional, space separated list of the K nearest neighbors to serach in the clusters construction. Deafult is 100."
-  echo "--max_distance_percentil MAX_DISTANCE_PERCENTIL - Optional, space separated list of max distance pecentile for filtering cluster neighbors. Default is \"100\" (all knn neighbors)."
+  echo "--max_distance MAX_DISTANCE - Optional, space separated list of max distance cutoff for filtering cluster neighbors. Default is \"100\" (all knn neighbors)."
   echo "--min_significance MIN_significance - Optional, space separated list of minimal significance threshould for the cluster selection. Default is \"0.7\"."
   echo "--min_subjects MIN_SUBJECTS - Optional, a space separated list of the number minimal of subjects threshold for the cluster selection. Default is \"7\"."
   echo "--work_dir WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\"."
@@ -17,7 +17,7 @@ knn=100
 min_significance="0.7"
 work_dir=./
 min_subjects=7
-max_distance_percentil=100
+max_distance=100
 description=""
 
 # Read command line options
@@ -26,7 +26,7 @@ ARGUMENT_LIST=(
     "description"
     "folds"
     "knn"
-    "max_distance_percentil"
+    "max_distance"
     "min_significance"
     "min_subjects"
     "work_dir"
@@ -60,8 +60,8 @@ while [[ $# -gt 0 ]]; do
         knn=$2
         shift 2
         ;;
-      --max_distance_percentil)
-        max_distance_percentil=$2
+      --max_distance)
+        max_distance=$2
         shift 2
         ;;
       --min_significance)
@@ -133,50 +133,50 @@ for fold in ${folds} ; do
         min_significance_dir=${min_subjects_dir}/min_significance_${min_significance_itr}
         mkdir -p ${min_significance_dir}
 
-        #loop max_distance_percentil
-        for max_distance_percentil_itr in ${max_distance_percentil}; do
-          echo "max_distance_percentil ${max_distance_percentil_itr}"; echo ""
-          max_distance_percentil_dir=${min_significance_dir}/max_distance_percentil_${max_distance_percentil_itr}
-          mkdir -p ${max_distance_percentil_dir}
+        #loop max_distance
+        for max_distance_itr in ${max_distance}; do
+          echo "max_distance ${max_distance_itr}"; echo ""
+          max_distance_dir=${min_significance_dir}/max_distance_${max_distance_itr}
+          mkdir -p ${max_distance_dir}
 
-          if [ -f ${max_distance_percentil_dir}/feature_list.tsv ] ; then
-            echo "${max_distance_percentil_dir}/feature_list.tsv already exists, skipping building feature list."
+          if [ -f ${max_distance_dir}/feature_list.tsv ] ; then
+            echo "${max_distance_dir}/feature_list.tsv already exists, skipping building feature list."
           else
             # build feature list
             cmd="nice -19 python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
-            ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_percentil_dir} feature_list --min_subjects ${min_subjects_itr} --min_significance ${min_significance_itr}
-            --max_distance_percentil ${max_distance_percentil_itr} --num_cpus 12"
+            ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_dir} feature_list --min_subjects ${min_subjects_itr} --min_significance ${min_significance_itr}
+            --max_distance ${max_distance_itr} --num_cpus 12"
             echo ${cmd}
             eval ${cmd}
           fi
 
-          if [ -f ${max_distance_percentil_dir}/train_feature_table.csv ] ; then
-            echo "${max_distance_percentil_dir}/train_feature_table.csv already exists, skipping building train feature table."
+          if [ -f ${max_distance_dir}/train_feature_table.csv ] ; then
+            echo "${max_distance_dir}/train_feature_table.csv already exists, skipping building train feature table."
           else
             cmd="nice -19 python ~/antibody_sequence_embedding/build_cluster_proximity_feature_table.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file}
-            ${max_distance_percentil_dir}/feature_list.tsv train ${max_distance_percentil_dir}"
+            ${max_distance_dir}/feature_list.tsv train ${max_distance_dir}"
             echo ${cmd}
             eval ${cmd}
           fi
 
-          if [ -f ${max_distance_percentil_dir}/test_feature_table.csv ] ; then
-            echo "${max_distance_percentil_dir}/test_feature_table.csv already exists, skipping building train feature table."
+          if [ -f ${max_distance_dir}/test_feature_table.csv ] ; then
+            echo "${max_distance_dir}/test_feature_table.csv already exists, skipping building train feature table."
           else
             cmd="nice -19 python ~/antibody_sequence_embedding/build_cluster_proximity_feature_table.py ${fold_dir}/${test_data_file} ${fold_dir}/${test_vectors_file}
-            ${max_distance_percentil_dir}/feature_list.tsv test ${max_distance_percentil_dir}"
+            ${max_distance_dir}/feature_list.tsv test ${max_distance_dir}"
             echo ${cmd}
             eval ${cmd}
           fi
 
-          if [ -f ${max_distance_percentil_dir}/selected_train_feature_table.csv ] && [ -f ${max_distance_percentil_dir}/selected_test_feature_table.csv ] ; then
-            echo "${max_distance_percentil_dir}/selected_train_feature_table.csv and ${max_distance_percentil_dir}/selected_test_feature_table.csv already exits, skipping feature selection."
+          if [ -f ${max_distance_dir}/selected_train_feature_table.csv ] && [ -f ${max_distance_dir}/selected_test_feature_table.csv ] ; then
+            echo "${max_distance_dir}/selected_train_feature_table.csv and ${max_distance_dir}/selected_test_feature_table.csv already exits, skipping feature selection."
           else
-            cmd="nice -19 python ~/antibody_sequence_embedding/select_features.py ${max_distance_percentil_dir}/train_feature_table.csv ${max_distance_percentil_dir}/test_feature_table.csv"
+            cmd="nice -19 python ~/antibody_sequence_embedding/select_features.py ${max_distance_dir}/train_feature_table.csv ${max_distance_dir}/test_feature_table.csv"
             echo ${cmd}
             eval ${cmd}
           fi
 
-        done # max_distance_percentil loop
+        done # max_distance loop
       done # min_significance loop
 		done # min_subjects loop
 	done # knnloop
