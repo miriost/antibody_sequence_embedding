@@ -62,9 +62,11 @@ def execute(args):
         print('normalizing the rows')
         tmp = train_feature_table.loc[:, ~train_feature_table.columns.isin([subject_column, label_column])]
         train_feature_table.loc[:,  ~train_feature_table.columns.isin([subject_column, label_column])] = tmp.div(tmp.sum(axis=1), axis=0)
+        train_feature_table.fillna(0, inplace=True)
 
         tmp = test_feature_table.loc[:, ~test_feature_table.columns.isin([subject_column, label_column])]
         test_feature_table.loc[:,  ~test_feature_table.columns.isin([subject_column, label_column])] = tmp.div(tmp.sum(axis=1), axis=0)
+        test_feature_table.fillna(0, inplace=True)
 
     if scale_columns:
         scaler = MinMaxScaler()
