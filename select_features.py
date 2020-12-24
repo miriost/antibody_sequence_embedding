@@ -84,7 +84,7 @@ def execute(args):
     y_train = train_feature_table[label_column]
     X_train = train_feature_table.drop(columns=[label_column, subject_column])
 
-    selected_features = X_train.columns
+    selected_features = X_train.columns.to_list()
 
     if selection_method == 'select_from_model':
         print('using select from model feature selection')
