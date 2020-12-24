@@ -10,6 +10,8 @@ function show_help {
   echo "--min_significance MIN_significance - Optional, space separated list of minimal significance threshould for the cluster selection. Default is \"0.7\"."
   echo "--min_subjects MIN_SUBJECTS - Optional, a space separated list of the number minimal of subjects threshold for the cluster selection. Default is \"7\"."
   echo "--work_dir WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\"."
+  echo "--same_gene SAME_GENE - Search knn enforcing same vgene and jgene"
+  echo "--same_cdr3_len  - Search knn enforcing same cdr3 length"
 }
 
 folds=0
@@ -19,6 +21,8 @@ work_dir=./
 min_subjects=7
 max_distance=100
 description=""
+same_gene=False
+same_cdr3_len=False
 
 # Read command line options
 ARGUMENT_LIST=(
@@ -30,6 +34,8 @@ ARGUMENT_LIST=(
     "min_significance"
     "min_subjects"
     "work_dir"
+    "same_gene"
+    "same_cdr3_len"
 )
 
 # read arguments
@@ -76,6 +82,14 @@ while [[ $# -gt 0 ]]; do
         work_dir=$2
         shift 2
         ;;
+      --same_gene)
+        same_gene=$2
+        shift 2
+        ;;
+      --same_cdr3_len)
+        same_cdr3_len=$2
+        shift 2
+        ;;
       *)
         break
         ;;
@@ -116,7 +130,8 @@ for fold in ${folds} ; do
 		else
 			# search K nearest neighbors
 			echo "Starting KNN search..."
-			cmd="nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn ${knn_dir} --cluster_size ${knn_itr} --num_cpus 12"
+			cmd="nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn ${knn_dir} --cluster_size ${knn_itr}
+			--num_cpus 12 --same_gene ${same_gene} --same_cdr3_len ${same_cdr3_len}"
 			echo ${cmd}
 			eval ${cmd}
 		fi
