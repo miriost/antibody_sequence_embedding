@@ -128,6 +128,12 @@ def main():
     data_file_id = ray.put(data_file)
     features_file_id = ray.put(features_file)
 
+    if same_genes is True:
+        data_file['v_gene'] = data_file['v_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(
+            lambda x: x[0])
+        data_file['j_gene'] = data_file['j_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(
+            lambda x: x[0])
+
     for subject, frame in by_subject:
         result_ids += [get_subject_feature_table.remote(subject, data_file_id, vectors_file_id, features_id, features_file_id,
                                                         max_distance_id, frame.index, dist_metric, same_genes,
@@ -163,11 +169,7 @@ def get_subject_feature_table(subject: str, data_file: pd.DataFrame, vectors: np
     t0 = time.time()
 
     by = []
-    if same_genes:
-        data_file['v_gene'] = data_file['v_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(
-            lambda x: x[0])
-        data_file['j_gene'] = data_file['j_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(
-            lambda x: x[0])
+    if same_genes is True:
         by += ['v_gene', 'j_gene']
 
     if same_junction_len:
