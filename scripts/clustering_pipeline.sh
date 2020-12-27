@@ -139,7 +139,7 @@ for fold in ${folds} ; do
 		knn_dir=${fold_dir}/knn_${knn_itr}
 		mkdir -p ${knn_dir}
 
-		if [ -f ${knn_dir}/${knn_itr}knn_neighbors.npy ] && [ -f ${knn_dir}/${knn_itr}knn_distances.npy ] ; then
+		if [ -f ${knn_dir}/${knn_itr}knn_neighbors.npy ] && [ -f ${knn_dir}/${knn_itr}knn_distances.npy ] && ![[ "${do_clustering}" == "True" ]] ; then
 			echo "${knn_dir}/${knn_itr}knn_neighbors.npy and ${knn_dir}/${knn_itr}knn_distances.npy already exists, skipping KNN search."
 		else
 			# search K nearest neighbors
@@ -172,7 +172,7 @@ for fold in ${folds} ; do
             echo "${max_distance_dir}/feature_list.tsv already exists, skipping building feature list."
           else
             # build feature list
-            if [[ "${sample}" == "True" ]]; then
+            if [[ "${do_clustering}" == "True" ]]; then
               cmd="nice -19 python -u ~/antibody_sequence_embedding/filter_clusters.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
               ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_dir} feature_list ${dist_metric}_cluster_id --min_subjects ${min_subjects_itr} --min_significance ${min_significance_itr}
               --max_distance ${max_distance_itr} --num_cpus 12 --dist_metric ${dist_metric}"
