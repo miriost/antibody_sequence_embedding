@@ -43,6 +43,7 @@ def main():
                         default=0.15)
     parser.add_argument('--cluster_id_column', help='the name of the column to store teh cluster_id, default is '
                                                     '"cluster_id"', default='cluster_id')
+    parser.add_argument('--thread_memory', help='thread memory size of ray.init()', type=int)
 
     args = parser.parse_args()
 
@@ -59,9 +60,14 @@ def main():
 
     num_cpus = args.num_cpus
     if num_cpus is None:
-        num_cpus = psutil.cpu_count() 
+        num_cpus = psutil.cpu_count()
 
-    ray.init(num_cpus=num_cpus, lru_evict=True)
+    thread_memory = args.thread_memory
+
+    if thread_memory is not None:
+        ray.init(num_cpus=num_cpus, lru_evict=True, memory=thread_memory, object_store_memory=thread_memory)
+    else:
+        ray.init(num_cpus=num_cpus, lru_evict=True)
    
     id_column = 'subject.subject_id'
     cluster_size = args.cluster_size
