@@ -192,7 +192,7 @@ for fold in ${folds} ; do
               fi
               cmd="nice -19 python -u ~/antibody_sequence_embedding/filter_clusters.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
               ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_dir} feature_list ${dist_metric}_cluster_id --subjects_th ${min_subjects_itr} --significance_th ${min_significance_itr}
-              --max_distance_th ${max_distance_itr} --is_manhattan${is_manhattan}"
+              --max_distance_th ${max_distance_itr} --is_manhattan ${is_manhattan}"
             else
               cmd="nice -19 python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file}
               ${knn_dir}/${knn_itr}knn_distances.npy ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_dir} feature_list --min_subjects ${min_subjects_itr} --min_significance
