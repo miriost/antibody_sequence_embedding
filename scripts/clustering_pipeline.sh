@@ -180,8 +180,8 @@ for fold in ${folds} ; do
           max_distance_dir=${min_significance_dir}/max_distance_${max_distance_itr}
           mkdir -p ${max_distance_dir}
 
-          if [ -f ${max_distance_dir}/feature_list.tsv ] ; then
-            echo "${max_distance_dir}/feature_list.tsv already exists, skipping building feature list."
+          if [ -f ${max_distance_dir}/${dist_metric}_feature_list.tsv ] ; then
+            echo "${max_distance_dir}/${dist_metric}_feature_list.tsv already exists, skipping building feature list."
           else
             # build feature list
             if [[ "${do_clustering}" == "True" ]]; then
@@ -190,8 +190,8 @@ for fold in ${folds} ; do
               else
                 is_manhattan=False
               fi
-              cmd="nice -19 python -u ~/antibody_sequence_embedding/filter_clusters.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
-              ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_dir} feature_list ${dist_metric}_cluster_id --subjects_th ${min_subjects_itr} --significance_th ${min_significance_itr}
+              cmd="nice -19 python -u ~/antibody_sequence_embedding/filter_clusters.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${max_distance_dir} ${dist_metric}_feature_list
+              ${dist_metric}_cluster_id --subjects_th ${min_subjects_itr} --significance_th ${min_significance_itr}
               --max_distance_th ${max_distance_itr} --is_manhattan ${is_manhattan}"
             else
               cmd="nice -19 python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file}
@@ -202,28 +202,28 @@ for fold in ${folds} ; do
             eval ${cmd}
           fi
 
-          if [ -f ${max_distance_dir}/train_feature_table.csv ] ; then
+          if [ -f ${max_distance_dir}/${dist_metric}_train_feature_table.csv ] ; then
             echo "${max_distance_dir}/train_feature_table.csv already exists, skipping building train feature table."
           else
             cmd="nice -19 python ~/antibody_sequence_embedding/build_cluster_proximity_feature_table.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file}
-            ${max_distance_dir}/feature_list.tsv train ${max_distance_dir} --dist_metric ${dist_metric} --same_gene ${same_gene} --same_junction_len ${same_junction_len}"
+            ${max_distance_dir}/${dist_metric}_feature_list.tsv train ${max_distance_dir} --dist_metric ${dist_metric} --same_gene ${same_gene} --same_junction_len ${same_junction_len}"
             echo ${cmd}
             eval ${cmd}
           fi
 
-          if [ -f ${max_distance_dir}/test_feature_table.csv ] ; then
-            echo "${max_distance_dir}/test_feature_table.csv already exists, skipping building train feature table."
+          if [ -f ${max_distance_dir}/${dist_metric}_test_feature_table.csv ] ; then
+            echo "${max_distance_dir}/${dist_metric}_test_feature_table.csv already exists, skipping building train feature table."
           else
             cmd="nice -19 python ~/antibody_sequence_embedding/build_cluster_proximity_feature_table.py ${fold_dir}/${test_data_file} ${fold_dir}/${test_vectors_file}
-            ${max_distance_dir}/feature_list.tsv test ${max_distance_dir} --dist_metric ${dist_metric}"
+            ${max_distance_dir}/${dist_metric}_feature_list.tsv ${dist_metric}_test ${max_distance_dir} --dist_metric ${dist_metric}"
             echo ${cmd}
             eval ${cmd}
           fi
 
-          if [ -f ${max_distance_dir}/selected_train_feature_table.csv ] && [ -f ${max_distance_dir}/selected_test_feature_table.csv ] ; then
-            echo "${max_distance_dir}/selected_train_feature_table.csv and ${max_distance_dir}/selected_test_feature_table.csv already exits, skipping feature selection."
+          if [ -f ${max_distance_dir}/${dist_metric}_selected_train_feature_table.csv ] && [ -f ${max_distance_dir}/${dist_metric}_selected_test_feature_table.csv ] ; then
+            echo "${max_distance_dir}/${dist_metric}_selected_train_feature_table.csv and ${max_distance_dir}/${dist_metric}_selected_test_feature_table.csv already exits, skipping feature selection."
           else
-            cmd="nice -19 python ~/antibody_sequence_embedding/select_features.py ${max_distance_dir}/train_feature_table.csv ${max_distance_dir}/test_feature_table.csv"
+            cmd="nice -19 python ~/antibody_sequence_embedding/select_features.py ${max_distance_dir}/${dist_metric}_train_feature_table.csv ${max_distance_dir}/${dist_metric}_test_feature_table.csv"
             echo ${cmd}
             eval ${cmd}
           fi

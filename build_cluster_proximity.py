@@ -41,7 +41,7 @@ def main():
                         default=False)
     parser.add_argument('--distance_th', help='Distance th for the full linkage hierarchical clustering', type=float,
                         default=0.15)
-    parser.add_argument('--cluster_id_column', help='the name of the column to store teh cluster_id, default is '
+    parser.add_argument('--cluster_id_column', help='the name of the column to store the cluster_id, default is '
                                                     '"cluster_id"', default='cluster_id')
     parser.add_argument('--thread_memory', help='thread memory size of ray.init()', type=int)
 
