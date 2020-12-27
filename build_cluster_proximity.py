@@ -97,6 +97,10 @@ def main():
 
     if args.do_clustering is True:
 
+        if cluster_id_column in data_file.columns:
+            print('{} column already exists in data_file, skipping'.format(cluster_id_column))
+            return
+
         data_file = find_clusters(data_file, vectors_file, same_junction_len, same_genes, dist_metric, distance_th,
                                   cluster_id_column)
         data_file.to_csv(data_file_path, sep='\t', index=False)
