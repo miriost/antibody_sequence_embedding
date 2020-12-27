@@ -14,6 +14,7 @@ function show_help {
   echo "--same_junction_len  - Optional, Search knn enforcing same cdr3 length, default is False"
   echo "--dist_metric - Optional. which dist_metric to use for the custering, default is \"euclidean\" "
   echo "--do_clustering - Optional. Use hierarchical clustering and not full linkage clustering. Deafulat is True"
+  echo "--thread_memory - Optional. Thread memory argument for ray.init()."
 }
 
 folds=0
@@ -27,6 +28,7 @@ same_gene=False
 same_junction_len=False
 dist_metric='euclidean'
 do_clustering=True
+thread_memory=0
 
 # Read command line options
 ARGUMENT_LIST=(
@@ -42,6 +44,7 @@ ARGUMENT_LIST=(
     "same_junction_len"
     "dist_metric"
     "do_clustering"
+    "thread_memory"
 )
 
 # read arguments
@@ -145,7 +148,8 @@ for fold in ${folds} ; do
 			# search K nearest neighbors
 			echo "Starting KNN search..."
 			cmd="nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn ${knn_dir} --cluster_size ${knn_itr}
-			--num_cpus 12 --same_gene ${same_gene} --same_junction_len ${same_junction_len} --dist_metric ${dist_metric} --do_clustering ${do_clustering} --cluster_id_column ${dist_metric}_cluster_id --thread_memory 107374182400"
+			--num_cpus 12 --same_gene ${same_gene} --same_junction_len ${same_junction_len} --dist_metric ${dist_metric} --do_clustering ${do_clustering} --cluster_id_column ${dist_metric}_cluster_id
+			--thread_memory ${thread_memory}"
 			echo ${cmd}
 			eval ${cmd}
 		fi

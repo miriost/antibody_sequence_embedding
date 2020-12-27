@@ -64,7 +64,7 @@ def main():
 
     thread_memory = args.thread_memory
 
-    if thread_memory is not None:
+    if thread_memory is not None and thread_memory > 0:
         ray.init(num_cpus=num_cpus, lru_evict=True, memory=thread_memory, object_store_memory=thread_memory)
     else:
         ray.init(num_cpus=num_cpus, lru_evict=True)
