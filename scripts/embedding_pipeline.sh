@@ -13,6 +13,7 @@ work_dir=./
 exclude_duplicates="True"
 sampe_file="False"
 n_dim=100
+test_size=0.2
 
 function show_help {
   echo "Execute all the pre processing steps before clustering a data set."
@@ -28,6 +29,7 @@ function show_help {
   echo "--naive NAIVE - Optional, Is the data naive cells - affects the squence filtering during the reprocess_mkdb. Deafult is True."
   echo "--exclude_duplicates EXCLUDE_DUPLICATES - Optional, exclude duplicated cdr3_aa sequences in teh subject when sampling and/or before embedding. Deafult is True."
   echo "--n_dim N_DIM - Optional, how many dimensions to use for the embedding. Deafult is 100."
+  echo "--test_size N_DIM - Optional, how many dimensions to use for the embedding. Deafult is 0.2."
 }
 
 # Read command line options
@@ -44,6 +46,7 @@ ARGUMENT_LIST=(
     "naive"
     "exclude_duplicates"
     "n_dim"
+    "test_size"
 )
 
 # read arguments
@@ -105,6 +108,10 @@ while [[ $# -gt 0 ]]; do
           ;;
       --exclude_duplicates)
           exclude_duplicates=$2
+          shift 2
+          ;;
+      --test_size)
+          test_size=$2
           shift 2
           ;;
       *)
@@ -222,7 +229,7 @@ if [ -d ${folds_dir} ]; then
 else
 	mkdir -p ${folds_dir}
 	echo "Split folds..."; echo ""
-	cmd="nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}"
+	cmd="nice -19 python ~/antibody_sequence_embedding/split_data_train_test_folds.py ${data_file} --test_size ${test_size} --balance_train_labels True --n_splits ${n_folds} --output_dir ${folds_dir}"
   echo ${cmd}
   eval ${cmd}
 	cmd="nice -19 python ~/antibody_sequence_embedding/split_vectors_train_test_folds.py ${data_file} ${vectors_file} --n_splits ${n_folds} --folds_dir ${folds_dir}"
