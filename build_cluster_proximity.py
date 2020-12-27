@@ -9,6 +9,7 @@ from sklearn.metrics.pairwise import pairwise_distances
 import ray
 import psutil
 import gc
+from sklearn.cluster import AgglomerativeClustering
 
 
 def str2bool(v):
@@ -36,6 +37,10 @@ def main():
     parser.add_argument('--step', help='How many rows to calculate in parallel, default is 100.',
                         type=int, default=100)
     parser.add_argument('--num_cpus', help='How many cpus are available for ray threads', type=int)
+    parser.add_argument('--do_clustering', help='Instead of KNN do full linkage hierarchical clustering', type=bool,
+                        default=False)
+    parser.add_argument('--distance_th', help='Distance th for the full linkage hierarchical clustering', type=float,
+                        default=0.85)
 
     args = parser.parse_args()
 
@@ -63,6 +68,7 @@ def main():
     same_genes = args.same_genes
     same_junction_len = args.same_junction_len
     output_desc = args.output_desc
+    distance_th = args.distance_th
 
     output_dir = args.output_folder_path
 
@@ -80,6 +86,13 @@ def main():
     distances_file_path = os.path.join(output_dir, output_desc + '_distances.npy')
     neighbors_file_path = os.path.join(output_dir, output_desc + '_neighbors.npy')
     subjects_file_path = os.path.join(output_dir, output_desc + '_subjects.npy')
+
+    if args.do_clustering is True:
+
+        data_file = find_clusters(data_file, vectors_file, same_junction_len, same_genes, dist_metric, distance_th)
+        data_file.to_csv(data_file_path, sep='\t', index=False)
+
+        return
 
     if args.search_knn is True:
         data_file = search_knn(data_file, vectors_file, cluster_size, same_junction_len, same_genes,
@@ -104,10 +117,81 @@ def main():
         del neighbors_map
 
     if args.analyze_cluster is True:
-        data_file = analyze_data(data_file, id_column, num_cpus, args.search_knn)
+        data_file = analyze_data(data_file, id_column, num_cpus)
         subjects_map = np.array(data_file['cluster_subjects'].to_list())
         np.savetxt(subjects_file_path, subjects_map, fmt='%s')
         del subjects_map
+
+
+def find_clusters(data_file: pd.DataFrame, vectors_file: np.array, same_junction_len, same_genes, dist_metric,
+                  distance_threshold):
+
+    data_file['cluster_id'] = None
+    vectors_id = ray.put(vectors_file)
+
+    by = []
+    if same_genes:
+        data_file['v_gene'] = data_file['v_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(
+            lambda x: x[0])
+        data_file['j_gene'] = data_file['j_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(
+            lambda x: x[0])
+        by += ['v_gene', 'j_gene']
+
+    if same_junction_len:
+        by += ['cdr3_aa_length']
+
+    if len(by) == 0:
+        data_file.loc[:, 'cluster_id'] = ray.get(do_agglomerative_clustering.remote(vectors_id,
+                                                                                    data_file.index.tolist(),
+                                                                                    dist_metric,
+                                                                                    distance_threshold))
+        print('found {} clusters'.format(len(data_file.loc['cluster_id'].unique())))
+        return data_file
+
+    results_ids = []
+    cluster_max_id = 0
+
+    sequences_completed = 0
+    for agg_idx, frame in data_file.groupby(by):
+
+        if len(frame) == 1:
+            data_file.loc[frame.index] = cluster_max_id
+            cluster_max_id += 1
+            sequences_completed += 1
+            continue
+
+        if dist_metric == 'manhattan':
+            distance_threshold = int(distance_threshold * agg_idx[2])
+            frame_vectors = np.array(frame['cdr3_aa'].apply(lambda x: [ b for b in 'ab'.encode('utf-8')]).to_list())
+            results_ids += [(frame.index, do_agglomerative_clustering.remote(frame_vectors, list(range(frame.shape[0])),
+                                                                             dist_metric, distance_threshold))]
+        else:
+            results_ids += [(frame.index, do_agglomerative_clustering.remote(vectors_id, frame.index.tolist(),
+                                                                             dist_metric, distance_threshold))]
+
+    for (frame_index, res_id) in results_ids:
+
+        cluster_labels = np.copy(ray.get(res_id))
+        cluster_labels += cluster_max_id
+        cluster_max_id += len(cluster_labels)
+        data_file.loc[frame_index, 'cluster_id'] = cluster_labels
+
+        sequences_completed += len(frame_index)
+
+        print('{:.2f}% of sequences completed so far'.format(sequences_completed * 100 / len(data_file)))
+
+    print('found {} clusters'.format(len(data_file['cluster_id'].unique())))
+    return data_file
+
+
+@ray.remote
+def do_agglomerative_clustering(vectors: np.array, frame_index: list, affinity, distance_threshold):
+    frame_vectors = vectors[frame_index, :]
+    clustering = AgglomerativeClustering(affinity=affinity,
+                                         linkage='complete',
+                                         distance_threshold=distance_threshold,
+                                         n_clusters=None).fit(frame_vectors)
+    return clustering.labels_
 
 
 def search_knn(data_file: pd.DataFrame, vectors_file: np.array, cluster_size, same_junction_len, same_genes,
@@ -245,7 +329,7 @@ def build_distance_and_knn_maps(vectors: np.array, sub_row_range, k, dist_metric
     return distances_map[np.arange(distances_map.shape[0])[:, None], knn_map], knn_map
 
 
-def analyze_data(data_file: pd.DataFrame, id_column, num_cpus, search_knn: bool):
+def analyze_data(data_file: pd.DataFrame, id_column, num_cpus):
 
     knn_map = np.array(data_file['cluster_neighbors'].tolist())
 
