@@ -40,7 +40,9 @@ def main():
     parser.add_argument('--do_clustering', help='Instead of KNN do full linkage hierarchical clustering', type=bool,
                         default=False)
     parser.add_argument('--distance_th', help='Distance th for the full linkage hierarchical clustering', type=float,
-                        default=0.85)
+                        default=0.15)
+    parser.add_argument('--cluster_id_column', help='the name of the column to store teh cluster_id, default is '
+                                                    '"cluster_id"', default='cluster_id')
 
     args = parser.parse_args()
 
@@ -69,7 +71,7 @@ def main():
     same_junction_len = args.same_junction_len
     output_desc = args.output_desc
     distance_th = args.distance_th
-
+    cluster_id_column = args.cluster_id_column
     output_dir = args.output_folder_path
 
     data_file = pd.read_csv(args.data_file_path, sep='\t')
@@ -89,7 +91,8 @@ def main():
 
     if args.do_clustering is True:
 
-        data_file = find_clusters(data_file, vectors_file, same_junction_len, same_genes, dist_metric, distance_th)
+        data_file = find_clusters(data_file, vectors_file, same_junction_len, same_genes, dist_metric, distance_th,
+                                  cluster_id_column)
         data_file.to_csv(data_file_path, sep='\t', index=False)
 
         return
@@ -124,9 +127,9 @@ def main():
 
 
 def find_clusters(data_file: pd.DataFrame, vectors_file: np.array, same_junction_len, same_genes, dist_metric,
-                  distance_threshold):
+                  distance_th, cluster_id_column):
 
-    data_file['cluster_id'] = None
+    data_file[cluster_id_column] = None
     vectors_id = ray.put(vectors_file)
 
     by = []
@@ -141,11 +144,11 @@ def find_clusters(data_file: pd.DataFrame, vectors_file: np.array, same_junction
         by += ['cdr3_aa_length']
 
     if len(by) == 0:
-        data_file.loc[:, 'cluster_id'] = ray.get(do_agglomerative_clustering.remote(vectors_id,
-                                                                                    data_file.index.tolist(),
-                                                                                    dist_metric,
-                                                                                    distance_threshold))
-        print('found {} clusters'.format(len(data_file.loc['cluster_id'].unique())))
+        data_file.loc[:, cluster_id_column] = ray.get(do_agglomerative_clustering.remote(vectors_id,
+                                                                                         data_file.index.tolist(),
+                                                                                         dist_metric,
+                                                                                         distance_th))
+        print('found {} clusters'.format(len(data_file.loc[cluster_id_column].unique())))
         return data_file
 
     results_ids = []
@@ -155,32 +158,32 @@ def find_clusters(data_file: pd.DataFrame, vectors_file: np.array, same_junction
     for agg_idx, frame in data_file.groupby(by):
 
         if len(frame) == 1:
-            data_file.loc[frame.index] = cluster_max_id
+            data_file.loc[frame.index, cluster_id_column] = cluster_max_id
             cluster_max_id += 1
             sequences_completed += 1
             continue
 
         if dist_metric == 'manhattan':
-            distance_threshold = int(distance_threshold * agg_idx[2])
-            frame_vectors = np.array(frame['cdr3_aa'].apply(lambda x: [ b for b in 'ab'.encode('utf-8')]).to_list())
+            frame_distance_th = int(distance_th * agg_idx[2])
+            frame_vectors = np.array(frame['cdr3_aa'].apply(lambda x: [b for b in 'ab'.encode('utf-8')]).to_list())
             results_ids += [(frame.index, do_agglomerative_clustering.remote(frame_vectors, list(range(frame.shape[0])),
-                                                                             dist_metric, distance_threshold))]
+                                                                             dist_metric, frame_distance_th))]
         else:
             results_ids += [(frame.index, do_agglomerative_clustering.remote(vectors_id, frame.index.tolist(),
-                                                                             dist_metric, distance_threshold))]
+                                                                             dist_metric, distance_th))]
 
     for (frame_index, res_id) in results_ids:
 
         cluster_labels = np.copy(ray.get(res_id))
         cluster_labels += cluster_max_id
         cluster_max_id += len(cluster_labels)
-        data_file.loc[frame_index, 'cluster_id'] = cluster_labels
+        data_file.loc[frame_index, cluster_id_column] = cluster_labels
 
         sequences_completed += len(frame_index)
 
         print('{:.2f}% of sequences completed so far'.format(sequences_completed * 100 / len(data_file)))
 
-    print('found {} clusters'.format(len(data_file['cluster_id'].unique())))
+    print('found {} clusters'.format(len(data_file[cluster_id_column].unique())))
     return data_file
 
 
