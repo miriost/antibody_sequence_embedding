@@ -145,7 +145,7 @@ for fold in ${folds} ; do
 			# search K nearest neighbors
 			echo "Starting KNN search..."
 			cmd="nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn ${knn_dir} --cluster_size ${knn_itr}
-			--num_cpus 12 --same_gene ${same_gene} --same_junction_len ${same_junction_len} --dist_metric ${dist_metric} --do_clustering ${do_clustering} --cluster_id_column ${dist_metric}_cluster_id --thread_memory 125829120"
+			--num_cpus 12 --same_gene ${same_gene} --same_junction_len ${same_junction_len} --dist_metric ${dist_metric} --do_clustering ${do_clustering} --cluster_id_column ${dist_metric}_cluster_id --thread_memory 107374182400"
 			echo ${cmd}
 			eval ${cmd}
 		fi
