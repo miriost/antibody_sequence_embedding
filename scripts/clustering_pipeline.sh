@@ -107,6 +107,10 @@ while [[ $# -gt 0 ]]; do
         do_clustering=$2
         shift 2
         ;;
+      --thread_memory)
+        thread_memory=$2
+        shift 2
+        ;;
       *)
         break
         ;;
