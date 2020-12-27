@@ -47,6 +47,9 @@ def main():
         print('{} is not in data_file columns: {}\nExiting...'.format(cluster_id_column, data_file.columns))
         sys.exit(1)
 
+    data_file['v_gene'] = data_file['v_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(lambda x: x[0])
+    data_file['j_gene'] = data_file['j_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(lambda x: x[0])
+
     print('loaded data file')
 
     vectors_file = np.load(vectors_file_path)
@@ -55,7 +58,8 @@ def main():
         sys.exit(1)
     print('loaded vectors file')
 
-    selected_clusters = pd.DataFrame(columns=['feature_index', 'vector', 'max_distance'])
+    selected_clusters = pd.DataFrame(columns=['feature_index', 'vector', 'max_distance', 'v_gene', 'j_gene',
+                                              'cdr3_aa_length'])
 
     for cluster_id, frame in data_file.groupby([cluster_id_column]):
 
@@ -75,7 +79,12 @@ def main():
             cluster_center = np.mean(frame_vectors, axis=0).tolist()
             max_distance = max_distance_th
 
-        selected_clusters.loc[len(selected_clusters), :] = [cluster_id, cluster_center, max_distance]
+        vgene = frame['v_gene'].iloc[0]
+        jgene = frame['j_gene'].iloc[0]
+        cdr3_aa_length = frame['cdr3_aa_length'].iloc[0]
+
+        selected_clusters.loc[len(selected_clusters), :] = [cluster_id, cluster_center, max_distance, vgene, jgene,
+                                                            cdr3_aa_length]
 
     print('{} out of {} clusters passed the filtering'.format(len(selected_clusters),
                                                               len(data_file['cluster_id'].unique())))

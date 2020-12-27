@@ -10,8 +10,10 @@ function show_help {
   echo "--min_significance MIN_significance - Optional, space separated list of minimal significance threshould for the cluster selection. Default is \"0.7\"."
   echo "--min_subjects MIN_SUBJECTS - Optional, a space separated list of the number minimal of subjects threshold for the cluster selection. Default is \"7\"."
   echo "--work_dir WORK_DIR - Optional, the folds root directory where the folds are. Default is \"./\"."
-  echo "--same_gene SAME_GENE - Search knn enforcing same vgene and jgene"
-  echo "--same_cdr3_len  - Search knn enforcing same cdr3 length"
+  echo "--same_gene SAME_GENE - Optional, Search knn enforcing same vgene and jgene, default is False"
+  echo "--same_cdr3_len  - Optional, Search knn enforcing same cdr3 length, default is False"
+  echo "--dist_metric - Optional. which dist_metric to use for the custering, default is \"euclidean\" "
+  echo "--do_clustering - Optional. Use hierarchical clustering and not full linkage clustering. Deafulat is True"
 }
 
 folds=0
@@ -23,6 +25,8 @@ max_distance=100
 description=""
 same_gene=False
 same_cdr3_len=False
+dist_metric='euclidean'
+knn_clustering=True
 
 # Read command line options
 ARGUMENT_LIST=(
@@ -36,6 +40,8 @@ ARGUMENT_LIST=(
     "work_dir"
     "same_gene"
     "same_cdr3_len"
+    "dist_metric"
+    "do_clustering"
 )
 
 # read arguments
@@ -90,6 +96,14 @@ while [[ $# -gt 0 ]]; do
         same_cdr3_len=$2
         shift 2
         ;;
+      --dist_metric)
+        dist_metric=$2
+        shift 2
+        ;;
+      --do_clustering)
+        do_clustering=$2
+        shift 2
+        ;;
       *)
         break
         ;;
@@ -131,7 +145,7 @@ for fold in ${folds} ; do
 			# search K nearest neighbors
 			echo "Starting KNN search..."
 			cmd="nice -19 python -u ~/antibody_sequence_embedding/build_cluster_proximity.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_itr}knn ${knn_dir} --cluster_size ${knn_itr}
-			--num_cpus 12 --same_gene ${same_gene} --same_cdr3_len ${same_cdr3_len}"
+			--num_cpus 12 --same_gene ${same_gene} --same_cdr3_len ${same_cdr3_len} --dist_metric ${dist_metric} --do_clustering ${do_clustering} --cluster_id_column ${dist_metric}_cluster_id"
 			echo ${cmd}
 			eval ${cmd}
 		fi
@@ -158,9 +172,15 @@ for fold in ${folds} ; do
             echo "${max_distance_dir}/feature_list.tsv already exists, skipping building feature list."
           else
             # build feature list
-            cmd="nice -19 python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
-            ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_dir} feature_list --min_subjects ${min_subjects_itr} --min_significance ${min_significance_itr}
-            --max_distance ${max_distance_itr} --num_cpus 12"
+            if [[ "${sample}" == "True" ]]; then
+              cmd="nice -19 python -u ~/antibody_sequence_embedding/filter_clusters.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file} ${knn_dir}/${knn_itr}knn_distances.npy
+              ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_dir} feature_list ${dist_metric}_cluster_id --min_subjects ${min_subjects_itr} --min_significance ${min_significance_itr}
+              --max_distance ${max_distance_itr} --num_cpus 12 --dist_metric ${dist_metric}"
+            else
+              cmd="nice -19 python -u ~/antibody_sequence_embedding/build_knn_cluster_proximity_feature_list.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file}
+              ${knn_dir}/${knn_itr}knn_distances.npy ${knn_dir}/${knn_itr}knn_neighbors.npy ${max_distance_dir} feature_list --min_subjects ${min_subjects_itr} --min_significance
+              ${min_significance_itr} --max_distance ${max_distance_itr} --num_cpus 12 --dist_metric ${dist_metric} --same_gene ${same_gene} --same_cdr3_len ${same_cdr3_len}"
+            fi
             echo ${cmd}
             eval ${cmd}
           fi
@@ -169,7 +189,7 @@ for fold in ${folds} ; do
             echo "${max_distance_dir}/train_feature_table.csv already exists, skipping building train feature table."
           else
             cmd="nice -19 python ~/antibody_sequence_embedding/build_cluster_proximity_feature_table.py ${fold_dir}/${data_file} ${fold_dir}/${vectors_file}
-            ${max_distance_dir}/feature_list.tsv train ${max_distance_dir}"
+            ${max_distance_dir}/feature_list.tsv train ${max_distance_dir} --dist_metric ${dist_metric} --same_gene ${same_gene} --same_cdr3_len ${same_cdr3_len}"
             echo ${cmd}
             eval ${cmd}
           fi
@@ -178,7 +198,7 @@ for fold in ${folds} ; do
             echo "${max_distance_dir}/test_feature_table.csv already exists, skipping building train feature table."
           else
             cmd="nice -19 python ~/antibody_sequence_embedding/build_cluster_proximity_feature_table.py ${fold_dir}/${test_data_file} ${fold_dir}/${test_vectors_file}
-            ${max_distance_dir}/feature_list.tsv test ${max_distance_dir}"
+            ${max_distance_dir}/feature_list.tsv test ${max_distance_dir} --dist_metric ${dist_metric}"
             echo ${cmd}
             eval ${cmd}
           fi

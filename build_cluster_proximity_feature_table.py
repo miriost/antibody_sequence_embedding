@@ -34,6 +34,10 @@ import gc
 from sklearn.metrics.pairwise import pairwise_distances
 
 
+def str2bool(v):
+    return v.lower() in ("yes", "true", "t", "1")
+
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -48,6 +52,11 @@ def main():
                         help='type of distance to use, default=euclidean', default='euclidean', type=str)
     parser.add_argument('--num_cpus',
                         help='number of cpus to run parallel computing', default=2, type=int)
+    parser.add_argument('--same_junction_len', help='Limit cluster to same junction length. Default is False',
+                        type=str2bool, default=False)
+    parser.add_argument('--same_genes', help='Limit cluster to same v/j_call. Default is False.', type=str2bool,
+                        default=False)
+
     args = parser.parse_args()
 
     label_column = 'subject.disease_diagnosis'
@@ -59,6 +68,8 @@ def main():
     dist_metric = args.dist_metric
     output_folder = args.output_folder
     output_description = args.output_description
+    same_genes = args.same_genes
+    same_junction_len = args.same_junction_len
 
     if not(os.path.isfile(data_file_path)):
         print('feature file error, make sure file path exists\nExiting...')
@@ -110,16 +121,17 @@ def main():
 
     features = np.array(features_file['vector'].apply(lambda x: json.loads(x)).to_list())
     max_distance = np.array(features_file.loc[:, 'max_distance']).reshape(1, len(features))
-    features_idx = features_file['feature_index']
 
     vectors_file_id = ray.put(vectors_file)
     features_id = ray.put(features)
     max_distance_id = ray.put(max_distance)
-    features_idx_id = ray.put(features_idx)
+    data_file_id = ray.put(data_file)
+    features_file_id = ray.put(features_file)
 
     for subject, frame in by_subject:
-        result_ids += [get_subject_feature_table.remote(subject, vectors_file_id, features_id, max_distance_id,
-                                                        features_idx_id, frame.index, dist_metric)]
+        result_ids += [get_subject_feature_table.remote(subject, data_file_id, vectors_file_id, features_id, features_file_id,
+                                                        max_distance_id, frame.index, dist_metric, same_genes,
+                                                        same_junction_len)]
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
     if psutil.virtual_memory().percent >= 80.0:
@@ -139,29 +151,86 @@ def main():
 
 
 @ray.remote
-def get_subject_feature_table(subject: str, vectors: np.ndarray, features: np.ndarray, max_distance: np.ndarray,
-                              features_idx: pd.Series, subject_index, dist_metric):
+def get_subject_feature_table(subject: str, data_file: pd.DataFrame, vectors: np.ndarray, features: np.ndarray,
+                              features_file: pd.DataFrame, max_distance: np.ndarray, subject_index, dist_metric,
+                              same_genes, same_junction_len):
+
+    features_idx = features_file['feature_index']
+
     subject_vectors = vectors[subject_index, :]
 
     print('Start creating feature table for subject {}'.format(subject))
     t0 = time.time()
+
+    by = []
+    if same_genes:
+        data_file['v_gene'] = data_file['v_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(
+            lambda x: x[0])
+        data_file['j_gene'] = data_file['j_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(
+            lambda x: x[0])
+        by += ['v_gene', 'j_gene']
+
+    if same_junction_len:
+        by += ['cdr3_aa_length']
+
     subject_features_table = pd.DataFrame(0, index=[subject], columns=features_idx.values)
-    # for each vector belonging to the subject
-    distances = pairwise_distances(X=subject_vectors, Y=features, metric=dist_metric)
-    distance_close_enough_mat = np.logical_or(np.isclose(distances, max_distance, rtol=1e-10, atol=1e-10),
-                                              np.less_equal(distances, max_distance))
 
-    features_count = np.sum(distance_close_enough_mat)
-    if features_count >= 1:
-        for distance_close_enough_vec in distance_close_enough_mat:
-            if np.sum(distance_close_enough_vec) == 0:
+    if len(by) == 0:
+
+        # for each vector belonging to the subject
+        distances = pairwise_distances(X=subject_vectors, Y=features, metric=dist_metric)
+        distance_close_enough_mat = np.logical_or(np.isclose(distances, max_distance, rtol=1e-10, atol=1e-10),
+                                                  np.less_equal(distances, max_distance))
+
+        features_count = np.sum(distance_close_enough_mat)
+        if features_count >= 1:
+            for distance_close_enough_vec in distance_close_enough_mat:
+                if np.sum(distance_close_enough_vec) == 0:
+                    continue
+                add_feature_index = np.where(distance_close_enough_vec)
+                subject_features_table.loc[subject, features_idx.iloc[add_feature_index[0]]] += 1
+
+        print('Finished creating feature table for subject {}, feature count {}, took {}'.format(subject,
+                                                                                                 features_count,
+                                                                                                 time.time()-t0))
+    else:
+
+        for agg_idx, frame in features_file.groupby(by):
+            tmp = data_file
+            tmp = tmp[tmp['v_gene'] == agg_idx[0]]
+            tmp = tmp[tmp['j_gene'] == agg_idx[1]]
+            tmp = tmp[tmp['cdr3_aa_length'] == agg_idx[2]]
+            tmp = tmp[tmp['subject.subject_id'] == subject]
+
+            if len(tmp) == 0:
                 continue
-            add_feature_index = np.where(distance_close_enough_vec)
-            subject_features_table.loc[subject, features_idx.iloc[add_feature_index[0]]] += 1
 
-    print('Finished creating feature table for subject {}, feature count {}, took {}'.format(subject,
-                                                                                             features_count,
-                                                                                             time.time()-t0))
+            frame_features_idx = frame['feature_index']
+
+            if dist_metric == 'manhattan':
+                frame_vectors = np.array(tmp['cdr3_aa'].apply(lambda x: [b for b in 'ab'.encode('utf-8')]).to_list())
+                frame_features = features[features_idx.to_list(), :]
+            else:
+                frame_vectors = vectors[tmp.index, :]
+                frame_features = features[tmp.index, :]
+
+            # for each vector belonging to the subject
+            distances = pairwise_distances(X=frame_vectors, Y=frame_features, metric=dist_metric)
+            distance_close_enough_mat = np.logical_or(np.isclose(distances, max_distance, rtol=1e-10, atol=1e-10),
+                                                      np.less_equal(distances, max_distance))
+
+            features_count = np.sum(distance_close_enough_mat)
+            if features_count >= 1:
+                for distance_close_enough_vec in distance_close_enough_mat:
+                    if np.sum(distance_close_enough_vec) == 0:
+                        continue
+                    add_feature_index = np.where(distance_close_enough_vec)
+                    subject_features_table.loc[subject, frame_features_idx.iloc[add_feature_index[0]]] += 1
+
+            print('Finished creating feature table for subject {}, feature count {}, took {}'.format(subject,
+                                                                                                     features_count,
+                                                                                                     time.time() - t0))
+
     return subject_features_table
 
 
