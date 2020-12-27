@@ -87,7 +87,7 @@ def main():
                                                             cdr3_aa_length]
 
     print('{} out of {} clusters passed the filtering'.format(len(selected_clusters),
-                                                              len(data_file['cluster_id'].unique())))
+                                                              len(data_file[cluster_id_column].unique())))
 
     selected_clusters.to_csv(os.path.join(output_folder_path, output_description + '.tsv'), sep='\t',
                              index_label='feature_index')
