@@ -26,7 +26,7 @@ description=""
 same_gene=False
 same_cdr3_len=False
 dist_metric='euclidean'
-knn_clustering=True
+do_clustering=True
 
 # Read command line options
 ARGUMENT_LIST=(
