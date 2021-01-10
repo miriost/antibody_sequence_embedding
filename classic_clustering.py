@@ -79,7 +79,7 @@ def filter_clusters(data_file: pd.DataFrame, cluster_id_column, subject_col, lab
                     similarity_th, subjects_th, significance_th):
 
     selected_clusters = pd.DataFrame(columns=['feature_index', 'vector', 'max_distance', 'v_gene', 'j_gene',
-                                              'cdr3_aa_length'])
+                                              'cdr3_aa_length', 'num_subjects', 'label', 'significance'])
 
     # filter clusters which has no chance to pass filter (has less than subjects_th sequences)
     clusters = data_file[cluster_id_column].value_counts()
@@ -89,12 +89,15 @@ def filter_clusters(data_file: pd.DataFrame, cluster_id_column, subject_col, lab
     t0 = time.time()
     for cluster_id, frame in data_file.groupby([cluster_id_column]):
 
-        if len(frame[subject_col].unique()) < subjects_th:
+        num_subjects = len(frame[subject_col].unique())
+        if num_subjects < subjects_th:
             continue
 
         frame_value_counts = frame[label_col].value_counts(normalize=True)
-        if frame_value_counts.max() < significance_th:
+        significance = frame_value_counts.values()[0]
+        if significance < significance_th:
             continue
+        label = frame_value_counts.key()[0]
 
         frame_vectors = np.array(frame['cdr3_aa'].apply(lambda x: [b for b in x.encode('utf-8')]).to_list())
         cluster_center = mode(frame_vectors)[0][0].tolist()
@@ -106,7 +109,7 @@ def filter_clusters(data_file: pd.DataFrame, cluster_id_column, subject_col, lab
         cdr3_aa_length = frame['cdr3_aa_length'].iloc[0]
 
         selected_clusters.loc[len(selected_clusters), :] = [cluster_id, cluster_center, max_distance, vgene, jgene,
-                                                            cdr3_aa_length]
+                                                            cdr3_aa_length, num_subjects, label, significance]
 
     print('{} out of {} clusters passed the filtering after {} msec'.format(len(selected_clusters),
                                                                             len(data_file[cluster_id_column].unique()),
