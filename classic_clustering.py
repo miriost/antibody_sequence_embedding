@@ -81,6 +81,11 @@ def filter_clusters(data_file: pd.DataFrame, cluster_id_column, subject_col, lab
     selected_clusters = pd.DataFrame(columns=['feature_index', 'vector', 'max_distance', 'v_gene', 'j_gene',
                                               'cdr3_aa_length'])
 
+    # filter clusters which has no chance to pass filter (has less than subjects_th sequences)
+    clusters = data_file[cluster_id_column].value_counts()
+    clusters = clusters[clusters > subjects_th]
+    data_file = data_file[data_file[cluster_id_column].isin(clusters.keys().tolist())]
+
     t0 = time.time()
     for cluster_id, frame in data_file.groupby([cluster_id_column]):
 
@@ -92,7 +97,7 @@ def filter_clusters(data_file: pd.DataFrame, cluster_id_column, subject_col, lab
             continue
 
         frame_vectors = np.array(frame['cdr3_aa'].apply(lambda x: [b for b in x.encode('utf-8')]).to_list())
-        cluster_center = mode(frame_vectors)[0].tolist()
+        cluster_center = mode(frame_vectors)[0][0].tolist()
         cluster_center = ''.join(chr(c) for c in cluster_center)
         max_distance = int(similarity_th * frame.iloc[0]['cdr3_aa_length'])
 
