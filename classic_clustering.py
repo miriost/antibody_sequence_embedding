@@ -64,7 +64,7 @@ def main():
     data_file = pd.read_csv(args.data_file_path, sep='\t')
     print('loaded data file')
 
-    data_file = find_clusters(data_file, vectors, cluster_id_column, similarity_th)
+    data_file = find_clusters(data_file, cluster_id_column, similarity_th)
     data_file.to_csv(data_file_path, sep='\t', index=False)
 
     selected_clusters = filter_clusters(data_file,
