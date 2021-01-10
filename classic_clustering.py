@@ -66,10 +66,6 @@ def main():
 
     vectors = np.array(data_file['cdr3_aa'].apply(lambda x: [b for b in 'ab'.encode('utf-8')]).to_list())
 
-    if cluster_id_column in data_file.columns:
-        print('{} column already exists in data_file, skipping'.format(cluster_id_column))
-        return
-
     data_file = find_clusters(data_file, vectors, cluster_id_column, similarity_th)
     data_file.to_csv(data_file_path, sep='\t', index=False)
 
@@ -77,8 +73,7 @@ def main():
                                         cluster_id_column, subject_col, label_col,
                                         similarity_th, subjects_th, significance_th)
 
-    selected_clusters.to_csv(os.path.join(output_folder_path, output_desc + '.tsv'), sep='\t',
-                             index_label='feature_index')
+    selected_clusters.to_csv(os.path.join(output_folder_path, output_desc + '.tsv'), sep='\t', index=False)
     print('feature list is saved to {}'.format(os.path.join(output_folder_path, output_desc + '.tsv')))
 
 
