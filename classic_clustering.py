@@ -140,8 +140,8 @@ def find_clusters(data_file: pd.DataFrame, vectors: np.array, cluster_id_column,
             continue
 
         frame_distance_th = int(similarity_th * agg_idx[2])
-        results_ids += [(frame.index, do_agglomerative_clustering.remote(vectors_id, frame.index.tolist(),
-                                                                         list(range(frame.shape[0])),
+        results_ids += [(frame.index, do_agglomerative_clustering.remote(vectors_id,
+                                                                         frame.index.tolist(),
                                                                          frame_distance_th))]
     t0 = time.time()
     for (frame_index, res_id) in results_ids:
@@ -168,7 +168,7 @@ def auto_garbage_collect(pct=80.0):
 
 
 @ray.remote
-def do_agglomerative_clustering(vectors: np.array, frame_index: list, affinity, distance_threshold):
+def do_agglomerative_clustering(vectors: np.array, frame_index: list, distance_threshold):
 
     frame_vectors = vectors[frame_index, :]
     clustering = AgglomerativeClustering(affinity='manhattan',
