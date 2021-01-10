@@ -97,7 +97,7 @@ def filter_clusters(data_file: pd.DataFrame, cluster_id_column, subject_col, lab
         significance = frame_value_counts.values[0]
         if significance < significance_th:
             continue
-        label = frame_value_counts.keys[0]
+        label = frame_value_counts.index[0]
 
         frame_vectors = np.array(frame['cdr3_aa'].apply(lambda x: [b for b in x.encode('utf-8')]).to_list())
         cluster_center = mode(frame_vectors)[0][0].tolist()
