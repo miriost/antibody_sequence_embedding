@@ -89,8 +89,13 @@ def filter_clusters(data_file: pd.DataFrame, cluster_id_column, subject_col, lab
     t0 = time.time()
     for cluster_id, frame in data_file.groupby([cluster_id_column]):
 
-        num_subjects = len(frame[subject_col].unique())
+        frame_subject_counts = frame[subject_col].value_counts(normalize=True)
+        num_subjects = len(frame_subject_counts)
         if num_subjects < subjects_th:
+            continue
+
+        if frame_subject_counts.values[0] >= 0.9:
+            # if more than 90% of the sequences come from the same subject - skip
             continue
 
         frame_value_counts = frame[label_col].value_counts(normalize=True)
