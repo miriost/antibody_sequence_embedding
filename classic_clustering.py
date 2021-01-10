@@ -95,6 +95,7 @@ def filter_clusters(data_file: pd.DataFrame, vectors: np.array, cluster_id_colum
 
         frame_vectors = vectors[frame.index, :]
         cluster_center = mode(frame_vectors)[0].tolist()
+        cluster_center = ''.join(chr(c) for c in cluster_center)
         max_distance = int(similarity_th * frame.iloc[0]['cdr3_aa_length'])
 
         vgene = frame['v_gene'].iloc[0]
@@ -165,7 +166,7 @@ def auto_garbage_collect(pct=80.0):
 @ray.remote
 def do_agglomerative_clustering(vectors: np.array, frame_index: list, distance_threshold):
 
-    frame_vectors = vectors[frame_index, :]
+    frame_vectors = vectors[frame_index]
     clustering = AgglomerativeClustering(affinity='manhattan',
                                          linkage='complete',
                                          distance_threshold=distance_threshold,
