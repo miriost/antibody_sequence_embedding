@@ -64,12 +64,10 @@ def main():
     data_file = pd.read_csv(args.data_file_path, sep='\t')
     print('loaded data file')
 
-    vectors = np.array(data_file['cdr3_aa'].apply(lambda x: [b for b in x.encode('utf-8')]).to_list())
-
     data_file = find_clusters(data_file, vectors, cluster_id_column, similarity_th)
     data_file.to_csv(data_file_path, sep='\t', index=False)
 
-    selected_clusters = filter_clusters(data_file, vectors,
+    selected_clusters = filter_clusters(data_file,
                                         cluster_id_column, subject_col, label_col,
                                         similarity_th, subjects_th, significance_th)
 
@@ -77,7 +75,7 @@ def main():
     print('feature list is saved to {}'.format(os.path.join(output_folder_path, output_desc + '.tsv')))
 
 
-def filter_clusters(data_file: pd.DataFrame, vectors: np.array, cluster_id_column, subject_col, label_col,
+def filter_clusters(data_file: pd.DataFrame, cluster_id_column, subject_col, label_col,
                     similarity_th, subjects_th, significance_th):
 
     selected_clusters = pd.DataFrame(columns=['feature_index', 'vector', 'max_distance', 'v_gene', 'j_gene',
@@ -93,7 +91,7 @@ def filter_clusters(data_file: pd.DataFrame, vectors: np.array, cluster_id_colum
         if frame_value_counts.max() < significance_th:
             continue
 
-        frame_vectors = vectors[frame.index, :]
+        frame_vectors = np.array(frame['cdr3_aa'].apply(lambda x: [b for b in x.encode('utf-8')]).to_list())
         cluster_center = mode(frame_vectors)[0].tolist()
         cluster_center = ''.join(chr(c) for c in cluster_center)
         max_distance = int(similarity_th * frame.iloc[0]['cdr3_aa_length'])
@@ -112,11 +110,9 @@ def filter_clusters(data_file: pd.DataFrame, vectors: np.array, cluster_id_colum
     return selected_clusters
 
 
-def find_clusters(data_file: pd.DataFrame, vectors: np.array, cluster_id_column, similarity_th):
+def find_clusters(data_file: pd.DataFrame, cluster_id_column, similarity_th):
 
     data_file[cluster_id_column] = None
-
-    vectors_id = ray.put(vectors)
 
     data_file['v_gene'] = data_file['v_call'].str.split('-').apply(lambda x: x[0]).str.split('*').apply(
         lambda x: x[0])
@@ -127,6 +123,9 @@ def find_clusters(data_file: pd.DataFrame, vectors: np.array, cluster_id_column,
     cluster_max_id = 0
 
     sequences_completed = 0
+
+    t0 = time.time()
+
     for agg_idx, frame in data_file.groupby(['v_gene', 'j_gene', 'cdr3_aa_length']):
 
         if len(frame) == 1:
@@ -135,11 +134,10 @@ def find_clusters(data_file: pd.DataFrame, vectors: np.array, cluster_id_column,
             sequences_completed += 1
             continue
 
+        frame_vectors = np.array(frame['cdr3_aa'].apply(lambda x: [b for b in x.encode('utf-8')]).to_list())
         frame_distance_th = int(similarity_th * agg_idx[2])
-        results_ids += [(frame.index, do_agglomerative_clustering.remote(vectors_id,
-                                                                         frame.index.tolist(),
-                                                                         frame_distance_th))]
-    t0 = time.time()
+        results_ids += [(frame.index, do_agglomerative_clustering.remote(frame_vectors, frame_distance_th))]
+
     for (frame_index, res_id) in results_ids:
 
         auto_garbage_collect()
@@ -164,13 +162,12 @@ def auto_garbage_collect(pct=80.0):
 
 
 @ray.remote
-def do_agglomerative_clustering(vectors: np.array, frame_index: list, distance_threshold):
+def do_agglomerative_clustering(vectors: np.array, distance_threshold):
 
-    frame_vectors = vectors[frame_index]
     clustering = AgglomerativeClustering(affinity='manhattan',
                                          linkage='complete',
                                          distance_threshold=distance_threshold,
-                                         n_clusters=None).fit(frame_vectors)
+                                         n_clusters=None).fit(vectors)
     return clustering.labels_
 
 
