@@ -64,7 +64,7 @@ def main():
     data_file = pd.read_csv(args.data_file_path, sep='\t')
     print('loaded data file')
 
-    vectors = np.array(data_file['cdr3_aa'].apply(lambda x: [b for b in 'ab'.encode('utf-8')]).to_list())
+    vectors = np.array(data_file['cdr3_aa'].apply(lambda x: [b for b in x.encode('utf-8')]).to_list())
 
     data_file = find_clusters(data_file, vectors, cluster_id_column, similarity_th)
     data_file.to_csv(data_file_path, sep='\t', index=False)
