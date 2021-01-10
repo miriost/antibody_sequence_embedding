@@ -171,7 +171,7 @@ def auto_garbage_collect(pct=80.0):
 def do_agglomerative_clustering(vectors: np.array, frame_index: list, affinity, distance_threshold):
 
     frame_vectors = vectors[frame_index, :]
-    clustering = AgglomerativeClustering(affinity=affinity,
+    clustering = AgglomerativeClustering(affinity='manhattan',
                                          linkage='complete',
                                          distance_threshold=distance_threshold,
                                          n_clusters=None).fit(frame_vectors)
