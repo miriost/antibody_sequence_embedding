@@ -29,9 +29,9 @@ def main():
     parser.add_argument('--subjects_th', help='th filter by min subjects, default is 5', default=5, type=int)
     parser.add_argument('--significance_th', help='th filter by min significance, default is 0.75', default=0.75,
                         type=float)
-    parser.add_argument('--step', help='How many rows to calculate in parallel, default is 100.', type=int, default=100)
     parser.add_argument('--cluster_id_column', help='the name of the column to store the cluster_id, default is '
                                                     '"cluster_id"', default='cluster_id')
+    parser.add_argument('--num_cpus', help='How many cpus are available for ray threads', type=int)
     parser.add_argument('--thread_memory', help='thread memory size of ray.init()', type=int)
 
     args = parser.parse_args()
