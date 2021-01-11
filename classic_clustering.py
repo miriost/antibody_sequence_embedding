@@ -9,6 +9,7 @@ import psutil
 import gc
 from sklearn.cluster import AgglomerativeClustering
 from scipy.stats import mode
+from sklearn.metrics.pairwise import pairwise_distances
 
 
 def str2bool(v):
@@ -18,12 +19,13 @@ def str2bool(v):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('data_file_path', help='the filtered data file path')
-    parser.add_argument('output_desc', help='description prefix for the output file names')
+    parser.add_argument('train_file_path', help='The preprocessed train data file path')
+    parser.add_argument('output_desc', help='Description prefix for the output file names')
     parser.add_argument('output_folder_path', help='Output folder for the output knn files')
     parser.add_argument('subject_col', help='name of the column with the subjects ids')
     parser.add_argument('label_col', help='name of the column with the disease diagnosis')
 
+    parser.add_argument('--test_file_path', help='The preprocessed test data file path')
     parser.add_argument('--similarity_th', help='similarity percentage cutoff value as percentage of the clustering. '
                                                 'Default is 0.85', type=int, default=0.85)
     parser.add_argument('--subjects_th', help='th filter by min subjects, default is 5', default=5, type=int)
@@ -36,9 +38,14 @@ def main():
 
     args = parser.parse_args()
 
-    data_file_path = args.data_file_path
-    if not os.path.isfile(data_file_path):
-        print('Data file error, make sure data file path: {}\nExiting...'.format(data_file_path))
+    train_file_path = args.data_file_path
+    if not os.path.isfile(train_file_path):
+        print('Data file error, make sure data file path: {}\nExiting...'.format(train_file_path))
+        sys.exit(1)
+
+    test_file_path = args.data_file_path
+    if test_file_path is not None and not os.path.isfile(test_file_path):
+        print('Data file error, make sure data file path: {}\nExiting...'.format(train_file_path))
         sys.exit(1)
 
     num_cpus = args.num_cpus
@@ -61,24 +68,42 @@ def main():
     subject_col = args.subject_col
     label_col = args.label_col
 
-    data_file = pd.read_csv(args.data_file_path, sep='\t')
+    train_data_file = pd.read_csv(train_file_path, sep='\t')
     print('loaded data file')
 
-    data_file = find_clusters(data_file, cluster_id_column, similarity_th)
-    data_file.to_csv(data_file_path, sep='\t', index=False)
+    train_data_file = find_clusters(train_data_file, cluster_id_column, similarity_th)
+    train_data_file.to_csv(train_file_path, sep='\t', index=False)
 
-    selected_clusters = filter_clusters(data_file,
+    selected_clusters = filter_clusters(train_data_file,
                                         cluster_id_column, subject_col, label_col,
                                         similarity_th, subjects_th, significance_th)
 
-    selected_clusters.to_csv(os.path.join(output_folder_path, output_desc + '.tsv'), sep='\t', index=False)
+    selected_clusters.to_csv(os.path.join(output_folder_path, output_desc + '_features.tsv'), sep='\t', index=False)
     print('feature list is saved to {}'.format(os.path.join(output_folder_path, output_desc + '.tsv')))
+
+    test_file_path = args.data_file_path
+    if test_file_path is None:
+        return
+
+    if not os.path.isfile(test_file_path):
+        print('Data file error, make sure data file path: {}\nExiting...'.format(train_file_path))
+        sys.exit(1)
+
+    train_feature_table = build_feature_table(train_data_file, selected_clusters, subject_col)
+    train_feature_table.to_csv(os.path.join(output_folder_path, output_desc + '_train.tsv'), sep='\t', index=False)
+    print('train feature table is saved to {}'.format(os.path.join(output_folder_path, output_desc + '_train.tsv')))
+
+    if test_file_path is not None:
+        test_data_file = pd.read_csv(test_file_path, sep='\t')
+        test_feature_table = build_feature_table(test_data_file, selected_clusters, subject_col)
+        test_feature_table.to_csv(os.path.join(output_folder_path, output_desc + '_test.tsv'), sep='\t', index=False)
+        print('test feature table is saved to {}'.format(os.path.join(output_folder_path, output_desc + '_test.tsv')))
 
 
 def filter_clusters(data_file: pd.DataFrame, cluster_id_column, subject_col, label_col,
-                    similarity_th, subjects_th, significance_th):
+                    similarity_th, subjects_th, significance_th) -> pd.DataFrame:
 
-    selected_clusters = pd.DataFrame(columns=['feature_index', 'vector', 'max_distance', 'v_gene', 'j_gene',
+    selected_clusters = pd.DataFrame(columns=['cluster_id', 'center', 'max_distance', 'v_gene', 'j_gene',
                                               'cdr3_aa_length', 'num_subjects', 'label', 'significance'])
 
     # filter clusters which has no chance to pass filter (has less than subjects_th sequences)
@@ -123,7 +148,7 @@ def filter_clusters(data_file: pd.DataFrame, cluster_id_column, subject_col, lab
     return selected_clusters
 
 
-def find_clusters(data_file: pd.DataFrame, cluster_id_column, similarity_th):
+def find_clusters(data_file: pd.DataFrame, cluster_id_column, similarity_th) -> pd.DataFrame:
 
     data_file[cluster_id_column] = None
 
@@ -166,6 +191,7 @@ def find_clusters(data_file: pd.DataFrame, cluster_id_column, similarity_th):
                                                                     time.time() - t0))
 
     print('found {} clusters'.format(len(data_file[cluster_id_column].unique())))
+
     return data_file
 
 
@@ -182,6 +208,66 @@ def do_agglomerative_clustering(vectors: np.array, distance_threshold):
                                          distance_threshold=distance_threshold,
                                          n_clusters=None).fit(vectors)
     return clustering.labels_
+
+
+def build_feature_table(data_file: pd.DataFrame, features_file: pd.DataFrame, subject_col: str) -> pd.DataFrame:
+
+    result_ids = []
+
+    data_file_id = ray.put(data_file)
+    features_file_id = ray.put(features_file)
+
+    for subject, frame in data_file.groupby(subject_col):
+        result_ids += [get_subject_feature_table.remote(subject, data_file_id, features_file_id)]
+
+    features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
+
+    return features_table
+
+
+@ray.remote
+def get_subject_feature_table(subject: str, data_file: pd.DataFrame, features_file: pd.DataFrame) -> pd.DataFrame:
+
+    t0 = time.time()
+
+    print('Start creating feature table for subject {}'.format(subject))
+
+    cluster_ids = features_file['cluster_id']
+    max_distances = features_file['max_distance'].to_numpy()
+
+    subject_data = data_file[data_file['subject.subject_id'] == subject]
+    subject_features_table = pd.DataFrame(0, index=[subject], columns=cluster_ids.values)
+    features_count = 0
+
+    by = ['v_gene', 'j_gene', 'cdr3_aa_length']
+    for agg_idx, feature_frame in features_file.groupby(by):
+
+        subject_frame = subject_data[subject_data['v_gene'] == agg_idx[0] &
+                                     subject_data['j_gene'] == agg_idx[1] &
+                                     subject_data['cdr3_aa_length'] == agg_idx[2]]
+
+        if len(subject_frame) == 0:
+            continue
+
+        subject_vectors = np.array(subject_frame['cdr3_aa'].apply(lambda x: [b for b in x.encode('utf-8')]).to_list())
+        feature_vectors = np.array(feature_frame['center'].apply(lambda x: [b for b in x.encode('utf-8')]).to_list())
+
+        # for each vector belonging to the subject
+        distances = pairwise_distances(X=subject_vectors, Y=feature_vectors, metric='manhattan')
+        distance_close_enough_mat = np.less_equal(distances, max_distances)
+
+        features_count += np.sum(distance_close_enough_mat)
+        if features_count >= 1:
+            for distance_close_enough_vec in distance_close_enough_mat:
+                if np.sum(distance_close_enough_vec) == 0:
+                    continue
+                cluster_id = np.where(distance_close_enough_vec)
+                subject_features_table.loc[subject, feature_frame['cluster_id'].iloc[cluster_id[0]]] += 1
+
+    print('Finished creating feature table for subject {}, feature count {}, took {}'.format(subject,
+                                                                                             features_count,
+                                                                                             time.time() - t0))
+    return subject_features_table
 
 
 if __name__ == '__main__':
