@@ -38,12 +38,12 @@ def main():
 
     args = parser.parse_args()
 
-    train_file_path = args.data_file_path
+    train_file_path = args.train_file_path
     if not os.path.isfile(train_file_path):
         print('Data file error, make sure data file path: {}\nExiting...'.format(train_file_path))
         sys.exit(1)
 
-    test_file_path = args.data_file_path
+    test_file_path = args.test_file_path
     if test_file_path is not None and not os.path.isfile(test_file_path):
         print('Data file error, make sure data file path: {}\nExiting...'.format(train_file_path))
         sys.exit(1)
