@@ -81,14 +81,6 @@ def main():
     selected_clusters.to_csv(os.path.join(output_folder_path, output_desc + '_features.tsv'), sep='\t', index=False)
     print('feature list is saved to {}'.format(os.path.join(output_folder_path, output_desc + '.tsv')))
 
-    test_file_path = args.data_file_path
-    if test_file_path is None:
-        return
-
-    if not os.path.isfile(test_file_path):
-        print('Data file error, make sure data file path: {}\nExiting...'.format(train_file_path))
-        sys.exit(1)
-
     train_feature_table = build_feature_table(train_data_file, selected_clusters, subject_col)
     train_feature_table.to_csv(os.path.join(output_folder_path, output_desc + '_train.tsv'), sep='\t', index=False)
     print('train feature table is saved to {}'.format(os.path.join(output_folder_path, output_desc + '_train.tsv')))
