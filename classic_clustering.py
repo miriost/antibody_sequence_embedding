@@ -228,7 +228,7 @@ def get_subject_feature_table(subject: str, data_file: pd.DataFrame, features_fi
     cluster_ids = features_file['cluster_id']
     max_distances = features_file['max_distance'].to_numpy()
 
-    subject_data = data_file[data_file['subject_col'] == subject]
+    subject_data = data_file[data_file[subject_col] == subject]
     subject_features_table = pd.DataFrame(0, index=[subject], columns=cluster_ids.values)
     features_count = 0
 
