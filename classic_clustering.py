@@ -210,7 +210,7 @@ def build_feature_table(data_file: pd.DataFrame, features_file: pd.DataFrame, su
     features_file_id = ray.put(features_file)
 
     for subject, frame in data_file.groupby(subject_col):
-        result_ids += [get_subject_feature_table.remote(subject, data_file_id, features_file_id)]
+        result_ids += [get_subject_feature_table.remote(subject, data_file_id, features_file_id, subject_col)]
 
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
@@ -218,7 +218,8 @@ def build_feature_table(data_file: pd.DataFrame, features_file: pd.DataFrame, su
 
 
 @ray.remote
-def get_subject_feature_table(subject: str, data_file: pd.DataFrame, features_file: pd.DataFrame) -> pd.DataFrame:
+def get_subject_feature_table(subject: str, data_file: pd.DataFrame, features_file: pd.DataFrame,
+                              subject_col: str) -> pd.DataFrame:
 
     t0 = time.time()
 
@@ -227,7 +228,7 @@ def get_subject_feature_table(subject: str, data_file: pd.DataFrame, features_fi
     cluster_ids = features_file['cluster_id']
     max_distances = features_file['max_distance'].to_numpy()
 
-    subject_data = data_file[data_file['subject.subject_id'] == subject]
+    subject_data = data_file[data_file['subject_col'] == subject]
     subject_features_table = pd.DataFrame(0, index=[subject], columns=cluster_ids.values)
     features_count = 0
 
