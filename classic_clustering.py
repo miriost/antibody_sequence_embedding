@@ -204,16 +204,12 @@ def do_agglomerative_clustering(vectors: np.array, distance_threshold):
 
 def build_feature_table(data_file: pd.DataFrame, features_file: pd.DataFrame, subject_col: str) -> pd.DataFrame:
 
-    result_ids = []
-
     data_file_id = ray.put(data_file)
     features_file_id = ray.put(features_file)
 
+    result_ids = []
     for subject, frame in data_file.groupby(subject_col):
         result_ids += [get_subject_feature_table.remote(subject, data_file_id, features_file_id, subject_col)]
-
-    for res_id in result_ids:
-        print(ray.get(res_id))
 
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
@@ -235,9 +231,9 @@ def get_subject_feature_table(subject: str, data_file: pd.DataFrame, features_fi
     by = ['v_gene', 'j_gene', 'cdr3_aa_length']
     for agg_idx, feature_frame in features_file.groupby(by):
 
-        subject_frame = subject_data[subject_data['v_gene'] == agg_idx[0] &
-                                     subject_data['j_gene'] == agg_idx[1] &
-                                     subject_data['cdr3_aa_length'] == agg_idx[2]]
+        subject_frame = subject_data[(subject_data['v_gene'] == agg_idx[0]) &
+                                     (subject_data['j_gene'] == agg_idx[1]) &
+                                     (subject_data['cdr3_aa_length'] == agg_idx[2])]
 
         if len(subject_frame) == 0:
             continue
