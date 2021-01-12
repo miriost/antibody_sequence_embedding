@@ -212,6 +212,9 @@ def build_feature_table(data_file: pd.DataFrame, features_file: pd.DataFrame, su
     for subject, frame in data_file.groupby(subject_col):
         result_ids += [get_subject_feature_table.remote(subject, data_file_id, features_file_id, subject_col)]
 
+    for res_id in result_ids:
+        print(ray.get(res_id))
+
     features_table = pd.concat([ray.get(res_id) for res_id in result_ids])
 
     return features_table
@@ -225,11 +228,8 @@ def get_subject_feature_table(subject: str, data_file: pd.DataFrame, features_fi
 
     print('Start creating feature table for subject {}'.format(subject))
 
-    cluster_ids = features_file['cluster_id']
-    max_distances = features_file['max_distance'].to_numpy()
-
     subject_data = data_file[data_file[subject_col] == subject]
-    subject_features_table = pd.DataFrame(0, index=[subject], columns=cluster_ids.values)
+    subject_features_table = pd.DataFrame(0, index=[subject], columns=features_file['cluster_id'].values)
     features_count = 0
 
     by = ['v_gene', 'j_gene', 'cdr3_aa_length']
@@ -247,7 +247,7 @@ def get_subject_feature_table(subject: str, data_file: pd.DataFrame, features_fi
 
         # for each vector belonging to the subject
         distances = pairwise_distances(X=subject_vectors, Y=feature_vectors, metric='manhattan')
-        distance_close_enough_mat = np.less_equal(distances, max_distances)
+        distance_close_enough_mat = np.less_equal(distances, features_file['max_distance'].to_numpy())
 
         features_count += np.sum(distance_close_enough_mat)
         if features_count >= 1:
@@ -257,9 +257,9 @@ def get_subject_feature_table(subject: str, data_file: pd.DataFrame, features_fi
                 cluster_id = np.where(distance_close_enough_vec)
                 subject_features_table.loc[subject, feature_frame['cluster_id'].iloc[cluster_id[0]]] += 1
 
-    print('Finished creating feature table for subject {}, feature count {}, took {}'.format(subject,
-                                                                                             features_count,
-                                                                                             time.time() - t0))
+    print('Finished creating feature table for subject {}, non zero feature count {}, took {}'.format(
+        subject, features_count, time.time() - t0))
+
     return subject_features_table
 
 
